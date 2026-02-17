@@ -1,0 +1,33 @@
+.item {
+  padding: 9px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.item:hover {
+  background: var(--bg-hover);
+}
+
+.item.active {
+  background: var(--accent-soft);
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item.active .title {
+  color: var(--accent);
+}
+
+.time {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}

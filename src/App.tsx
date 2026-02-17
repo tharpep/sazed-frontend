@@ -1,50 +1,22 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { TopBar } from "./components/TopBar/TopBar";
+import { InputBar } from "./components/InputBar/InputBar";
+import { EmptyState } from "./features/chat/EmptyState";
+import { ChatArea } from "./features/chat/ChatArea";
+import { HistoryOverlay } from "./features/history/HistoryOverlay";
+import styles from "./App.module.css";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
-
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [view] = useState<"empty" | "chat">("chat");
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    <div className={styles.app}>
+      <HistoryOverlay open={historyOpen} />
+      <TopBar historyOpen={historyOpen} onToggleHistory={() => setHistoryOpen((o) => !o)} />
+      {view === "empty" ? <EmptyState /> : <ChatArea />}
+      <InputBar />
+    </div>
   );
 }
 

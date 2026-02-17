@@ -1,0 +1,17 @@
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.arrow {
+  color: var(--accent);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.text {
+  font-size: 14px;
+  color: var(--text);
+}

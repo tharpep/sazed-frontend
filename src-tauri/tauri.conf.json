@@ -5,7 +5,7 @@
   "identifier": "com.aatha.sazed-frontend",
   "build": {
     "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:3000",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
@@ -13,8 +13,12 @@
     "windows": [
       {
         "title": "Sazed",
-        "width": 800,
-        "height": 600
+        "width": 900,
+        "height": 620,
+        "minWidth": 600,
+        "minHeight": 480,
+        "decorations": false,
+        "transparent": false
       }
     ],
     "security": {

@@ -1,0 +1,39 @@
+/* Dark pastels — from ui_reference.html :root */
+:root {
+  --bg: #1A1816;
+  --bg-elevated: #21201D;
+  --bg-surface: #292724;
+  --bg-hover: #31302C;
+  --bg-active: #3A3835;
+
+  --text: #E8E4DF;
+  --text-secondary: #9B9590;
+  --text-tertiary: #6B6560;
+  --text-faint: #4A4540;
+
+  --accent: #8BABF1;
+  --accent-soft: rgba(139, 171, 241, 0.10);
+  --accent-hover: rgba(139, 171, 241, 0.16);
+  --accent-muted: #6B8BD1;
+
+  --pastel-green: #8BCFA6;
+  --pastel-green-bg: rgba(139, 207, 166, 0.10);
+  --pastel-red: #E8A0A0;
+  --pastel-red-bg: rgba(232, 160, 160, 0.10);
+  --pastel-blue: #8BABF1;
+  --pastel-blue-bg: rgba(139, 171, 241, 0.10);
+  --pastel-purple: #B8A0E8;
+  --pastel-purple-bg: rgba(184, 160, 232, 0.10);
+  --pastel-amber: #E8C88A;
+  --pastel-amber-bg: rgba(232, 200, 138, 0.10);
+
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.10);
+  --success: #8BCFA6;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: "DM Sans", -apple-system, sans-serif;
+  --mono: "JetBrains Mono", monospace;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}

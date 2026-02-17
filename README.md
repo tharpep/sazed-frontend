@@ -1,7 +1,13 @@
-# Tauri + React + Typescript
+# Sazed Frontend
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Static UI for the Sazed chat app. See [PLAN.md](./PLAN.md) for architecture and build order.
 
-## Recommended IDE Setup
+## Commands
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+- **Web:** `pnpm dev` — dev server at http://localhost:3000
+- **Desktop:** `pnpm tauri dev` — Tauri window (requires Rust)
+- **Build:** `pnpm build` then `pnpm tauri build`
+
+## Stack
+
+React 19, TypeScript, Vite 7, Tauri v2, CSS Modules, no backend calls (static mock data).

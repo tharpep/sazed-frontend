@@ -1,0 +1,23 @@
+.lights {
+  display: flex;
+  gap: 7px;
+  -webkit-app-region: no-drag;
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.red {
+  background: #e8706b;
+}
+
+.yellow {
+  background: #e8c46b;
+}
+
+.green {
+  background: #6bc880;
+}
