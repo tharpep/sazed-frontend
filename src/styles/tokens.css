@@ -1,5 +1,6 @@
 /* Dark pastels — from ui_reference.html :root */
 :root {
+  --bg-outer: #0e0d0c;
   --bg: #1A1816;
   --bg-elevated: #21201D;
   --bg-surface: #292724;
@@ -33,6 +34,7 @@
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   --radius: 12px;
   --radius-sm: 8px;
+  --radius-window: 16px;
   --font: "DM Sans", -apple-system, sans-serif;
   --mono: "JetBrains Mono", monospace;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);

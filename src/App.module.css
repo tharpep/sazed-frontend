@@ -1,9 +1,50 @@
-.app {
-  width: 100%;
+/* Outer dark surface — fills the entire viewport */
+.surface {
+  width: 100vw;
   height: 100vh;
-  background: var(--bg);
+  background: var(--bg-outer);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Floating window — landscape proportions (more padding top/bottom than sides) */
+.floatingUnit {
+  width: 88vw;
+  height: 78vh;
+  display: flex;
+  flex-direction: row;
+  border-radius: var(--radius-window);
+  overflow: hidden;
+  box-shadow:
+    0 32px 80px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Main chat panel — fills remaining width after history sidebar */
+.mainPanel {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  position: relative;
+  background: var(--bg);
   overflow: hidden;
+}
+
+/* ── Responsive collapse ───────────────────────────────────────────────────── */
+/* When the viewport is too narrow or too short, drop to full-screen layout    */
+@media (max-width: 660px), (max-height: 520px) {
+  .surface {
+    background: var(--bg);
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  .floatingUnit {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    position: relative; /* anchor for absolute history overlay on mobile */
+  }
 }

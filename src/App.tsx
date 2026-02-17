@@ -11,11 +11,18 @@ function App() {
   const [view] = useState<"empty" | "chat">("chat");
 
   return (
-    <div className={styles.app}>
-      <HistoryOverlay open={historyOpen} />
-      <TopBar historyOpen={historyOpen} onToggleHistory={() => setHistoryOpen((o) => !o)} />
-      {view === "empty" ? <EmptyState /> : <ChatArea />}
-      <InputBar />
+    <div className={styles.surface}>
+      <div className={styles.floatingUnit}>
+        <HistoryOverlay open={historyOpen} />
+        <div className={styles.mainPanel}>
+          <TopBar
+            historyOpen={historyOpen}
+            onToggleHistory={() => setHistoryOpen((o) => !o)}
+          />
+          {view === "empty" ? <EmptyState /> : <ChatArea />}
+          <InputBar />
+        </div>
+      </div>
     </div>
   );
 }
