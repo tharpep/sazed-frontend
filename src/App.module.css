@@ -6,19 +6,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.5s var(--ease);
 }
 
 /* Floating window — landscape proportions (more padding top/bottom than sides) */
 .floatingUnit {
-  width: 88vw;
-  height: 78vh;
+  width: 80vw;
+  height: 90vh;
   display: flex;
   flex-direction: row;
   border-radius: var(--radius-window);
   overflow: hidden;
   box-shadow:
-    0 32px 80px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  transition:
+    width 0.5s var(--ease),
+    height 0.5s var(--ease),
+    border-radius 0.5s var(--ease),
+    box-shadow 0.5s var(--ease);
 }
 
 /* Main chat panel — fills remaining width after history sidebar */

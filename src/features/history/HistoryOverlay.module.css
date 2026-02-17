@@ -6,7 +6,6 @@
   overflow: hidden;
   flex-shrink: 0;
   background: var(--bg-elevated);
-  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   transition: max-width 0.3s var(--ease);
@@ -76,7 +75,7 @@
 
 .list {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: scroll;
   padding: 6px 8px;
   display: flex;
   flex-direction: column;

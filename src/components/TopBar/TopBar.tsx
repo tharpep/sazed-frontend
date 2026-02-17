@@ -1,4 +1,3 @@
-import { TrafficLights } from "./TrafficLights";
 import { StatusDot } from "./StatusDot";
 import { IconButton } from "./IconButton";
 import styles from "./TopBar.module.css";
@@ -11,7 +10,6 @@ interface TopBarProps {
 export function TopBar({ historyOpen, onToggleHistory }: TopBarProps) {
   return (
     <div className={styles.topbar}>
-      <TrafficLights />
       <div className={styles.title}>
         <span className={styles.titleStrong}>sazed</span> · session #247
       </div>
