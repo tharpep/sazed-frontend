@@ -11,27 +11,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-Static UI only. No backend, no API calls, no network requests anywhere. All rendered content comes from `src/mock/data.ts`.
+**Stack:** React 19 + TypeScript, Vite 7, Tauri v2, Zustand, CSS Modules + CSS custom properties. Package manager: pnpm.
 
-**Stack:** React 19 + TypeScript, Vite 7, Tauri v2, CSS Modules + CSS custom properties. Package manager: pnpm.
+The app talks to the **Sazed** backend (agent API). Base URL and API key come from env: `VITE_SAZED_URL` (default `http://localhost:8000`) and `VITE_API_KEY` (optional). All requests go through `src/api/client.ts` (`apiFetch`).
 
-**Layout (App.tsx):** Column flex, 100vh. State: `historyOpen` (boolean) and `view` (`'empty' | 'chat'`, defaults to `'chat'`). HistoryOverlay is always mounted, toggled via `translateX` — never `display: none`.
+**Layout (App.tsx):** Column flex, 100vh. HistoryOverlay is always mounted, toggled via `translateX`. TopBar shows Conversations toggle, Knowledge Base button (currently no-op), and online status (from `/health` poll every 30s). Chat state and session state are in Zustand stores; view switches between empty state and chat based on whether there are messages.
 
 **Source layout:**
-- `src/styles/` — `tokens.css` (all CSS custom properties from `ui_reference.html`) and `reset.css` (box-sizing, body, `@font-face`). Both imported in `main.tsx`. These are the only global CSS files.
-- `src/assets/fonts/` — Self-hosted DM Sans + JetBrains Mono woff2 files.
-- `src/mock/data.ts` — All hardcoded content: `MOCK_MESSAGES`, `MOCK_SESSIONS`, `MOCK_EVENTS`. TypeScript interfaces: `Message`, `Session`, `ToolCall`.
-- `src/components/` — Shared UI primitives: `TopBar/` (TrafficLights, StatusDot, IconButton, TopBar) and `InputBar/`.
-- `src/features/chat/` — Chat view: ChatArea, Message, ToolCard, ToolsRow, EventLine, TaskLine, StreamingIndicator, EmptyState.
+
+- `src/styles/` — `tokens.css` (CSS custom properties from `ui_reference.html`) and `reset.css` (box-sizing, body, `@font-face`). Both imported in `main.tsx`. Only global CSS.
+- `src/assets/fonts/` — Self-hosted DM Sans + JetBrains Mono woff2.
+- `src/mock/data.ts` — TypeScript interfaces only: `Message`, `Session`, `ToolCall`. No hardcoded message/session data; content comes from the API.
+- `src/api/` — `client.ts` (apiFetch), `chat.ts` (postMessage), `conversations.ts` (list, get, process), `memory.ts` (get, put, delete).
+- `src/store/` — Zustand: `chatStore` (messages, sessionId, send, newSession, loadSession), `sessionStore` (sessions, loadSessions, selectSession), `uiStore` (historyOpen, online, toggles).
+- `src/components/` — TopBar/ (TrafficLights, StatusDot, IconButton, TopBar), InputBar/.
+- `src/features/chat/` — ChatArea, Message, ToolCard, ToolsRow, EventLine, TaskLine, StreamingIndicator, EmptyState.
 - `src/features/history/` — HistoryOverlay, HistoryItem, HistorySearch.
-- `src-tauri/` — Rust/Tauri shell. Window: 900×620, min 600×480, `decorations: false` (no native title bar). TopBar uses `-webkit-app-region: drag`; interactive children use `no-drag`.
+- `src-tauri/` — Tauri shell. Window 900×620, min 600×480, `decorations: false`. TopBar uses `-webkit-app-region: drag`; interactive children use `no-drag`.
 
-## Hard Rules
+## Conventions
 
-- No `fetch` calls, no API client, no `.env` variables.
-- No Zustand — `useState` only, exclusively for UI toggles.
-- CSS Modules only on components; no global class names.
+- CSS Modules only on components; no global class names except in `src/styles/`.
 - No media queries — desktop layout only.
 - No markdown renderer in message bodies.
-- All content must come from `src/mock/data.ts`, not scattered string literals.
-- Before making any UI changes, read `ui_reference.html` in the repo root — it is the pixel-accurate design reference.
+- Before UI changes, read `ui_reference.html` in the repo root as the design reference.
