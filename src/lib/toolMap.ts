@@ -38,6 +38,15 @@ export function toolUseToToolCall(block: {
   return { category, label, done: true };
 }
 
+/** Creates a pending (in-progress) ToolCall for use during streaming. */
+export function toolCallPending(name: string): ToolCall {
+  return {
+    category: getCategory(name),
+    label: name.replace(/_/g, " "),
+    done: false,
+  };
+}
+
 function formatToolLabel(name: string, input?: Record<string, unknown>): string {
   const normalized = name.replace(/_/g, " ");
   if (input && Object.keys(input).length > 0) {

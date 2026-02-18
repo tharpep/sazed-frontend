@@ -1,25 +1,29 @@
 import type { Message as MessageType } from "../../mock/data";
 import { ToolsRow } from "./ToolsRow";
 import { EventLine } from "./EventLine";
+import { StreamingIndicator } from "./StreamingIndicator";
 import styles from "./Message.module.css";
 
 interface MessageProps {
   message: MessageType;
+  isLastStreaming?: boolean;
 }
 
-export function Message({ message }: MessageProps) {
+export function Message({ message, isLastStreaming = false }: MessageProps) {
   const isUser = message.role === "user";
+  const hasTools = message.role === "assistant" && message.tools && message.tools.length > 0;
+  const showDots = isLastStreaming && !message.content && !hasTools;
 
   return (
     <div className={styles.msg}>
       <div className={`${styles.label} ${isUser ? styles.you : styles.agent}`}>
         {isUser ? "you" : "sazed"}
       </div>
-      {message.role === "assistant" && message.tools && message.tools.length > 0 && (
-        <ToolsRow tools={message.tools} />
-      )}
+      {hasTools && <ToolsRow tools={message.tools!} />}
       <div className={styles.body}>
-        {message.events && message.events.length > 0 ? (
+        {showDots ? (
+          <StreamingIndicator />
+        ) : message.events && message.events.length > 0 ? (
           <>
             <p>Your day:</p>
             <div className={styles.eventsBlock}>
