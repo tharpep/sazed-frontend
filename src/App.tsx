@@ -4,6 +4,7 @@ import { InputBar } from "./components/InputBar/InputBar";
 import { EmptyState } from "./features/chat/EmptyState";
 import { ChatArea } from "./features/chat/ChatArea";
 import { HistoryOverlay } from "./features/history/HistoryOverlay";
+import { KbPage } from "./features/kb/KbPage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
 import { apiFetch } from "./api/client";
@@ -11,7 +12,9 @@ import styles from "./App.module.css";
 
 function App() {
   const historyOpen = useUiStore((s) => s.historyOpen);
+  const kbOpen = useUiStore((s) => s.kbOpen);
   const toggleHistory = useUiStore((s) => s.toggleHistory);
+  const toggleKb = useUiStore((s) => s.toggleKb);
   const setOnline = useUiStore((s) => s.setOnline);
   const online = useUiStore((s) => s.online);
   const messages = useChatStore((s) => s.messages);
@@ -37,11 +40,19 @@ function App() {
         <div className={styles.mainPanel}>
           <TopBar
             historyOpen={historyOpen}
+            kbOpen={kbOpen}
             onToggleHistory={toggleHistory}
+            onToggleKb={toggleKb}
             online={online}
           />
-          {view === "empty" ? <EmptyState /> : <ChatArea />}
-          <InputBar onSend={send} disabled={isStreaming} />
+          {kbOpen ? (
+            <KbPage />
+          ) : view === "empty" ? (
+            <EmptyState />
+          ) : (
+            <ChatArea />
+          )}
+          {!kbOpen && <InputBar onSend={send} disabled={isStreaming} />}
         </div>
       </div>
     </div>
