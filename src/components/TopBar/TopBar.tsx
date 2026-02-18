@@ -5,13 +5,14 @@ import styles from "./TopBar.module.css";
 interface TopBarProps {
   historyOpen: boolean;
   onToggleHistory: () => void;
+  online?: boolean;
 }
 
-export function TopBar({ historyOpen, onToggleHistory }: TopBarProps) {
+export function TopBar({ historyOpen, onToggleHistory, online = false }: TopBarProps) {
   return (
     <div className={styles.topbar}>
       <div className={styles.title}>
-        <span className={styles.titleStrong}>sazed</span> · session #247
+        <span className={styles.titleStrong}>sazed</span>
       </div>
       <div className={styles.actions}>
         <IconButton
@@ -29,7 +30,7 @@ export function TopBar({ historyOpen, onToggleHistory }: TopBarProps) {
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
           </svg>
         </IconButton>
-        <StatusDot />
+        <StatusDot online={online} />
       </div>
     </div>
   );

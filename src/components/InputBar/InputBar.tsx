@@ -1,21 +1,30 @@
 import { useState } from "react";
 import styles from "./InputBar.module.css";
 
-export function InputBar() {
+interface InputBarProps {
+  onSend: (text: string) => void;
+  disabled?: boolean;
+}
+
+export function InputBar({ onSend, disabled = false }: InputBarProps) {
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
 
-  const showCursor = value === "" && !focused;
+  const showCursor = value === "" && !focused && !disabled;
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") {
       e.preventDefault();
-      setValue("");
+      const trimmed = value.trim();
+      if (trimmed && !disabled) {
+        onSend(trimmed);
+        setValue("");
+      }
     }
   }
 
   return (
-    <div className={styles.bar}>
+    <div className={`${styles.bar} ${disabled ? styles.disabled : ""}`}>
       <div className={styles.row}>
         <span className={styles.prompt}>›</span>
         <input
@@ -27,6 +36,7 @@ export function InputBar() {
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onKeyDown={handleKeyDown}
+          disabled={disabled}
         />
         {showCursor && <span className={styles.cursor} />}
       </div>

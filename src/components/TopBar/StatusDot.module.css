@@ -6,6 +6,11 @@
   animation: pulse 2.5s ease-in-out infinite;
 }
 
+.dot.offline {
+  background: var(--pastel-red);
+  animation: none;
+}
+
 @keyframes pulse {
   0%,
   100% {

@@ -1,4 +1,7 @@
-import { MOCK_SESSIONS } from "../../mock/data";
+import { useState, useEffect } from "react";
+import { useSessionStore } from "../../store/sessionStore";
+import { useChatStore } from "../../store/chatStore";
+import { useUiStore } from "../../store/uiStore";
 import { HistorySearch } from "./HistorySearch";
 import { HistoryItem } from "./HistoryItem";
 import styles from "./HistoryOverlay.module.css";
@@ -7,35 +10,68 @@ interface HistoryOverlayProps {
   open: boolean;
 }
 
-const groupedSessions = (() => {
-  const groups: Record<string, typeof MOCK_SESSIONS> = {};
-  for (const s of MOCK_SESSIONS) {
-    if (!groups[s.dateGroup]) groups[s.dateGroup] = [];
-    groups[s.dateGroup].push(s);
-  }
-  return groups;
-})();
-
 export function HistoryOverlay({ open }: HistoryOverlayProps) {
+  const [query, setQuery] = useState("");
+  const sessions = useSessionStore((s) => s.sessions);
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const loadSessions = useSessionStore((s) => s.loadSessions);
+  const selectSession = useSessionStore((s) => s.selectSession);
+  const loadSession = useChatStore((s) => s.loadSession);
+  const newSession = useChatStore((s) => s.newSession);
+  const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
+
+  useEffect(() => {
+    if (open) loadSessions();
+  }, [open, loadSessions]);
+
+  const filtered = query.trim()
+    ? sessions.filter((s) => s.title.toLowerCase().includes(query.toLowerCase()))
+    : sessions;
+
+  const grouped = (() => {
+    const groups: Record<string, typeof sessions> = {};
+    for (const s of filtered) {
+      if (!groups[s.dateGroup]) groups[s.dateGroup] = [];
+      groups[s.dateGroup].push(s);
+    }
+    return groups;
+  })();
+
+  function handleNewChat() {
+    newSession();
+    setHistoryOpen(false);
+  }
+
+  function handleSelectSession(id: string) {
+    selectSession(id);
+    loadSession(id);
+  }
+
   return (
     <div className={`${styles.overlay} ${open ? styles.visible : ""}`}>
       <div className={styles.header}>
         <h3 className={styles.title}>History</h3>
-        <button type="button" className={styles.newBtn} title="New conversation">
+        <button
+          type="button"
+          className={styles.newBtn}
+          title="New conversation"
+          onClick={handleNewChat}
+        >
           +
         </button>
       </div>
-      <HistorySearch />
+      <HistorySearch value={query} onChange={setQuery} />
       <div className={styles.list}>
-        {Object.entries(groupedSessions).map(([groupName, sessions]) => (
+        {Object.entries(grouped).map(([groupName, groupSessions]) => (
           <div key={groupName}>
             <div className={styles.dateLabel}>{groupName}</div>
-            {sessions.map((s) => (
+            {groupSessions.map((s) => (
               <HistoryItem
                 key={s.id}
                 title={s.title}
                 time={s.time}
-                active={s.id === "1"}
+                active={s.id === activeSessionId}
+                onClick={() => handleSelectSession(s.id)}
               />
             ))}
           </div>
