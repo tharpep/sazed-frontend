@@ -42,18 +42,22 @@ interface SessionState {
   selectSession: (id: string) => void;
 }
 
-export const useSessionStore = create<SessionState>((set, get) => ({
+export const useSessionStore = create<SessionState>((set) => ({
   sessions: [],
   activeSessionId: null,
   loadSessions: async () => {
-    const res = await listConversations();
-    const sessions: Session[] = res.conversations.map((c) => ({
-      id: c.session_id,
-      title: `${c.session_id.slice(0, 8)}…`,
-      time: formatTime(c.last_activity),
-      dateGroup: dateGroup(c.last_activity),
-    }));
-    set({ sessions });
+    try {
+      const res = await listConversations();
+      const sessions: Session[] = res.conversations.map((c) => ({
+        id: c.session_id,
+        title: `${c.session_id.slice(0, 8)}…`,
+        time: formatTime(c.last_activity),
+        dateGroup: dateGroup(c.last_activity),
+      }));
+      set({ sessions });
+    } catch {
+      // Sazed offline — leave sessions list unchanged
+    }
   },
   selectSession: (id: string) => {
     set({ activeSessionId: id });

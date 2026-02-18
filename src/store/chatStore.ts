@@ -28,7 +28,9 @@ function rawMessagesToMessages(raw: RawMessage[]): Message[] {
       for (const block of row.content) {
         if (block.type === "text" && block.text) textParts.push(block.text);
         if (block.type === "tool_use" && block.name) {
-          toolCalls.push(toolUseToToolCall(block));
+          toolCalls.push(
+            toolUseToToolCall({ name: block.name, id: block.id, input: block.input })
+          );
         }
       }
       result.push({
@@ -57,7 +59,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   send: async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    const { sessionId, messages } = get();
+    const { sessionId } = get();
     set((s) => ({
       messages: [
         ...s.messages,
@@ -97,8 +99,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     useSessionStore.setState({ activeSessionId: null });
   },
   loadSession: async (id: string) => {
-    const res = await getConversation(id);
-    const messages = rawMessagesToMessages(res.messages);
-    set({ sessionId: id, messages });
+    try {
+      const res = await getConversation(id);
+      const messages = rawMessagesToMessages(res.messages);
+      set({ sessionId: id, messages });
+    } catch {
+      // Sazed offline or session not found — leave current messages unchanged
+    }
   },
 }));
