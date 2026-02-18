@@ -38,6 +38,7 @@ function dateGroup(iso: string): string {
 interface SessionState {
   sessions: Session[];
   activeSessionId: string | null;
+  sessionsError: string | null;
   loadSessions: () => Promise<void>;
   selectSession: (id: string) => void;
 }
@@ -45,6 +46,7 @@ interface SessionState {
 export const useSessionStore = create<SessionState>((set) => ({
   sessions: [],
   activeSessionId: null,
+  sessionsError: null,
   loadSessions: async () => {
     try {
       const res = await listConversations();
@@ -54,9 +56,9 @@ export const useSessionStore = create<SessionState>((set) => ({
         time: formatTime(c.last_activity),
         dateGroup: dateGroup(c.last_activity),
       }));
-      set({ sessions });
-    } catch {
-      // Sazed offline — leave sessions list unchanged
+      set({ sessions, sessionsError: null });
+    } catch (err) {
+      set({ sessionsError: err instanceof Error ? err.message : "Failed to load conversations" });
     }
   },
   selectSession: (id: string) => {

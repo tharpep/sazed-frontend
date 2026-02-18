@@ -14,6 +14,7 @@ export function HistoryOverlay({ open }: HistoryOverlayProps) {
   const [query, setQuery] = useState("");
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const sessionsError = useSessionStore((s) => s.sessionsError);
   const loadSessions = useSessionStore((s) => s.loadSessions);
   const selectSession = useSessionStore((s) => s.selectSession);
   const loadSession = useChatStore((s) => s.loadSession);
@@ -61,6 +62,9 @@ export function HistoryOverlay({ open }: HistoryOverlayProps) {
         </button>
       </div>
       <HistorySearch value={query} onChange={setQuery} />
+      {sessionsError && (
+        <div className={styles.error}>{sessionsError}</div>
+      )}
       <div className={styles.list}>
         {Object.entries(grouped).map(([groupName, groupSessions]) => (
           <div key={groupName}>

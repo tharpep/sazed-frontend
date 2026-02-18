@@ -73,6 +73,13 @@
   background: var(--accent-soft);
 }
 
+.error {
+  padding: 8px 16px;
+  font-size: 11px;
+  color: var(--text-faint);
+  border-bottom: 1px solid var(--border);
+}
+
 .list {
   flex: 1;
   overflow-y: scroll;
