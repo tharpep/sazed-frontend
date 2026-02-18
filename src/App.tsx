@@ -31,6 +31,7 @@ function App() {
 
   return (
     <div className={styles.surface}>
+      <div className={styles.dragBar} />
       <div className={styles.floatingUnit}>
         <HistoryOverlay open={historyOpen} />
         <div className={styles.mainPanel}>

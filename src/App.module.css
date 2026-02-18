@@ -7,6 +7,20 @@
   align-items: center;
   justify-content: center;
   transition: background 0.5s var(--ease);
+  position: relative;
+}
+
+/* Invisible drag strip pinned to the very top of the Tauri window.
+   Lets the user grab and move the window from the outer surface area,
+   which feels natural on a frameless desktop app. */
+.dragBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  -webkit-app-region: drag;
+  z-index: 9999;
 }
 
 /* Floating window — landscape proportions (more padding top/bottom than sides) */

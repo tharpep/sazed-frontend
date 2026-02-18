@@ -1,5 +1,7 @@
 import { StatusDot } from "./StatusDot";
 import { IconButton } from "./IconButton";
+import { TrafficLights } from "./TrafficLights";
+import { isTauri } from "../../lib/isTauri";
 import styles from "./TopBar.module.css";
 
 interface TopBarProps {
@@ -11,6 +13,7 @@ interface TopBarProps {
 export function TopBar({ historyOpen, onToggleHistory, online = false }: TopBarProps) {
   return (
     <div className={styles.topbar}>
+      {isTauri && <TrafficLights />}
       <div className={styles.title}>
         <span className={styles.titleStrong}>sazed</span>
       </div>
