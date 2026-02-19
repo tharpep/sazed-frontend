@@ -2,6 +2,7 @@ import type { Message as MessageType } from "../../mock/data";
 import { ToolsRow } from "./ToolsRow";
 import { EventLine } from "./EventLine";
 import { StreamingIndicator } from "./StreamingIndicator";
+import { MarkdownContent } from "./MarkdownContent";
 import styles from "./Message.module.css";
 
 interface MessageProps {
@@ -28,18 +29,19 @@ export function Message({ message, isLastStreaming = false }: MessageProps) {
             <p>Your day:</p>
             <div className={styles.eventsBlock}>
               {message.events.map((ev, i) => (
-                <EventLine
-                  key={i}
-                  time={ev.time}
-                  name={ev.name}
-                  meta={ev.meta}
-                />
+                <EventLine key={i} time={ev.time} name={ev.name} meta={ev.meta} />
               ))}
             </div>
-            <p>{message.content}</p>
+            {message.content && (
+              isUser
+                ? <p>{message.content}</p>
+                : <MarkdownContent content={message.content} />
+            )}
           </>
-        ) : (
+        ) : isUser ? (
           <p>{message.content}</p>
+        ) : (
+          <MarkdownContent content={message.content} />
         )}
       </div>
     </div>

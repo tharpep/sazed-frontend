@@ -1,0 +1,221 @@
+/* Root — reset spacing so the first/last child doesn't add extra gap */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.root > * + * {
+  margin-top: 10px;
+}
+
+/* Paragraphs */
+.p {
+  margin: 0;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+/* Lists */
+.ul,
+.ol {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+.ul {
+  list-style-type: disc;
+}
+
+.ol {
+  list-style-type: decimal;
+}
+
+.li {
+  margin-top: 4px;
+  padding-left: 2px;
+}
+
+.li:first-child {
+  margin-top: 0;
+}
+
+/* Headings — keep them proportional to chat body size */
+.heading {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+
+.subheading {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+/* Emphasis */
+.strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.em {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+/* Blockquote */
+.blockquote {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent-muted);
+  background: var(--accent-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.blockquote p {
+  margin: 0;
+}
+
+/* Inline code */
+.codeInline {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--pastel-purple);
+  background: var(--pastel-purple-bg);
+  border: 1px solid rgba(184, 160, 232, 0.18);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* Code block wrapper */
+.pre {
+  margin: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  padding: 12px 14px;
+}
+
+.pre::-webkit-scrollbar {
+  height: 4px;
+}
+
+.pre::-webkit-scrollbar-thumb {
+  background: var(--bg-active);
+  border-radius: 2px;
+}
+
+/* Code block content — override highlight.js background */
+.codeBlock {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  background: transparent !important;
+  padding: 0;
+  white-space: pre;
+}
+
+/* Links */
+.link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(139, 171, 241, 0.3);
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.link:hover {
+  color: var(--pastel-blue);
+  border-bottom-color: var(--accent);
+}
+
+/* Horizontal rule */
+.hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0;
+}
+
+/* Tables */
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.th {
+  padding: 7px 12px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+}
+
+.table tr:last-child .td {
+  border-bottom: none;
+}
+
+/* ---------- highlight.js dark theme overrides ---------- */
+/* Force token colours to fit our dark pastel palette     */
+.codeBlock :global(.hljs-keyword),
+.codeBlock :global(.hljs-selector-tag),
+.codeBlock :global(.hljs-built_in) {
+  color: var(--pastel-purple);
+}
+
+.codeBlock :global(.hljs-string),
+.codeBlock :global(.hljs-attr) {
+  color: var(--pastel-green);
+}
+
+.codeBlock :global(.hljs-number),
+.codeBlock :global(.hljs-literal) {
+  color: var(--pastel-amber);
+}
+
+.codeBlock :global(.hljs-comment),
+.codeBlock :global(.hljs-meta) {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.codeBlock :global(.hljs-title),
+.codeBlock :global(.hljs-function),
+.codeBlock :global(.hljs-name) {
+  color: var(--pastel-blue);
+}
+
+.codeBlock :global(.hljs-variable),
+.codeBlock :global(.hljs-params) {
+  color: var(--text-secondary);
+}
