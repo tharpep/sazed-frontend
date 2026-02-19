@@ -111,11 +111,18 @@ export async function postMessageStream(
               complete = true;
               callbacks.onDone();
               break;
+            case "error":
+              complete = true;
+              callbacks.onError(new Error((data.message as string) || "Stream error"));
+              break;
           }
         } catch {
           // malformed SSE chunk — skip
         }
       }
+    }
+    if (!complete) {
+      callbacks.onError(new Error("Stream ended unexpectedly"));
     }
   } finally {
     reader.releaseLock();
