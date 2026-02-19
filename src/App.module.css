@@ -1,7 +1,7 @@
 /* Outer dark surface — fills the entire viewport */
 .surface {
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   background: var(--bg-outer);
   display: flex;
   align-items: center;

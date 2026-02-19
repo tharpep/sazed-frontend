@@ -60,7 +60,14 @@ function App() {
           ) : (
             <ChatArea />
           )}
-          {!kbOpen && !settingsOpen && <InputBar onSend={send} disabled={isStreaming} />}
+          {!kbOpen && !settingsOpen && (
+            <InputBar
+              onSend={send}
+              disabled={isStreaming}
+              historyOpen={historyOpen}
+              onToggleHistory={toggleHistory}
+            />
+          )}
         </div>
       </div>
     </div>

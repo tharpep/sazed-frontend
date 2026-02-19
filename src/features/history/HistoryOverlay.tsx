@@ -49,6 +49,11 @@ export function HistoryOverlay({ open }: HistoryOverlayProps) {
   }
 
   return (
+    <>
+    {/* Mobile backdrop — tap anywhere outside the panel to close */}
+    {open && (
+      <div className={styles.backdrop} onClick={() => setHistoryOpen(false)} />
+    )}
     <div className={`${styles.overlay} ${open ? styles.visible : ""}`}>
       <div className={styles.header}>
         <h3 className={styles.title}>History</h3>
@@ -82,5 +87,6 @@ export function HistoryOverlay({ open }: HistoryOverlayProps) {
         ))}
       </div>
     </div>
+    </>
   );
 }

@@ -31,3 +31,9 @@
   color: var(--text-faint);
   margin-top: 2px;
 }
+
+@media (max-width: 660px) {
+  .item {
+    padding: 14px 10px;
+  }
+}

@@ -24,3 +24,14 @@
 .input:focus {
   border-color: var(--accent-muted);
 }
+
+@media (max-width: 660px) {
+  .wrapper {
+    padding: 12px 12px;
+  }
+
+  .input {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+}

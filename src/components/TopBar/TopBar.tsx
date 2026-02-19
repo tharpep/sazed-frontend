@@ -30,15 +30,18 @@ export function TopBar({
         <span className={styles.titleStrong}>sazed</span>
       </div>
       <div className={styles.actions}>
-        <IconButton
-          active={historyOpen}
-          title="Conversations"
-          onClick={onToggleHistory}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-        </IconButton>
+        {/* Hidden on mobile — history button moves to the InputBar on small screens */}
+        <div className={styles.historyBtnWrapper}>
+          <IconButton
+            active={historyOpen}
+            title="Conversations"
+            onClick={onToggleHistory}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </IconButton>
+        </div>
         <IconButton active={kbOpen} title="Knowledge Base & Memory" onClick={onToggleKb}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />

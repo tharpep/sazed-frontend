@@ -26,3 +26,16 @@
   width: 15px;
   height: 15px;
 }
+
+@media (max-width: 660px) {
+  .btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+
+  .btn svg {
+    width: 20px;
+    height: 20px;
+  }
+}

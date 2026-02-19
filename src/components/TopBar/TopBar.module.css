@@ -28,3 +28,10 @@
   color: var(--text-tertiary);
   font-weight: 500;
 }
+
+/* Hide history button on mobile — it lives in the InputBar instead */
+@media (max-width: 660px) {
+  .historyBtnWrapper {
+    display: none;
+  }
+}
