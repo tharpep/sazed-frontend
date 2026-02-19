@@ -10,7 +10,7 @@ export function InputBar({ onSend, disabled = false }: InputBarProps) {
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
 
-  const showCursor = value === "" && !focused && !disabled;
+  const showCursor = value === "" && !focused;
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") {
@@ -36,7 +36,6 @@ export function InputBar({ onSend, disabled = false }: InputBarProps) {
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onKeyDown={handleKeyDown}
-          disabled={disabled}
         />
         {showCursor && <span className={styles.cursor} />}
       </div>
