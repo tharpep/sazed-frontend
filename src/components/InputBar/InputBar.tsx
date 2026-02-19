@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import styles from "./InputBar.module.css";
 
 interface InputBarProps {
@@ -11,6 +11,7 @@ interface InputBarProps {
 export function InputBar({ onSend, disabled = false, historyOpen = false, onToggleHistory }: InputBarProps) {
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const showCursor = value === "" && !focused;
   const canSend = value.trim() !== "" && !disabled;
@@ -20,11 +21,21 @@ export function InputBar({ onSend, disabled = false, historyOpen = false, onTogg
     if (trimmed && !disabled) {
       onSend(trimmed);
       setValue("");
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
     }
   }
 
+  function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setValue(e.target.value);
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -46,12 +57,13 @@ export function InputBar({ onSend, disabled = false, historyOpen = false, onTogg
         </button>
 
         <span className={styles.prompt}>›</span>
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
+          rows={1}
           className={styles.input}
           placeholder="ask sazed anything..."
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={handleChange}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onKeyDown={handleKeyDown}

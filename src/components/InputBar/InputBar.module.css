@@ -9,7 +9,8 @@
   max-width: 680px;
   margin: 0 auto;
   display: flex;
-  align-items: center;
+  /* flex-end so icon buttons stay at the bottom as textarea grows */
+  align-items: flex-end;
   gap: 10px;
 }
 
@@ -20,6 +21,8 @@
   flex-shrink: 0;
   user-select: none;
   opacity: 0.7;
+  /* Align with the first line of text */
+  padding-bottom: 8px;
 }
 
 .input {
@@ -28,10 +31,15 @@
   outline: none;
   font-family: var(--font);
   font-size: 14px;
+  line-height: 1.5;
   color: var(--text);
   background: transparent;
   padding: 8px 0;
   caret-color: var(--accent);
+  resize: none;
+  overflow-y: auto;
+  max-height: 200px;
+  display: block;
 }
 
 .bar.disabled {
@@ -50,6 +58,8 @@
   animation: blink 1.1s step-end infinite;
   vertical-align: text-bottom;
   opacity: 0.7;
+  /* Align with the first line of text */
+  margin-bottom: 8px;
 }
 
 @keyframes blink {
@@ -95,7 +105,7 @@
 }
 
 /* ── Mobile layout ──────────────────────────────────────────────────────────
-   At ≤660px: [≡ history] [input…] [↑ send]
+   At ≤660px: [≡ history] [pill input…] [↑ send]
    Safe-area padding handles the home indicator on notched phones.           */
 
 @media (max-width: 660px) {
@@ -125,6 +135,7 @@
     border: 1px solid var(--border-strong);
     border-radius: 22px;
     transition: border-color 0.15s;
+    max-height: 160px;
   }
 
   .input:focus {
