@@ -1,0 +1,45 @@
+.screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: var(--bg);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.title {
+  font-family: var(--font);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--text-faint);
+  margin: 0;
+}
+
+.retry {
+  border: none;
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.retry:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
