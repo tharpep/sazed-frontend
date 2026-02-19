@@ -1,9 +1,17 @@
-const BASE =
-  (import.meta.env.VITE_SAZED_URL as string | undefined) || "http://localhost:8000";
-const KEY = (import.meta.env.VITE_API_KEY as string | undefined) || "";
+import { useSettingsStore } from "../store/settingsStore";
+
+function getBase(): string {
+  return useSettingsStore.getState().getEffectiveBase();
+}
+
+function getKey(): string {
+  return useSettingsStore.getState().getEffectiveKey();
+}
 
 export async function apiFetch(path: string, options?: RequestInit): Promise<unknown> {
-  const url = path.startsWith("http") ? path : `${BASE.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
+  const base = getBase();
+  const key = getKey();
+  const url = path.startsWith("http") ? path : `${base}/${path.replace(/^\//, "")}`;
   const headers: Record<string, string> = {
     ...(typeof options?.headers === "object" && !(options.headers instanceof Headers)
       ? Object.fromEntries(
@@ -15,8 +23,8 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<unk
   if (method !== "GET" && method !== "HEAD") {
     headers["Content-Type"] = "application/json";
   }
-  if (KEY) {
-    headers["X-API-Key"] = KEY;
+  if (key) {
+    headers["X-API-Key"] = key;
   }
   const res = await fetch(url, { ...options, headers });
   if (!res.ok) {
