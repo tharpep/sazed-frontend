@@ -7,6 +7,9 @@ import styles from "./AuthGate.module.css";
 
 const ALLOWED_EMAIL = import.meta.env.VITE_ALLOWED_EMAIL as string;
 
+// Skip auth when running locally (Tauri desktop or local pnpm dev with VITE_SAZED_URL set)
+const isLocal = isTauri || !!(import.meta.env.VITE_SAZED_URL as string | undefined);
+
 async function fetchConfig(googleToken: string): Promise<void> {
   try {
     const res = await fetch("/api/config", {
@@ -26,12 +29,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [wrongAccount, setWrongAccount] = useState(false);
 
   async function authorize(token: string) {
-    if (!isTauri) await fetchConfig(token);
+    if (!isLocal) await fetchConfig(token);
     setAuthed(true);
   }
 
   useEffect(() => {
-    if (isTauri) {
+    if (isLocal) {
       setChecking(false);
       return;
     }
@@ -51,7 +54,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (checking) return null;
-  if (isTauri || authed) return <>{children}</>;
+  if (isLocal || authed) return <>{children}</>;
 
   if (wrongAccount) {
     return (
