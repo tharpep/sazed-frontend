@@ -14,7 +14,7 @@ interface KbState {
   removeFile: (driveFileId: string) => Promise<void>;
 }
 
-export const useKbStore = create<KbState>((set, get) => ({
+export const useKbStore = create<KbState>((set) => ({
   stats: null,
   sources: [],
   loading: false,
