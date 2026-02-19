@@ -33,10 +33,9 @@ export async function postMessageStream(
   body: PostMessageBody,
   callbacks: StreamCallbacks
 ): Promise<void> {
-  const base =
-    (import.meta.env.VITE_SAZED_URL as string | undefined) ||
-    "http://localhost:8000";
-  const key = (import.meta.env.VITE_API_KEY as string | undefined) || "";
+  const { useSettingsStore } = await import("../store/settingsStore");
+  const base = useSettingsStore.getState().getEffectiveBase() || "http://localhost:8000";
+  const key = useSettingsStore.getState().getEffectiveKey();
 
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (key) headers["X-API-Key"] = key;

@@ -2,14 +2,33 @@ import { useEffect, useState } from "react";
 import { GoogleLogin, googleLogout } from "@react-oauth/google";
 import { isTauri } from "../../lib/isTauri";
 import { clearToken, decodeEmail, getToken, saveToken, verifyStoredToken } from "./auth";
+import { useConfigStore } from "../../store/configStore";
 import styles from "./AuthGate.module.css";
 
 const ALLOWED_EMAIL = import.meta.env.VITE_ALLOWED_EMAIL as string;
+
+async function fetchConfig(googleToken: string): Promise<void> {
+  try {
+    const res = await fetch("/api/config", {
+      headers: { Authorization: `Bearer ${googleToken}` },
+    });
+    if (!res.ok) return;
+    const data = (await res.json()) as { sazedUrl: string; apiKey: string };
+    useConfigStore.getState().setConfig(data.sazedUrl, data.apiKey);
+  } catch {
+    // Config fetch failed — app will fall back to any available defaults
+  }
+}
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [authed, setAuthed] = useState(false);
   const [checking, setChecking] = useState(true);
   const [wrongAccount, setWrongAccount] = useState(false);
+
+  async function authorize(token: string) {
+    if (!isTauri) await fetchConfig(token);
+    setAuthed(true);
+  }
 
   useEffect(() => {
     if (isTauri) {
@@ -23,11 +42,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
     verifyStoredToken(token).then((email) => {
       if (email === ALLOWED_EMAIL) {
-        setAuthed(true);
+        authorize(token).finally(() => setChecking(false));
       } else {
         clearToken();
+        setChecking(false);
       }
-      setChecking(false);
     });
   }, []);
 
@@ -70,7 +89,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
               return;
             }
             saveToken(res.credential);
-            setAuthed(true);
+            void authorize(res.credential);
           }}
           onError={() => {}}
         />

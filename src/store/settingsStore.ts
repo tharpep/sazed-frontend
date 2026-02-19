@@ -1,8 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useConfigStore } from "./configStore";
 
+// VITE_ vars are only populated in local/Tauri builds.
+// On Vercel, these are empty — config is fetched from /api/config after auth.
 const BUILD_BASE =
-  (import.meta.env.VITE_SAZED_URL as string | undefined) || "http://localhost:8000";
+  (import.meta.env.VITE_SAZED_URL as string | undefined) || "";
 const BUILD_KEY = (import.meta.env.VITE_API_KEY as string | undefined) || "";
 
 export interface SettingsState {
@@ -38,11 +41,14 @@ export const useSettingsStore = create<SettingsState>()(
 
       getEffectiveBase: () => {
         const s = get();
-        return s.useBuildDefaults ? BUILD_BASE : (s.apiBaseUrl || BUILD_BASE).replace(/\/$/, "");
+        if (!s.useBuildDefaults) return (s.apiBaseUrl || BUILD_BASE).replace(/\/$/, "");
+        // Prefer VITE_ var (Tauri/local), fall back to server-fetched config (Vercel)
+        return (BUILD_BASE || useConfigStore.getState().sazedUrl).replace(/\/$/, "");
       },
       getEffectiveKey: () => {
         const s = get();
-        return s.useBuildDefaults ? BUILD_KEY : (s.apiKey ?? "");
+        if (!s.useBuildDefaults) return s.apiKey ?? "";
+        return BUILD_KEY || useConfigStore.getState().apiKey;
       },
     }),
     { name: STORAGE_KEY }
