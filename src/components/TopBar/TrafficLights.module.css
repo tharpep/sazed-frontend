@@ -1,29 +1,32 @@
 .lights {
   display: flex;
-  gap: 7px;
+  gap: 2px;
   -webkit-app-region: no-drag;
 }
 
-.dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1;
   cursor: pointer;
-  transition: filter 0.15s ease;
+  border-radius: 4px;
+  transition: background 0.1s ease, color 0.1s ease;
+  -webkit-app-region: no-drag;
 }
 
-.dot:hover {
-  filter: brightness(1.2);
+.btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
-.red {
-  background: #e8706b;
-}
-
-.yellow {
-  background: #e8c46b;
-}
-
-.green {
-  background: #6bc880;
+.btnClose:hover {
+  color: var(--pastel-red);
 }

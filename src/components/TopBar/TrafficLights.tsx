@@ -20,21 +20,27 @@ function handleMaximize() {
 export function TrafficLights() {
   return (
     <div className={styles.lights}>
-      <div
-        className={`${styles.dot} ${styles.red}`}
-        title="Close"
-        onClick={handleClose}
-      />
-      <div
-        className={`${styles.dot} ${styles.yellow}`}
+      <button
+        className={`${styles.btn} ${styles.btnMin}`}
         title="Minimize"
         onClick={handleMinimize}
-      />
-      <div
-        className={`${styles.dot} ${styles.green}`}
+      >
+        −
+      </button>
+      <button
+        className={`${styles.btn} ${styles.btnMax}`}
         title="Maximize / Restore"
         onClick={handleMaximize}
-      />
+      >
+        □
+      </button>
+      <button
+        className={`${styles.btn} ${styles.btnClose}`}
+        title="Close"
+        onClick={handleClose}
+      >
+        ×
+      </button>
     </div>
   );
 }
