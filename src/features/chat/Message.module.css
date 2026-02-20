@@ -39,6 +39,10 @@
   letter-spacing: -0.005em;
 }
 
+.bodyAfterTools {
+  margin-top: 6px;
+}
+
 .body p + p {
   margin-top: 10px;
 }

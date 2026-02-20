@@ -21,7 +21,7 @@ export function Message({ message, isLastStreaming = false }: MessageProps) {
         {isUser ? "you" : "sazed"}
       </div>
       {hasTools && <ToolsRow tools={message.tools!} />}
-      <div className={styles.body}>
+      <div className={`${styles.body}${hasTools && message.content ? ` ${styles.bodyAfterTools}` : ""}`}>
         {showDots ? (
           <StreamingIndicator />
         ) : message.events && message.events.length > 0 ? (
