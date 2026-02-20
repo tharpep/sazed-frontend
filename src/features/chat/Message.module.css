@@ -1,8 +1,20 @@
+@keyframes msgIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .msg {
   margin-bottom: 20px;
   display: flex;
   flex-direction: column;
   gap: 5px;
+  animation: msgIn 0.25s var(--ease) both;
 }
 
 .label {

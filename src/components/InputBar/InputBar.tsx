@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import styles from "./InputBar.module.css";
 
 interface InputBarProps {
@@ -11,12 +11,13 @@ interface InputBarProps {
 export function InputBar({ onSend, disabled = false, historyOpen = false, onToggleHistory }: InputBarProps) {
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
+  const [sendPulse, setSendPulse] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const showCursor = value === "" && !focused;
   const canSend = value.trim() !== "" && !disabled;
 
-  function handleSend() {
+  const handleSend = useCallback(() => {
     const trimmed = value.trim();
     if (trimmed && !disabled) {
       onSend(trimmed);
@@ -24,8 +25,10 @@ export function InputBar({ onSend, disabled = false, historyOpen = false, onTogg
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
+      setSendPulse(true);
+      setTimeout(() => setSendPulse(false), 300);
     }
-  }
+  }, [value, disabled, onSend]);
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setValue(e.target.value);
@@ -73,7 +76,7 @@ export function InputBar({ onSend, disabled = false, historyOpen = false, onTogg
         {/* Mobile-only: send button on the right */}
         <button
           type="button"
-          className={`${styles.mobileBtn} ${canSend ? styles.sendActive : ""}`}
+          className={`${styles.mobileBtn} ${canSend ? styles.sendActive : ""} ${sendPulse ? styles.sendPulse : ""}`}
           onClick={handleSend}
           aria-label="Send"
         >

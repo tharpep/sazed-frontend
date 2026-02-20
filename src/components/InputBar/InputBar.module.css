@@ -104,6 +104,16 @@
   color: var(--accent);
 }
 
+@keyframes sendPulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.78); }
+  100% { transform: scale(1); }
+}
+
+.sendPulse {
+  animation: sendPulse 0.3s var(--ease);
+}
+
 /* ── Mobile layout ──────────────────────────────────────────────────────────
    At ≤660px: [≡ history] [pill input…] [↑ send]
    Safe-area padding handles the home indicator on notched phones.           */

@@ -2,11 +2,12 @@
   padding: 9px 10px;
   border-radius: 7px;
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background 0.15s, transform 0.15s var(--ease);
 }
 
 .item:hover {
   background: var(--bg-hover);
+  transform: translateX(3px);
 }
 
 .item.active {
