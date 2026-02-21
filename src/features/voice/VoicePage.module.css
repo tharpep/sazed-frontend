@@ -1,0 +1,151 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--bg-outer);
+  color: var(--text);
+  font-family: var(--font);
+  overflow: hidden;
+}
+
+.header {
+  padding: 20px 24px 0;
+  flex-shrink: 0;
+}
+
+.wordmark {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+}
+
+/* Conversation feed */
+.feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.msg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.user .label {
+  color: var(--text-tertiary);
+}
+
+.assistant .label {
+  color: var(--accent-muted);
+}
+
+.body p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.user .body p {
+  color: var(--text-secondary);
+}
+
+.assistant .body p {
+  color: var(--text);
+}
+
+/* Button area */
+.controls {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px 44px;
+}
+
+.btn {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s var(--ease), background 0.2s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:disabled {
+  cursor: default;
+}
+
+/* idle */
+.idle {
+  background: var(--bg-surface);
+  color: var(--accent);
+}
+
+.idle:hover {
+  background: var(--bg-hover);
+  transform: scale(1.04);
+}
+
+.idle:active {
+  transform: scale(0.94);
+}
+
+/* listening — pulsing outer ring */
+.listening {
+  background: rgba(232, 160, 160, 0.15);
+  color: var(--pastel-red);
+}
+
+.listening::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid var(--pastel-red);
+  animation: pulse-ring 1.4s var(--ease) infinite;
+  pointer-events: none;
+}
+
+/* thinking */
+.thinking {
+  background: var(--bg-surface);
+  color: var(--text-tertiary);
+}
+
+/* speaking */
+.speaking {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.status {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  min-height: 18px;
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  70%  { transform: scale(1.35); opacity: 0;  }
+  100% { transform: scale(1.35); opacity: 0;  }
+}
