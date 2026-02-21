@@ -49,6 +49,7 @@ export function VoicePage() {
   const streamDoneRef = useRef(false);
   const conversationModeRef = useRef(false);
   const selectedVoiceUriRef = useRef(selectedVoiceUri);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
   const wakeLockRef = useRef<{ release: () => void } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -84,6 +85,7 @@ export function VoicePage() {
         .filter((v) => v.lang.startsWith("en"))
         .sort((a, b) => Number(a.localService) - Number(b.localService));
       setVoices(en);
+      voicesRef.current = en;
       // If nothing stored yet, default to the first cloud voice
       if (!localStorage.getItem(VOICE_STORAGE_KEY) && en.length) {
         const defaultUri = en[0].voiceURI;
@@ -157,7 +159,7 @@ export function VoicePage() {
       ttsBufferRef.current = buffer.slice(lastIndex);
     }
 
-    const activeVoice = voices.find((v) => v.voiceURI === selectedVoiceUriRef.current) ?? null;
+    const activeVoice = voicesRef.current.find((v) => v.voiceURI === selectedVoiceUriRef.current) ?? null;
 
     for (const sentence of sentences) {
       utteranceCountRef.current++;
@@ -273,6 +275,11 @@ export function VoicePage() {
       alert("Speech recognition is not supported in this browser.");
       return;
     }
+    // Unlock speechSynthesis while we're inside a user gesture — iOS requires
+    // this or any speak() call from an async context will silently no-op.
+    const unlock = new SpeechSynthesisUtterance("");
+    unlock.volume = 0;
+    speechSynthesis.speak(unlock);
     startListening();
   }
 
