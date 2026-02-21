@@ -1,10 +1,39 @@
 import { useEffect, useRef, useState } from "react";
 import { ToolsRow } from "../chat/ToolsRow";
 import { StreamingIndicator } from "../chat/StreamingIndicator";
+import { MarkdownContent } from "../chat/MarkdownContent";
 import { postMessageStream } from "../../api/chat";
 import { toolCallPending } from "../../lib/toolMap";
 import type { ToolCall } from "../../mock/data";
 import styles from "./VoicePage.module.css";
+
+function stripMarkdownForTts(text: string): string {
+  return text
+    // Drop code blocks entirely — don't speak raw code
+    .replace(/```[\s\S]*?```/g, "")
+    // Inline code — keep the text, drop the backticks
+    .replace(/`([^`]+)`/g, "$1")
+    // Headings — drop the # markers
+    .replace(/^#{1,6}\s+/gm, "")
+    // Bold / italic — keep inner text
+    .replace(/\*{1,3}([^*\n]+)\*{1,3}/g, "$1")
+    .replace(/_{1,3}([^_\n]+)_{1,3}/g, "$1")
+    // Links — keep label, drop URL
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    // Images — keep alt text
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    // Blockquote markers
+    .replace(/^>\s*/gm, "")
+    // Horizontal rules
+    .replace(/^[-*_]{3,}\s*$/gm, "")
+    // Unordered list markers
+    .replace(/^[-*+]\s+/gm, "")
+    // Ordered list markers
+    .replace(/^\d+\.\s+/gm, "")
+    // Collapse excess blank lines
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 type Phase = "idle" | "listening" | "thinking" | "speaking";
 
@@ -179,7 +208,7 @@ export function VoicePage() {
 
     for (const sentence of sentences) {
       utteranceCountRef.current++;
-      const u = new SpeechSynthesisUtterance(sentence);
+      const u = new SpeechSynthesisUtterance(stripMarkdownForTts(sentence));
       if (activeVoice) u.voice = activeVoice;
       u.onstart = () => setPhase("speaking");
       u.onend = () => {
@@ -352,7 +381,13 @@ export function VoicePage() {
               <span className={styles.label}>{isUser ? "you" : "sazed"}</span>
               {hasTools && <ToolsRow tools={msg.tools!} />}
               <div className={styles.body}>
-                {showDots ? <StreamingIndicator /> : <p>{msg.content}</p>}
+                {showDots ? (
+                  <StreamingIndicator />
+                ) : isUser ? (
+                  <p>{msg.content}</p>
+                ) : (
+                  <MarkdownContent content={msg.content} />
+                )}
               </div>
             </div>
           );
