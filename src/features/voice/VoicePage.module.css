@@ -144,6 +144,36 @@
   min-height: 18px;
 }
 
+/* Bottom row: voice picker + conversation toggle */
+.bottomRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.voiceSelect {
+  appearance: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: var(--font);
+  padding: 8px 14px;
+  cursor: pointer;
+  max-width: 180px;
+  outline: none;
+  transition: border-color 0.15s var(--ease), color 0.15s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.voiceSelect:focus {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
 /* Conversation mode toggle */
 .convoToggle {
   display: flex;

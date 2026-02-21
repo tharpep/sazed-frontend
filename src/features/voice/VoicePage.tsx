@@ -31,17 +31,24 @@ const PHASE_LABEL: Record<Phase, string> = {
   speaking: "speaking...",
 };
 
+const VOICE_STORAGE_KEY = "sazed-voice-uri";
+
 export function VoicePage() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [messages, setMessages] = useState<VoiceMsg[]>([]);
   const [conversationMode, setConversationMode] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceUri, setSelectedVoiceUri] = useState<string>(
+    () => localStorage.getItem(VOICE_STORAGE_KEY) ?? ""
+  );
 
   const sessionIdRef = useRef<string | null>(null);
   const ttsBufferRef = useRef("");
   const utteranceCountRef = useRef(0);
   const utteranceDoneRef = useRef(0);
   const streamDoneRef = useRef(false);
-  const conversationModeRef = useRef(false); // readable inside TTS closures
+  const conversationModeRef = useRef(false);
+  const selectedVoiceUriRef = useRef(selectedVoiceUri);
   const wakeLockRef = useRef<{ release: () => void } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +73,28 @@ export function VoicePage() {
       document.removeEventListener("visibilitychange", onVisibility);
       wakeLockRef.current?.release();
     };
+  }, []);
+
+  // Load available voices, sorted cloud-first within English
+  useEffect(() => {
+    function load() {
+      const all = speechSynthesis.getVoices();
+      if (!all.length) return;
+      const en = all
+        .filter((v) => v.lang.startsWith("en"))
+        .sort((a, b) => Number(a.localService) - Number(b.localService));
+      setVoices(en);
+      // If nothing stored yet, default to the first cloud voice
+      if (!localStorage.getItem(VOICE_STORAGE_KEY) && en.length) {
+        const defaultUri = en[0].voiceURI;
+        setSelectedVoiceUri(defaultUri);
+        selectedVoiceUriRef.current = defaultUri;
+        localStorage.setItem(VOICE_STORAGE_KEY, defaultUri);
+      }
+    }
+    load();
+    speechSynthesis.addEventListener("voiceschanged", load);
+    return () => speechSynthesis.removeEventListener("voiceschanged", load);
   }, []);
 
   // Auto-scroll to latest message
@@ -128,9 +157,12 @@ export function VoicePage() {
       ttsBufferRef.current = buffer.slice(lastIndex);
     }
 
+    const activeVoice = voices.find((v) => v.voiceURI === selectedVoiceUriRef.current) ?? null;
+
     for (const sentence of sentences) {
       utteranceCountRef.current++;
       const u = new SpeechSynthesisUtterance(sentence);
+      if (activeVoice) u.voice = activeVoice;
       u.onstart = () => setPhase("speaking");
       u.onend = () => {
         utteranceDoneRef.current++;
@@ -244,6 +276,12 @@ export function VoicePage() {
     startListening();
   }
 
+  function handleVoiceChange(uri: string) {
+    setSelectedVoiceUri(uri);
+    selectedVoiceUriRef.current = uri;
+    localStorage.setItem(VOICE_STORAGE_KEY, uri);
+  }
+
   function toggleConversationMode() {
     setConversationMode((prev) => {
       conversationModeRef.current = !prev;
@@ -289,14 +327,30 @@ export function VoicePage() {
           <MicIcon phase={phase} />
         </button>
         <span className={styles.status}>{PHASE_LABEL[phase]}</span>
-        <button
-          className={`${styles.convoToggle} ${conversationMode ? styles.convoActive : ""}`}
-          onClick={toggleConversationMode}
-          aria-label={conversationMode ? "turn off conversation mode" : "turn on conversation mode"}
-        >
-          <LoopIcon />
-          conversation
-        </button>
+        <div className={styles.bottomRow}>
+          {voices.length > 0 && (
+            <select
+              className={styles.voiceSelect}
+              value={selectedVoiceUri}
+              onChange={(e) => handleVoiceChange(e.target.value)}
+              aria-label="Select voice"
+            >
+              {voices.map((v) => (
+                <option key={v.voiceURI} value={v.voiceURI}>
+                  {v.name}{v.localService ? " · device" : " · cloud"}
+                </option>
+              ))}
+            </select>
+          )}
+          <button
+            className={`${styles.convoToggle} ${conversationMode ? styles.convoActive : ""}`}
+            onClick={toggleConversationMode}
+            aria-label={conversationMode ? "turn off conversation mode" : "turn on conversation mode"}
+          >
+            <LoopIcon />
+            conversation
+          </button>
+        </div>
       </div>
     </div>
   );
