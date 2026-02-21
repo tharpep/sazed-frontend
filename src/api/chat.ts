@@ -4,6 +4,7 @@ export interface PostMessageBody {
   session_id?: string;
   message: string;
   mode?: string;
+  timezone?: string;
 }
 
 export interface PostMessageResponse {

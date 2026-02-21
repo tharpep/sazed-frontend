@@ -72,7 +72,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
 
     await postMessageStream(
-      { session_id: sessionId ?? undefined, message: trimmed },
+      { session_id: sessionId ?? undefined, message: trimmed, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
       {
         onSession: (id) => set({ sessionId: id }),
 
