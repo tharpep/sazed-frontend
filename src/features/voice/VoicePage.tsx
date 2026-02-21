@@ -50,6 +50,8 @@ export function VoicePage() {
   const conversationModeRef = useRef(false);
   const selectedVoiceUriRef = useRef(selectedVoiceUri);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const finalizedRef = useRef(false);       // prevents double-transition after speaking
+  const pollIntervalRef = useRef<number | null>(null); // fallback for iOS onend bug
   const wakeLockRef = useRef<{ release: () => void } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -138,6 +140,20 @@ export function VoicePage() {
     recognition.start();
   }
 
+  function finalize() {
+    if (finalizedRef.current) return;
+    finalizedRef.current = true;
+    if (pollIntervalRef.current !== null) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    if (conversationModeRef.current) {
+      setTimeout(startListening, 600);
+    } else {
+      setPhase("idle");
+    }
+  }
+
   function flushTtsBuffer(isFinal: boolean) {
     const buffer = ttsBufferRef.current;
     const boundaryRe = /[.!?]+[\s\n]+/g;
@@ -169,11 +185,7 @@ export function VoicePage() {
       u.onend = () => {
         utteranceDoneRef.current++;
         if (streamDoneRef.current && utteranceDoneRef.current >= utteranceCountRef.current) {
-          if (conversationModeRef.current) {
-            setTimeout(startListening, 600);
-          } else {
-            setPhase("idle");
-          }
+          finalize();
         }
       };
       speechSynthesis.speak(u);
@@ -192,6 +204,11 @@ export function VoicePage() {
     utteranceCountRef.current = 0;
     utteranceDoneRef.current = 0;
     streamDoneRef.current = false;
+    finalizedRef.current = false;
+    if (pollIntervalRef.current !== null) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
 
     await postMessageStream(
       { session_id: sessionIdRef.current ?? undefined, message: text },
@@ -243,13 +260,19 @@ export function VoicePage() {
         onDone: () => {
           streamDoneRef.current = true;
           flushTtsBuffer(true);
-          // Nothing was spoken (empty response) — resolve immediately
           if (utteranceCountRef.current === 0) {
-            if (conversationModeRef.current) {
-              setTimeout(startListening, 600);
-            } else {
-              setPhase("idle");
-            }
+            // Nothing was enqueued (empty response) — finalize immediately
+            finalize();
+          } else {
+            // Polling fallback: iOS Safari often skips utterance onend callbacks.
+            // When speechSynthesis goes quiet, finalize if onend hasn't already.
+            pollIntervalRef.current = window.setInterval(() => {
+              if (!speechSynthesis.speaking && !speechSynthesis.pending) {
+                clearInterval(pollIntervalRef.current!);
+                pollIntervalRef.current = null;
+                finalize();
+              }
+            }, 250);
           }
         },
 
@@ -269,7 +292,20 @@ export function VoicePage() {
   }
 
   function handleTap() {
+    // Interrupt: cancel TTS and return to idle
+    if (phase === "speaking") {
+      speechSynthesis.cancel();
+      finalizedRef.current = true; // block any pending onend / poll from firing
+      if (pollIntervalRef.current !== null) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      setPhase("idle");
+      return;
+    }
+
     if (phase !== "idle") return;
+
     const w = window as unknown as Record<string, unknown>;
     if (!w.SpeechRecognition && !w.webkitSpeechRecognition) {
       alert("Speech recognition is not supported in this browser.");
@@ -328,7 +364,7 @@ export function VoicePage() {
         <button
           className={`${styles.btn} ${styles[phase]}`}
           onClick={handleTap}
-          disabled={phase !== "idle"}
+          disabled={phase === "thinking" || phase === "listening"}
           aria-label={PHASE_LABEL[phase]}
         >
           <MicIcon phase={phase} />
