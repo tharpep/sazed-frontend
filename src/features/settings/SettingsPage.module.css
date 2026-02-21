@@ -179,3 +179,71 @@
   color: var(--text);
   background: var(--bg-hover);
 }
+
+.dangerBtn {
+  padding: 8px 16px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: #c0392b;
+  background: transparent;
+  border: 1px solid #c0392b55;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+}
+
+.dangerBtn:hover {
+  background: #c0392b14;
+  border-color: #c0392b;
+}
+
+.dangerBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.archiveRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.archiveRow span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.daysInput {
+  width: 56px;
+  padding: 7px 10px;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  text-align: center;
+  transition: border-color 0.15s;
+}
+
+.daysInput:focus {
+  border-color: var(--accent-muted);
+}
+
+.archiveResult {
+  font-size: 12px;
+  margin-top: 8px;
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+
+.archiveResult.success {
+  color: var(--text-secondary);
+}
+
+.archiveResult.error {
+  color: #c0392b;
+}

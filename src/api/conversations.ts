@@ -43,3 +43,18 @@ export async function getConversation(
   const data = await apiFetch(`/conversations/${encodeURIComponent(id)}`);
   return data as GetConversationResponse;
 }
+
+export interface ArchiveResponse {
+  sessions_archived: number;
+  messages_archived: number;
+}
+
+export async function archiveSessions(
+  olderThanDays: number
+): Promise<ArchiveResponse> {
+  const data = await apiFetch(
+    `/conversations/archive?older_than_days=${olderThanDays}`,
+    { method: "POST" }
+  );
+  return data as ArchiveResponse;
+}

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettingsStore } from "../../store/settingsStore";
+import { archiveSessions } from "../../api/conversations";
+import { useSessionStore } from "../../store/sessionStore";
 import styles from "./SettingsPage.module.css";
 
 const BUILD_BASE =
@@ -20,10 +22,33 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     getEffectiveKey,
   } = useSettingsStore();
 
+  const loadSessions = useSessionStore((s) => s.loadSessions);
+
   const [localUseBuild, setLocalUseBuild] = useState(useBuildDefaults);
   const [localBase, setLocalBase] = useState(apiBaseUrl);
   const [localKey, setLocalKey] = useState(apiKey);
   const [saved, setSaved] = useState(false);
+
+  const [olderThanDays, setOlderThanDays] = useState(30);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveResult, setArchiveResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function handleArchive() {
+    setArchiving(true);
+    setArchiveResult(null);
+    try {
+      const res = await archiveSessions(olderThanDays);
+      setArchiveResult({
+        ok: true,
+        text: `Archived ${res.sessions_archived} session${res.sessions_archived !== 1 ? "s" : ""} and ${res.messages_archived} message${res.messages_archived !== 1 ? "s" : ""}.`,
+      });
+      await loadSessions();
+    } catch {
+      setArchiveResult({ ok: false, text: "Archive failed. Check the console or API logs." });
+    } finally {
+      setArchiving(false);
+    }
+  }
 
   useEffect(() => {
     setLocalUseBuild(useBuildDefaults);
@@ -106,6 +131,38 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
           {localUseBuild && (getEffectiveKey() ? (
             <p className={styles.effective}>Using build key</p>
           ) : null)}
+        </div>
+
+        <div className={styles.section}>
+          <label className={styles.label}>Archive old sessions</label>
+          <p className={styles.hint}>
+            Moves sessions and their messages to an archive table. Keeps the database lean without
+            losing history.
+          </p>
+          <div className={styles.archiveRow}>
+            <span>Older than</span>
+            <input
+              type="number"
+              className={styles.daysInput}
+              value={olderThanDays}
+              min={1}
+              onChange={(e) => setOlderThanDays(Math.max(1, parseInt(e.target.value) || 1))}
+            />
+            <span>days</span>
+            <button
+              type="button"
+              className={styles.dangerBtn}
+              onClick={handleArchive}
+              disabled={archiving}
+            >
+              {archiving ? "Archiving…" : "Archive"}
+            </button>
+          </div>
+          {archiveResult && (
+            <p className={`${styles.archiveResult} ${archiveResult.ok ? styles.success : styles.error}`}>
+              {archiveResult.text}
+            </p>
+          )}
         </div>
 
         <div className={styles.actions}>
