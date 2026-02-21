@@ -34,12 +34,14 @@ const PHASE_LABEL: Record<Phase, string> = {
 export function VoicePage() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [messages, setMessages] = useState<VoiceMsg[]>([]);
+  const [conversationMode, setConversationMode] = useState(false);
 
   const sessionIdRef = useRef<string | null>(null);
   const ttsBufferRef = useRef("");
   const utteranceCountRef = useRef(0);
   const utteranceDoneRef = useRef(0);
   const streamDoneRef = useRef(false);
+  const conversationModeRef = useRef(false); // readable inside TTS closures
   const wakeLockRef = useRef<{ release: () => void } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +73,40 @@ export function VoicePage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  function startListening() {
+    const w = window as unknown as Record<string, unknown>;
+    const SR = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as
+      | (new () => ISpeechRecognition)
+      | undefined;
+    if (!SR) return;
+
+    const recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    let transcript = "";
+
+    recognition.onresult = (e) => {
+      transcript = e.results[0][0].transcript;
+    };
+
+    recognition.onend = () => {
+      if (!transcript.trim()) {
+        setPhase("idle");
+        return;
+      }
+      void sendMessage(transcript.trim());
+    };
+
+    recognition.onerror = () => {
+      setPhase("idle");
+    };
+
+    setPhase("listening");
+    recognition.start();
+  }
+
   function flushTtsBuffer(isFinal: boolean) {
     const buffer = ttsBufferRef.current;
     const boundaryRe = /[.!?]+[\s\n]+/g;
@@ -99,7 +135,11 @@ export function VoicePage() {
       u.onend = () => {
         utteranceDoneRef.current++;
         if (streamDoneRef.current && utteranceDoneRef.current >= utteranceCountRef.current) {
-          setPhase("idle");
+          if (conversationModeRef.current) {
+            setTimeout(startListening, 600);
+          } else {
+            setPhase("idle");
+          }
         }
       };
       speechSynthesis.speak(u);
@@ -169,8 +209,14 @@ export function VoicePage() {
         onDone: () => {
           streamDoneRef.current = true;
           flushTtsBuffer(true);
-          // Nothing was spoken (empty response) — go idle immediately
-          if (utteranceCountRef.current === 0) setPhase("idle");
+          // Nothing was spoken (empty response) — resolve immediately
+          if (utteranceCountRef.current === 0) {
+            if (conversationModeRef.current) {
+              setTimeout(startListening, 600);
+            } else {
+              setPhase("idle");
+            }
+          }
         },
 
         onError: (err) => {
@@ -190,42 +236,19 @@ export function VoicePage() {
 
   function handleTap() {
     if (phase !== "idle") return;
-
     const w = window as unknown as Record<string, unknown>;
-    const SR = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as
-      | (new () => ISpeechRecognition)
-      | undefined;
-
-    if (!SR) {
+    if (!w.SpeechRecognition && !w.webkitSpeechRecognition) {
       alert("Speech recognition is not supported in this browser.");
       return;
     }
+    startListening();
+  }
 
-    const recognition = new SR();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-
-    let transcript = "";
-
-    recognition.onresult = (e) => {
-      transcript = e.results[0][0].transcript;
-    };
-
-    recognition.onend = () => {
-      if (!transcript.trim()) {
-        setPhase("idle");
-        return;
-      }
-      void sendMessage(transcript.trim());
-    };
-
-    recognition.onerror = () => {
-      setPhase("idle");
-    };
-
-    setPhase("listening");
-    recognition.start();
+  function toggleConversationMode() {
+    setConversationMode((prev) => {
+      conversationModeRef.current = !prev;
+      return !prev;
+    });
   }
 
   const isLastStreaming = phase === "thinking" || phase === "speaking";
@@ -266,6 +289,14 @@ export function VoicePage() {
           <MicIcon phase={phase} />
         </button>
         <span className={styles.status}>{PHASE_LABEL[phase]}</span>
+        <button
+          className={`${styles.convoToggle} ${conversationMode ? styles.convoActive : ""}`}
+          onClick={toggleConversationMode}
+          aria-label={conversationMode ? "turn off conversation mode" : "turn on conversation mode"}
+        >
+          <LoopIcon />
+          conversation
+        </button>
       </div>
     </div>
   );
@@ -324,6 +355,39 @@ function MicIcon({ phase }: { phase: Phase }) {
       />
       <line x1="16" y1="26" x2="16" y2="30" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
       <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LoopIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M17 2l4 4-4 4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 11V9a4 4 0 0 1 4-4h14"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7 22l-4-4 4-4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M21 13v2a4 4 0 0 1-4 4H3"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
