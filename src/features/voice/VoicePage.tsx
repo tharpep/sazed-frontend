@@ -240,7 +240,7 @@ export function VoicePage() {
     }
 
     await postMessageStream(
-      { session_id: sessionIdRef.current ?? undefined, message: text },
+      { session_id: sessionIdRef.current ?? undefined, message: text, mode: "voice" },
       {
         onSession: (id) => {
           sessionIdRef.current = id;

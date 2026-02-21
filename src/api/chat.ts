@@ -3,6 +3,7 @@ import { apiFetch } from "./client";
 export interface PostMessageBody {
   session_id?: string;
   message: string;
+  mode?: string;
 }
 
 export interface PostMessageResponse {
