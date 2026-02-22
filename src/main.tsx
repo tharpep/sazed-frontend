@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App";
 import { AuthGate } from "./features/auth/AuthGate";
-import { VoicePage } from "./features/voice/VoicePage";
+import { DisplayPage } from "./features/display/DisplayPage";
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
 
@@ -17,7 +17,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
         <AuthGate>
           <Routes>
             <Route path="/" element={<App />} />
-            <Route path="/voice" element={<VoicePage />} />
+            <Route path="/display" element={<DisplayPage />} />
           </Routes>
         </AuthGate>
       </GoogleOAuthProvider>

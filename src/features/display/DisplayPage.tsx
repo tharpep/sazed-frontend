@@ -5,7 +5,7 @@ import { MarkdownContent } from "../chat/MarkdownContent";
 import { postMessageStream } from "../../api/chat";
 import { toolCallPending } from "../../lib/toolMap";
 import type { ToolCall } from "../../mock/data";
-import styles from "./VoicePage.module.css";
+import styles from "./DisplayPage.module.css";
 
 function stripMarkdownForTts(text: string): string {
   return text
@@ -51,6 +51,7 @@ interface ISpeechRecognition {
   onend: (() => void) | null;
   onerror: (() => void) | null;
   start: () => void;
+  stop: () => void;
 }
 
 const PHASE_LABEL: Record<Phase, string> = {
@@ -61,14 +62,18 @@ const PHASE_LABEL: Record<Phase, string> = {
 };
 
 const VOICE_STORAGE_KEY = "sazed-voice-uri";
+const MUTE_STORAGE_KEY = "sazed-mute";
 
-export function VoicePage() {
+export function DisplayPage() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [messages, setMessages] = useState<VoiceMsg[]>([]);
   const [conversationMode, setConversationMode] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceUri, setSelectedVoiceUri] = useState<string>(
     () => localStorage.getItem(VOICE_STORAGE_KEY) ?? ""
+  );
+  const [muted, setMuted] = useState<boolean>(
+    () => localStorage.getItem(MUTE_STORAGE_KEY) === "true"
   );
 
   const sessionIdRef = useRef<string | null>(null);
@@ -83,6 +88,9 @@ export function VoicePage() {
   const pollIntervalRef = useRef<number | null>(null); // fallback for iOS onend bug
   const wakeLockRef = useRef<{ release: () => void } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<ISpeechRecognition | null>(null);
+  const cancelledListeningRef = useRef(false);
+  const mutedRef = useRef(muted);
 
   // Wake lock — keep screen on, re-acquire if visibility returns
   useEffect(() => {
@@ -154,7 +162,8 @@ export function VoicePage() {
     };
 
     recognition.onend = () => {
-      if (!transcript.trim()) {
+      recognitionRef.current = null;
+      if (cancelledListeningRef.current || !transcript.trim()) {
         setPhase("idle");
         return;
       }
@@ -162,9 +171,12 @@ export function VoicePage() {
     };
 
     recognition.onerror = () => {
+      recognitionRef.current = null;
       setPhase("idle");
     };
 
+    cancelledListeningRef.current = false;
+    recognitionRef.current = recognition;
     setPhase("listening");
     recognition.start();
   }
@@ -282,15 +294,19 @@ export function VoicePage() {
             msgs[msgs.length - 1] = last;
             return msgs;
           });
-          ttsBufferRef.current += delta;
-          flushTtsBuffer(false);
+          if (!mutedRef.current) {
+            ttsBufferRef.current += delta;
+            flushTtsBuffer(false);
+          }
         },
 
         onDone: () => {
           streamDoneRef.current = true;
-          flushTtsBuffer(true);
+          if (!mutedRef.current) {
+            flushTtsBuffer(true);
+          }
           if (utteranceCountRef.current === 0) {
-            // Nothing was enqueued (empty response) — finalize immediately
+            // Nothing was enqueued (empty response or muted) — finalize immediately
             finalize();
           } else {
             // Polling fallback: iOS Safari often skips utterance onend callbacks.
@@ -333,6 +349,14 @@ export function VoicePage() {
       return;
     }
 
+    // Cancel: stop listening and return to idle without sending
+    if (phase === "listening") {
+      cancelledListeningRef.current = true;
+      recognitionRef.current?.stop();
+      setPhase("idle");
+      return;
+    }
+
     if (phase !== "idle") return;
 
     const w = window as unknown as Record<string, unknown>;
@@ -342,9 +366,11 @@ export function VoicePage() {
     }
     // Unlock speechSynthesis while we're inside a user gesture — iOS requires
     // this or any speak() call from an async context will silently no-op.
-    const unlock = new SpeechSynthesisUtterance("");
-    unlock.volume = 0;
-    speechSynthesis.speak(unlock);
+    if (!mutedRef.current) {
+      const unlock = new SpeechSynthesisUtterance("");
+      unlock.volume = 0;
+      speechSynthesis.speak(unlock);
+    }
     startListening();
   }
 
@@ -357,6 +383,14 @@ export function VoicePage() {
   function toggleConversationMode() {
     setConversationMode((prev) => {
       conversationModeRef.current = !prev;
+      return !prev;
+    });
+  }
+
+  function toggleMute() {
+    setMuted((prev) => {
+      mutedRef.current = !prev;
+      localStorage.setItem(MUTE_STORAGE_KEY, String(!prev));
       return !prev;
     });
   }
@@ -399,14 +433,14 @@ export function VoicePage() {
         <button
           className={`${styles.btn} ${styles[phase]}`}
           onClick={handleTap}
-          disabled={phase === "thinking" || phase === "listening"}
+          disabled={phase === "thinking"}
           aria-label={PHASE_LABEL[phase]}
         >
           <MicIcon phase={phase} />
         </button>
         <span className={styles.status}>{PHASE_LABEL[phase]}</span>
         <div className={styles.bottomRow}>
-          {voices.length > 0 && (
+          {voices.length > 0 && !muted && (
             <select
               className={styles.voiceSelect}
               value={selectedVoiceUri}
@@ -427,6 +461,14 @@ export function VoicePage() {
           >
             <LoopIcon />
             conversation
+          </button>
+          <button
+            className={`${styles.convoToggle} ${muted ? styles.convoActive : ""}`}
+            onClick={toggleMute}
+            aria-label={muted ? "unmute voice output" : "mute voice output"}
+          >
+            <MuteIcon muted={muted} />
+            {muted ? "muted" : "sound"}
           </button>
         </div>
       </div>
@@ -516,6 +558,41 @@ function LoopIcon() {
       />
       <path
         d="M21 13v2a4 4 0 0 1-4 4H3"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function MuteIcon({ muted }: { muted: boolean }) {
+  if (muted) {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M11 5L6 9H2v6h4l5 4V5z"
+          fill="currentColor"
+        />
+        <line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M11 5L6 9H2v6h4l5 4V5z"
+        fill="currentColor"
+      />
+      <path
+        d="M15.54 8.46a5 5 0 0 1 0 7.07"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M19.07 4.93a10 10 0 0 1 0 14.14"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
