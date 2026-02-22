@@ -7,7 +7,7 @@
 
 .item:hover {
   background: var(--bg-hover);
-  transform: translateX(3px);
+  transform: translateX(6px);
 }
 
 .item.active {

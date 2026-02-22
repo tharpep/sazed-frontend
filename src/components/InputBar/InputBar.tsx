@@ -10,11 +10,9 @@ interface InputBarProps {
 
 export function InputBar({ onSend, disabled = false, historyOpen = false, onToggleHistory }: InputBarProps) {
   const [value, setValue] = useState("");
-  const [focused, setFocused] = useState(false);
   const [sendPulse, setSendPulse] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const showCursor = value === "" && !focused;
   const canSend = value.trim() !== "" && !disabled;
 
   const handleSend = useCallback(() => {
@@ -67,12 +65,8 @@ export function InputBar({ onSend, disabled = false, historyOpen = false, onTogg
           placeholder="ask sazed anything..."
           value={value}
           onChange={handleChange}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
           onKeyDown={handleKeyDown}
         />
-        {showCursor && <span className={styles.cursor} />}
-
         {/* Mobile-only: send button on the right */}
         <button
           type="button"

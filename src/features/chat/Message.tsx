@@ -16,7 +16,7 @@ export function Message({ message, isLastStreaming = false }: MessageProps) {
   const showDots = isLastStreaming && !message.content && !hasTools;
 
   return (
-    <div className={styles.msg}>
+    <div className={`${styles.msg} ${!isUser ? styles.agentMsg : ""}`}>
       <div className={`${styles.label} ${isUser ? styles.you : styles.agent}`}>
         {isUser ? "you" : "sazed"}
       </div>

@@ -150,7 +150,12 @@ export function MemoryPanel() {
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.list}>
-        {loading && <div className={styles.empty}>Loading…</div>}
+        {loading && Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className={styles.skelFact}>
+            <div className={styles.skelKey} />
+            <div className={styles.skelValue} style={{ width: `${55 + (i * 13) % 35}%` }} />
+          </div>
+        ))}
         {!loading && facts.length === 0 && (
           <div className={styles.empty}>No facts stored yet.</div>
         )}

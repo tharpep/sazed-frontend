@@ -28,8 +28,8 @@
   --pastel-amber: #E8C88A;
   --pastel-amber-bg: rgba(232, 200, 138, 0.10);
 
-  --border: rgba(255, 255, 255, 0.06);
-  --border-strong: rgba(255, 255, 255, 0.10);
+  --border: rgba(255, 255, 255, 0.13);
+  --border-strong: rgba(255, 255, 255, 0.16);
   --success: #8BCFA6;
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   --radius: 12px;

@@ -2,7 +2,9 @@
 .surface {
   width: 100vw;
   height: 100dvh;
-  background: var(--bg-outer);
+  background:
+    radial-gradient(ellipse 90% 80% at 50% 50%, rgba(139, 171, 241, 0.07) 0%, transparent 65%),
+    var(--bg-outer);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,6 +53,21 @@
   overflow: hidden;
 }
 
+/* ── Page transition ───────────────────────────────────────────────────────── */
+@keyframes pageIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.viewContainer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: pageIn 0.2s var(--ease) both;
+}
+
 /* ── Responsive collapse ───────────────────────────────────────────────────── */
 /* When the viewport is too narrow or too short, drop to full-screen layout    */
 @media (max-width: 660px), (max-height: 520px) {
@@ -58,6 +75,7 @@
     background: var(--bg);
     align-items: stretch;
     justify-content: stretch;
+    /* Remove glow on mobile — full-screen layout has no outer surface to show */
   }
 
   .floatingUnit {

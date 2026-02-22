@@ -1,7 +1,7 @@
 @keyframes msgIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
@@ -14,7 +14,12 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  animation: msgIn 0.25s var(--ease) both;
+  animation: msgIn 0.3s var(--ease) both;
+}
+
+.agentMsg {
+  border-left: 2px solid rgba(139, 171, 241, 0.25);
+  padding-left: 12px;
 }
 
 .label {
@@ -33,10 +38,9 @@
 }
 
 .body {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.65;
   color: var(--text);
-  letter-spacing: -0.005em;
 }
 
 .bodyAfterTools {

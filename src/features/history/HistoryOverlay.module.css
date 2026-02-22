@@ -123,3 +123,34 @@
   color: var(--text-faint);
   padding: 12px 8px 6px;
 }
+
+/* ── Skeleton loading ──────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position: 200% center; }
+}
+
+.skelItem {
+  padding: 9px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.skelTitle {
+  height: 13px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--bg-hover) 25%, var(--bg-active) 50%, var(--bg-hover) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skelTime {
+  height: 10px;
+  width: 45%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--bg-hover) 25%, var(--bg-active) 50%, var(--bg-hover) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}

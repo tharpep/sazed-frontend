@@ -125,7 +125,18 @@ export function KbPanel() {
       )}
 
       <div className={styles.list}>
-        {loading && <div className={styles.empty}>Loading…</div>}
+        {loading && Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className={styles.skelRow}>
+            <div className={styles.skelMain}>
+              <div className={styles.skelBadge} />
+              <div className={styles.skelFilename} style={{ width: `${48 + (i * 17) % 35}%` }} />
+            </div>
+            <div className={styles.skelMeta}>
+              <div className={styles.skelMetaChip} />
+              <div className={styles.skelMetaChip} style={{ width: 36 }} />
+            </div>
+          </div>
+        ))}
         {!loading && activeSources.length === 0 && (
           <div className={styles.empty}>No files indexed. Run a sync to get started.</div>
         )}

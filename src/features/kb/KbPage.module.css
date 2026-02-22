@@ -7,13 +7,13 @@
 }
 
 .left {
-  flex: 0 0 57%;
+  flex: 0 0 50%;
   min-width: 0;
   overflow: hidden;
 }
 
 .right {
-  flex: 0 0 43%;
+  flex: 0 0 50%;
   min-width: 0;
   overflow: hidden;
 }

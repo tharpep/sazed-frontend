@@ -12,6 +12,7 @@ interface HistoryOverlayProps {
 
 export function HistoryOverlay({ open }: HistoryOverlayProps) {
   const [query, setQuery] = useState("");
+  const [sessionsLoading, setSessionsLoading] = useState(false);
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const sessionsError = useSessionStore((s) => s.sessionsError);
@@ -22,7 +23,10 @@ export function HistoryOverlay({ open }: HistoryOverlayProps) {
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
 
   useEffect(() => {
-    if (open) loadSessions();
+    if (open) {
+      setSessionsLoading(true);
+      loadSessions().finally(() => setSessionsLoading(false));
+    }
   }, [open, loadSessions]);
 
   const filtered = query.trim()
@@ -71,6 +75,12 @@ export function HistoryOverlay({ open }: HistoryOverlayProps) {
         <div className={styles.error}>{sessionsError}</div>
       )}
       <div className={styles.list}>
+        {sessionsLoading && sessions.length === 0 && Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className={styles.skelItem}>
+            <div className={styles.skelTitle} style={{ width: `${50 + (i * 19) % 35}%` }} />
+            <div className={styles.skelTime} />
+          </div>
+        ))}
         {Object.entries(grouped).map(([groupName, groupSessions]) => (
           <div key={groupName}>
             <div className={styles.dateLabel}>{groupName}</div>

@@ -25,6 +25,7 @@ function App() {
   const send = useChatStore((s) => s.send);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const view = messages.length === 0 ? "empty" : "chat";
+  const viewKey = settingsOpen ? "settings" : kbOpen ? "kb" : view;
 
   useEffect(() => {
     const check = () =>
@@ -51,15 +52,17 @@ function App() {
             onToggleSettings={toggleSettings}
             online={online}
           />
-          {settingsOpen ? (
-            <SettingsPage onClose={() => setSettingsOpen(false)} />
-          ) : kbOpen ? (
-            <KbPage />
-          ) : view === "empty" ? (
-            <EmptyState />
-          ) : (
-            <ChatArea />
-          )}
+          <div key={viewKey} className={styles.viewContainer}>
+            {settingsOpen ? (
+              <SettingsPage onClose={() => setSettingsOpen(false)} />
+            ) : kbOpen ? (
+              <KbPage />
+            ) : view === "empty" ? (
+              <EmptyState />
+            ) : (
+              <ChatArea />
+            )}
+          </div>
           {!kbOpen && !settingsOpen && (
             <InputBar
               onSend={send}
