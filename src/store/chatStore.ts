@@ -25,17 +25,23 @@ function rawMessagesToMessages(raw: RawMessage[]): Message[] {
     if (row.role === "assistant" && isRawContentBlockArray(row.content)) {
       const textParts: string[] = [];
       const toolCalls: Message["tools"] = [];
+      let prevWasTool = false;
       for (const block of row.content) {
-        if (block.type === "text" && block.text) textParts.push(block.text);
         if (block.type === "tool_use" && block.name) {
           toolCalls.push(
             toolUseToToolCall({ name: block.name, id: block.id, input: block.input })
           );
+          prevWasTool = true;
+        }
+        if (block.type === "text" && block.text) {
+          const prefix = prevWasTool && textParts.length > 0 ? "\n\n" : "";
+          textParts.push(prefix + block.text);
+          prevWasTool = false;
         }
       }
       result.push({
         role: "assistant",
-        content: textParts.join("\n") || "No response.",
+        content: textParts.join("") || "No response.",
         tools: toolCalls.length > 0 ? toolCalls : undefined,
       });
     }
@@ -71,6 +77,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isStreaming: true,
     }));
 
+    let needsBreakAfterTool = false;
+
     await postMessageStream(
       { session_id: sessionId ?? undefined, message: trimmed, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
       {
@@ -102,13 +110,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
             messages[messages.length - 1] = last;
             return { messages };
           });
+          needsBreakAfterTool = true;
         },
 
         onText: (delta) => {
           set((s) => {
             const messages = [...s.messages];
             const last = { ...messages[messages.length - 1] };
-            last.content = last.content + delta;
+            const prefix = needsBreakAfterTool && last.content.length > 0 ? "\n\n" : "";
+            needsBreakAfterTool = false;
+            last.content = last.content + prefix + delta;
             messages[messages.length - 1] = last;
             return { messages };
           });
