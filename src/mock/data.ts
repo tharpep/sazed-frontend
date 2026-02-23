@@ -9,6 +9,7 @@ export interface Message {
   content: string;
   tools?: ToolCall[];
   events?: { time: string; name: string; meta?: string }[];
+  isError?: boolean;
 }
 
 export interface Session {

@@ -42,6 +42,12 @@
   margin-top: 0;
 }
 
+.li > .ul,
+.li > .ol {
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
 /* Headings — keep them proportional to chat body size */
 .heading {
   margin: 0;
@@ -101,6 +107,42 @@
 }
 
 /* Code block wrapper */
+.codeWrapper {
+  position: relative;
+}
+
+.codeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 14px;
+  background: var(--bg-active);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.codeLang {
+  color: var(--text-tertiary);
+}
+
+.copyBtn {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.copyBtn:hover {
+  color: var(--text-secondary);
+}
+
 .pre {
   margin: 0;
   background: var(--bg-surface);
@@ -108,6 +150,10 @@
   border-radius: var(--radius-sm);
   overflow-x: auto;
   padding: 12px 14px;
+}
+
+.codeHeader + .pre {
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 
 .pre::-webkit-scrollbar {

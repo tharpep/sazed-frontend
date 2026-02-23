@@ -14,6 +14,7 @@ export function Message({ message, isLastStreaming = false }: MessageProps) {
   const isUser = message.role === "user";
   const hasTools = message.role === "assistant" && message.tools && message.tools.length > 0;
   const showDots = isLastStreaming && !message.content && !hasTools;
+  const hasBody = showDots || (message.events && message.events.length > 0) || message.content;
 
   return (
     <div className={`${styles.msg} ${!isUser ? styles.agentMsg : ""}`}>
@@ -21,29 +22,33 @@ export function Message({ message, isLastStreaming = false }: MessageProps) {
         {isUser ? "you" : "sazed"}
       </div>
       {hasTools && <ToolsRow tools={message.tools!} />}
-      <div className={`${styles.body}${hasTools && message.content ? ` ${styles.bodyAfterTools}` : ""}`}>
-        {showDots ? (
-          <StreamingIndicator />
-        ) : message.events && message.events.length > 0 ? (
-          <>
-            <p>Your day:</p>
-            <div className={styles.eventsBlock}>
-              {message.events.map((ev, i) => (
-                <EventLine key={i} time={ev.time} name={ev.name} meta={ev.meta} />
-              ))}
-            </div>
-            {message.content && (
-              isUser
-                ? <p>{message.content}</p>
-                : <MarkdownContent content={message.content} />
-            )}
-          </>
-        ) : isUser ? (
-          <p>{message.content}</p>
-        ) : (
-          <MarkdownContent content={message.content} />
-        )}
-      </div>
+      {hasBody && (
+        <div className={`${styles.body}${hasTools && message.content ? ` ${styles.bodyAfterTools}` : ""}`}>
+          {showDots ? (
+            <StreamingIndicator />
+          ) : message.events && message.events.length > 0 ? (
+            <>
+              <p>Your day:</p>
+              <div className={styles.eventsBlock}>
+                {message.events.map((ev, i) => (
+                  <EventLine key={i} time={ev.time} name={ev.name} meta={ev.meta} />
+                ))}
+              </div>
+              {message.content && (
+                isUser
+                  ? <p className={styles.userBody}>{message.content}</p>
+                  : <MarkdownContent content={message.content} />
+              )}
+            </>
+          ) : isUser ? (
+            <p className={styles.userBody}>{message.content}</p>
+          ) : message.isError ? (
+            <p className={styles.errorText}>{message.content}</p>
+          ) : (
+            <MarkdownContent content={message.content} />
+          )}
+        </div>
+      )}
     </div>
   );
 }

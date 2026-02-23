@@ -41,7 +41,7 @@ function rawMessagesToMessages(raw: RawMessage[]): Message[] {
       }
       result.push({
         role: "assistant",
-        content: textParts.join("") || "No response.",
+        content: textParts.join("") || "",
         tools: toolCalls.length > 0 ? toolCalls : undefined,
       });
     }
@@ -135,7 +135,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const messages = [...s.messages];
             messages[messages.length - 1] = {
               role: "assistant",
-              content: `Error: ${err.message}`,
+              content: `${err.message}`,
+              isError: true,
             };
             return { messages, isStreaming: false };
           });

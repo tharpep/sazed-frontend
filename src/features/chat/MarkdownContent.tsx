@@ -1,8 +1,25 @@
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import type { Components } from "react-markdown";
 import styles from "./MarkdownContent.module.css";
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = React.useState(false);
+  return (
+    <button
+      className={styles.copyBtn}
+      onClick={() => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+    >
+      {copied ? "copied" : "copy"}
+    </button>
+  );
+}
 
 interface MarkdownContentProps {
   content: string;
@@ -36,7 +53,22 @@ const components: Components = {
     }
     return <code className={styles.codeInline} {...props}>{children}</code>;
   },
-  pre: ({ children }) => <pre className={styles.pre}>{children}</pre>,
+  pre: ({ children, ...props }) => {
+    const codeEl = React.Children.toArray(children)[0] as React.ReactElement<{ className?: string; children?: string }>;
+    const lang = codeEl?.props?.className?.replace("language-", "") ?? "";
+    const raw = codeEl?.props?.children ?? "";
+    return (
+      <div className={styles.codeWrapper}>
+        {lang && (
+          <div className={styles.codeHeader}>
+            <span className={styles.codeLang}>{lang}</span>
+            <CopyButton text={String(raw)} />
+          </div>
+        )}
+        <pre {...props} className={styles.pre}>{children}</pre>
+      </div>
+    );
+  },
   hr: () => <hr className={styles.hr} />,
   table: ({ children }) => (
     <div className={styles.tableWrapper}>

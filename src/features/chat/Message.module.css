@@ -54,3 +54,13 @@
 .eventsBlock {
   margin: 8px 0 12px;
 }
+
+.userBody {
+  white-space: pre-wrap;
+}
+
+.errorText {
+  color: var(--pastel-red);
+  font-size: 13px;
+  font-family: var(--mono);
+}
