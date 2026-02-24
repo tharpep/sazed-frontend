@@ -8,6 +8,7 @@ export function ChatArea() {
   const isStreaming = useChatStore((s) => s.isStreaming);
   const areaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const prevStreamingRef = useRef(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
 
   function isNearBottom() {
@@ -25,9 +26,10 @@ export function ChatArea() {
   }
 
   useEffect(() => {
-    const lastMsg = messages[messages.length - 1];
-    const userJustSent = lastMsg?.role === "user";
-    if (userJustSent || isNearBottom()) {
+    const justStartedStreaming = isStreaming && !prevStreamingRef.current;
+    prevStreamingRef.current = isStreaming;
+
+    if (justStartedStreaming || isNearBottom()) {
       scrollToBottom();
     }
     setShowScrollBtn(!isNearBottom());
