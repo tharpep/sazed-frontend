@@ -42,6 +42,3 @@ export async function deleteKbFile(driveFileId: string): Promise<unknown> {
   return apiFetch(`/kb/files/${encodeURIComponent(driveFileId)}`, { method: "DELETE" });
 }
 
-export async function clearKb(): Promise<unknown> {
-  return apiFetch("/kb", { method: "DELETE" });
-}

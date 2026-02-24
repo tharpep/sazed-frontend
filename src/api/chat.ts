@@ -1,15 +1,9 @@
-import { apiFetch } from "./client";
 
 export interface PostMessageBody {
   session_id?: string;
   message: string;
   mode?: string;
   timezone?: string;
-}
-
-export interface PostMessageResponse {
-  session_id: string;
-  response: string;
 }
 
 export interface StreamCallbacks {
@@ -19,16 +13,6 @@ export interface StreamCallbacks {
   onText: (delta: string) => void;
   onDone: () => void;
   onError: (err: Error) => void;
-}
-
-export async function postMessage(
-  body: PostMessageBody
-): Promise<PostMessageResponse> {
-  const data = await apiFetch("/chat", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-  return data as PostMessageResponse;
 }
 
 export async function postMessageStream(
