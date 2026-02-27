@@ -1,0 +1,218 @@
+.page {
+  padding: 20px 24px;
+  overflow-y: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.heading {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 12px;
+}
+
+.state {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.stateError {
+  font-size: 13px;
+  color: var(--pastel-red);
+}
+
+/* Summary bar */
+.summaryRow {
+  display: flex;
+  gap: 32px;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summaryLabel {
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summaryValue {
+  font-family: var(--mono);
+  font-size: 20px;
+  color: var(--text);
+}
+
+.summaryValuePositive {
+  font-family: var(--mono);
+  font-size: 20px;
+  color: var(--pastel-green);
+}
+
+.summaryValueNegative {
+  font-family: var(--mono);
+  font-size: 20px;
+  color: var(--pastel-red);
+}
+
+/* Tables */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0 10px 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.table td {
+  padding: 7px 10px 7px 0;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.mono {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.secondary {
+  color: var(--text-secondary);
+}
+
+.dotActive,
+.dotInactive {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dotActive { background: var(--pastel-green); }
+.dotInactive { background: var(--border); }
+
+/* Inline edit for budget */
+.budgetRow {
+  cursor: pointer;
+}
+
+.budgetRow:hover td {
+  background: var(--bg-hover);
+}
+
+.limitInput {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 2px 6px;
+  width: 90px;
+  outline: none;
+}
+
+.limitInput:focus {
+  border-color: var(--text-faint);
+}
+
+/* Add forms */
+.addRow td {
+  padding-top: 10px;
+  border-bottom: none;
+}
+
+.addForm {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+  min-width: 0;
+}
+
+.input:focus {
+  border-color: var(--text-faint);
+}
+
+.input::placeholder {
+  color: var(--text-faint);
+}
+
+.inputSm {
+  width: 80px;
+}
+
+.inputMd {
+  width: 120px;
+}
+
+.inputLg {
+  width: 160px;
+}
+
+.select {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+.addBtn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.addBtn:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.deleteBtn:hover {
+  color: var(--pastel-red);
+}

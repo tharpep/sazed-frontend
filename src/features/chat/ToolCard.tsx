@@ -8,6 +8,7 @@ const CATEGORY_CLASS: Record<ToolBlock["category"], string> = {
   kb: styles.kb,
   notify: styles.notify,
   memory: styles.memory,
+  finance: styles.finance,
 };
 
 type ToolCardProps = Omit<ToolBlock, "type">;
@@ -23,6 +24,7 @@ export function ToolCard({ category, label, status, error }: ToolCardProps) {
           {category === "email" && "@"}
           {category === "notify" && "!"}
           {category === "memory" && "mem"}
+          {category === "finance" && "$"}
         </div>
         <span className={styles.label}>{label}</span>
         {status === "pending" && (

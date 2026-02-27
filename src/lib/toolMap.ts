@@ -20,6 +20,14 @@ const TOOL_NAME_TO_CATEGORY: Record<string, ToolCall["category"]> = {
   send_notification: "notify",
   search_knowledge_base: "kb",
   memory_update: "memory",
+  get_subscriptions: "finance",
+  add_subscription: "finance",
+  update_subscription: "finance",
+  get_budget: "finance",
+  set_budget_limit: "finance",
+  get_income: "finance",
+  add_income_source: "finance",
+  get_monthly_summary: "finance",
 };
 
 const DEFAULT_CATEGORY: ToolCall["category"] = "tasks";
