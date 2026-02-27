@@ -28,7 +28,6 @@ function rawMessagesToMessages(raw: RawMessage[]): Message[] {
         if (block.type === "tool_use" && block.name) {
           blocks.push({
             type: "tool",
-            name: block.name,
             ...toolUseToToolCall({ name: block.name, id: block.id, input: block.input }),
           });
         }
@@ -78,7 +77,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           set((s) => {
             const messages = [...s.messages];
             const last = { ...messages[messages.length - 1] };
-            const toolBlock: ToolBlock = { type: "tool", name, ...toolCallPending(name) };
+            const toolBlock: ToolBlock = { type: "tool", ...toolCallPending(name) };
             last.blocks = [...(last.blocks ?? []), toolBlock];
             messages[messages.length - 1] = last;
             return { messages };

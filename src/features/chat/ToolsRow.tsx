@@ -12,9 +12,12 @@ export function ToolsRow({ tools }: ToolsRowProps) {
       {tools.map((t, i) => (
         <ToolCard
           key={i}
+          name={t.name}
           category={t.category}
           label={t.label}
           done={t.done}
+          status={t.status}
+          error={t.error}
         />
       ))}
     </div>
