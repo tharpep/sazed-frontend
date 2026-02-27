@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Message } from "../mock/data";
+import type { Message, MessageBlock, ToolBlock } from "../mock/data";
 import { postMessageStream } from "../api/chat";
 import { getConversation } from "../api/conversations";
 import type { RawMessage, RawContentBlock } from "../api/conversations";
@@ -23,27 +23,20 @@ function rawMessagesToMessages(raw: RawMessage[]): Message[] {
       continue;
     }
     if (row.role === "assistant" && isRawContentBlockArray(row.content)) {
-      const textParts: string[] = [];
-      const toolCalls: Message["tools"] = [];
-      let prevWasTool = false;
+      const blocks: MessageBlock[] = [];
       for (const block of row.content) {
         if (block.type === "tool_use" && block.name) {
-          toolCalls.push(
-            toolUseToToolCall({ name: block.name, id: block.id, input: block.input })
-          );
-          prevWasTool = true;
+          blocks.push({
+            type: "tool",
+            name: block.name,
+            ...toolUseToToolCall({ name: block.name, id: block.id, input: block.input }),
+          });
         }
         if (block.type === "text" && block.text) {
-          const prefix = prevWasTool && textParts.length > 0 ? "\n\n" : "";
-          textParts.push(prefix + block.text);
-          prevWasTool = false;
+          blocks.push({ type: "text", content: block.text });
         }
       }
-      result.push({
-        role: "assistant",
-        content: textParts.join("") || "",
-        tools: toolCalls.length > 0 ? toolCalls : undefined,
-      });
+      result.push({ role: "assistant", content: "", blocks });
     }
   }
   return result;
@@ -67,17 +60,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!trimmed) return;
     const { sessionId } = get();
 
-    // Push user message and empty assistant placeholder immediately
     set((s) => ({
       messages: [
         ...s.messages,
         { role: "user" as const, content: trimmed },
-        { role: "assistant" as const, content: "" },
+        { role: "assistant" as const, content: "", blocks: [] },
       ],
       isStreaming: true,
     }));
-
-    let needsBreakAfterTool = false;
 
     await postMessageStream(
       { session_id: sessionId ?? undefined, message: trimmed, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
@@ -88,38 +78,42 @@ export const useChatStore = create<ChatState>((set, get) => ({
           set((s) => {
             const messages = [...s.messages];
             const last = { ...messages[messages.length - 1] };
-            last.tools = [...(last.tools ?? []), toolCallPending(name)];
+            const toolBlock: ToolBlock = { type: "tool", name, ...toolCallPending(name) };
+            last.blocks = [...(last.blocks ?? []), toolBlock];
             messages[messages.length - 1] = last;
             return { messages };
           });
         },
 
-        onToolDone: (name) => {
-          const label = name.replace(/_/g, " ");
+        onToolDone: (name, status, error) => {
           set((s) => {
             const messages = [...s.messages];
             const last = { ...messages[messages.length - 1] };
             let marked = false;
-            last.tools = (last.tools ?? []).map((t) => {
-              if (!marked && t.label === label && !t.done) {
+            last.blocks = (last.blocks ?? []).map((b) => {
+              if (!marked && b.type === "tool" && b.name === name && !b.done) {
                 marked = true;
-                return { ...t, done: true };
+                return { ...b, done: true, status, error };
               }
-              return t;
+              return b;
             });
             messages[messages.length - 1] = last;
             return { messages };
           });
-          needsBreakAfterTool = true;
         },
 
         onText: (delta) => {
           set((s) => {
             const messages = [...s.messages];
             const last = { ...messages[messages.length - 1] };
-            const prefix = needsBreakAfterTool && last.content.length > 0 ? "\n\n" : "";
-            needsBreakAfterTool = false;
-            last.content = last.content + prefix + delta;
+            const blocks = [...(last.blocks ?? [])];
+            const lastBlock = blocks[blocks.length - 1];
+            if (lastBlock?.type === "text") {
+              blocks[blocks.length - 1] = { ...lastBlock, content: lastBlock.content + delta };
+            } else {
+              blocks.push({ type: "text", content: delta });
+            }
+            last.blocks = blocks;
             messages[messages.length - 1] = last;
             return { messages };
           });

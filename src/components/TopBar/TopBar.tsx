@@ -8,9 +8,11 @@ interface TopBarProps {
   historyOpen: boolean;
   kbOpen: boolean;
   settingsOpen: boolean;
+  auditOpen: boolean;
   onToggleHistory: () => void;
   onToggleKb: () => void;
   onToggleSettings: () => void;
+  onToggleAudit: () => void;
   online?: boolean;
 }
 
@@ -18,9 +20,11 @@ export function TopBar({
   historyOpen,
   kbOpen,
   settingsOpen,
+  auditOpen,
   onToggleHistory,
   onToggleKb,
   onToggleSettings,
+  onToggleAudit,
   online = false,
 }: TopBarProps) {
   return (
@@ -30,7 +34,6 @@ export function TopBar({
         <span className={styles.titleStrong}>sazed</span>
       </div>
       <div className={styles.actions}>
-        {/* Hidden on mobile — history button moves to the InputBar on small screens */}
         <div className={styles.historyBtnWrapper}>
           <IconButton
             active={historyOpen}
@@ -46,6 +49,15 @@ export function TopBar({
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          </svg>
+        </IconButton>
+        <IconButton active={auditOpen} title="Tool Log" onClick={onToggleAudit}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
           </svg>
         </IconButton>
         <IconButton active={settingsOpen} title="Settings" onClick={onToggleSettings}>

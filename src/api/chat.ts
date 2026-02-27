@@ -9,7 +9,7 @@ export interface PostMessageBody {
 export interface StreamCallbacks {
   onSession: (sessionId: string) => void;
   onToolStart: (name: string) => void;
-  onToolDone: (name: string) => void;
+  onToolDone: (name: string, status: "success" | "error", error?: string) => void;
   onText: (delta: string) => void;
   onDone: () => void;
   onError: (err: Error) => void;
@@ -87,7 +87,11 @@ export async function postMessageStream(
               callbacks.onToolStart(data.name as string);
               break;
             case "tool_done":
-              callbacks.onToolDone(data.name as string);
+              callbacks.onToolDone(
+                data.name as string,
+                data.status as "success" | "error",
+                data.error as string | undefined,
+              );
               break;
             case "text_delta":
               callbacks.onText(data.text as string);

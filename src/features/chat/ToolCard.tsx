@@ -1,7 +1,7 @@
-import type { ToolCall } from "../../mock/data";
+import type { ToolBlock } from "../../mock/data";
 import styles from "./ToolCard.module.css";
 
-const CATEGORY_CLASS: Record<ToolCall["category"], string> = {
+const CATEGORY_CLASS: Record<ToolBlock["category"], string> = {
   calendar: styles.calendar,
   email: styles.email,
   tasks: styles.tasks,
@@ -10,25 +10,32 @@ const CATEGORY_CLASS: Record<ToolCall["category"], string> = {
   memory: styles.memory,
 };
 
-interface ToolCardProps {
-  category: ToolCall["category"];
-  label: string;
-  done?: boolean;
-}
+type ToolCardProps = Omit<ToolBlock, "type">;
 
-export function ToolCard({ category, label, done }: ToolCardProps) {
+export function ToolCard({ category, label, status, error }: ToolCardProps) {
   return (
-    <div className={styles.card}>
-      <div className={`${styles.icon} ${CATEGORY_CLASS[category]}`}>
-        {category === "calendar" && "📅"}
-        {category === "kb" && "🔍"}
-        {category === "tasks" && "✓"}
-        {category === "email" && "✉️"}
-        {category === "notify" && "🔔"}
-        {category === "memory" && "✓"}
+    <div className={styles.wrapper}>
+      <div className={styles.card}>
+        <div className={`${styles.icon} ${CATEGORY_CLASS[category]}`}>
+          {category === "calendar" && "cal"}
+          {category === "kb" && "kb"}
+          {category === "tasks" && "do"}
+          {category === "email" && "@"}
+          {category === "notify" && "!"}
+          {category === "memory" && "mem"}
+        </div>
+        <span className={styles.label}>{label}</span>
+        {status === "pending" && (
+          <span className={styles.spinner}>
+            <span /><span /><span />
+          </span>
+        )}
+        {status === "success" && <span className={styles.check}>✓</span>}
+        {status === "error" && <span className={styles.errorBadge}>✗</span>}
       </div>
-      <span className={styles.label}>{label}</span>
-      {done && <span className={styles.check}>✓</span>}
+      {status === "error" && error && (
+        <p className={styles.errorMsg}>{error}</p>
+      )}
     </div>
   );
 }

@@ -1,0 +1,135 @@
+.page {
+  padding: 20px 24px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.heading {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 16px;
+}
+
+.state {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.stateError {
+  font-size: 13px;
+  color: var(--pastel-red);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0 10px 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.row {
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+
+.row:hover td {
+  background: var(--bg-hover);
+}
+
+.row td {
+  padding: 8px 10px 8px 0;
+  vertical-align: middle;
+}
+
+.dotSuccess,
+.dotError {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+.dotSuccess { background: var(--pastel-green); }
+.dotError   { background: var(--pastel-red); }
+
+.toolName {
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.duration {
+  color: var(--text-secondary);
+  width: 70px;
+}
+
+.time {
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.expand {
+  color: var(--text-faint);
+  font-size: 10px;
+  text-align: right;
+  padding-right: 4px;
+}
+
+.expandRow td {
+  padding: 0;
+}
+
+.detail {
+  padding: 10px 0 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.errorMsg {
+  font-size: 12px;
+  color: var(--pastel-red);
+  font-family: var(--mono);
+  margin-bottom: 8px;
+}
+
+.ioGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ioLabel {
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.pre {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}

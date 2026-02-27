@@ -6,6 +6,7 @@ import { ChatArea } from "./features/chat/ChatArea";
 import { HistoryOverlay } from "./features/history/HistoryOverlay";
 import { KbPage } from "./features/kb/KbPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
+import { AuditPage } from "./features/audit/AuditPage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
 import { apiFetch } from "./api/client";
@@ -15,9 +16,11 @@ function App() {
   const historyOpen = useUiStore((s) => s.historyOpen);
   const kbOpen = useUiStore((s) => s.kbOpen);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
+  const auditOpen = useUiStore((s) => s.auditOpen);
   const toggleHistory = useUiStore((s) => s.toggleHistory);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
+  const toggleAudit = useUiStore((s) => s.toggleAudit);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const online = useUiStore((s) => s.online);
@@ -25,7 +28,7 @@ function App() {
   const send = useChatStore((s) => s.send);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const view = messages.length === 0 ? "empty" : "chat";
-  const viewKey = settingsOpen ? "settings" : kbOpen ? "kb" : view;
+  const viewKey = settingsOpen ? "settings" : auditOpen ? "audit" : kbOpen ? "kb" : view;
 
   useEffect(() => {
     const check = () =>
@@ -47,14 +50,18 @@ function App() {
             historyOpen={historyOpen}
             kbOpen={kbOpen}
             settingsOpen={settingsOpen}
+            auditOpen={auditOpen}
             onToggleHistory={toggleHistory}
             onToggleKb={toggleKb}
             onToggleSettings={toggleSettings}
+            onToggleAudit={toggleAudit}
             online={online}
           />
           <div key={viewKey} className={styles.viewContainer}>
             {settingsOpen ? (
               <SettingsPage onClose={() => setSettingsOpen(false)} />
+            ) : auditOpen ? (
+              <AuditPage />
             ) : kbOpen ? (
               <KbPage />
             ) : view === "empty" ? (
@@ -63,7 +70,7 @@ function App() {
               <ChatArea />
             )}
           </div>
-          {!kbOpen && !settingsOpen && (
+          {!kbOpen && !settingsOpen && !auditOpen && (
             <InputBar
               onSend={send}
               disabled={isStreaming}

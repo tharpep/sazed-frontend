@@ -35,15 +35,17 @@ export function toolUseToToolCall(block: {
 }): ToolCall {
   const category = getCategory(block.name);
   const label = formatToolLabel(block.name, block.input);
-  return { category, label, done: true };
+  return { name: block.name, category, label, done: true, status: "success" };
 }
 
 /** Creates a pending (in-progress) ToolCall for use during streaming. */
 export function toolCallPending(name: string): ToolCall {
   return {
+    name,
     category: getCategory(name),
     label: name.replace(/_/g, " "),
     done: false,
+    status: "pending",
   };
 }
 

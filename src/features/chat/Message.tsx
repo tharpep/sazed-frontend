@@ -1,5 +1,5 @@
 import type { Message as MessageType } from "../../mock/data";
-import { ToolsRow } from "./ToolsRow";
+import { ToolCard } from "./ToolCard";
 import { EventLine } from "./EventLine";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { MarkdownContent } from "./MarkdownContent";
@@ -12,42 +12,55 @@ interface MessageProps {
 
 export function Message({ message, isLastStreaming = false }: MessageProps) {
   const isUser = message.role === "user";
-  const hasTools = message.role === "assistant" && message.tools && message.tools.length > 0;
-  const showDots = isLastStreaming && !message.content && !hasTools;
-  const hasBody = showDots || (message.events && message.events.length > 0) || message.content;
+  const hasBlocks = !isUser && message.blocks && message.blocks.length > 0;
+  const showDots = isLastStreaming && !isUser && !hasBlocks && !message.content;
 
   return (
     <div className={`${styles.msg} ${!isUser ? styles.agentMsg : ""}`}>
       <div className={`${styles.label} ${isUser ? styles.you : styles.agent}`}>
         {isUser ? "you" : "sazed"}
       </div>
-      {hasTools && <ToolsRow tools={message.tools!} />}
-      {hasBody && (
-        <div className={`${styles.body}${hasTools && message.content ? ` ${styles.bodyAfterTools}` : ""}`}>
-          {showDots ? (
-            <StreamingIndicator />
-          ) : message.events && message.events.length > 0 ? (
-            <>
+
+      {hasBlocks ? (
+        message.blocks!.map((block, i) =>
+          block.type === "tool" ? (
+            <ToolCard key={i} {...block} />
+          ) : (
+            <div key={i} className={styles.body}>
+              <MarkdownContent content={block.content} />
+            </div>
+          )
+        )
+      ) : (
+        <>
+          {showDots && (
+            <div className={styles.body}>
+              <StreamingIndicator />
+            </div>
+          )}
+          {!showDots && message.events && message.events.length > 0 && (
+            <div className={styles.body}>
               <p>Your day:</p>
               <div className={styles.eventsBlock}>
                 {message.events.map((ev, i) => (
                   <EventLine key={i} time={ev.time} name={ev.name} meta={ev.meta} />
                 ))}
               </div>
-              {message.content && (
-                isUser
-                  ? <p className={styles.userBody}>{message.content}</p>
-                  : <MarkdownContent content={message.content} />
-              )}
-            </>
-          ) : isUser ? (
-            <p className={styles.userBody}>{message.content}</p>
-          ) : message.isError ? (
-            <p className={styles.errorText}>{message.content}</p>
-          ) : (
-            <MarkdownContent content={message.content} />
+              {message.content && <MarkdownContent content={message.content} />}
+            </div>
           )}
-        </div>
+          {!showDots && (!message.events || message.events.length === 0) && message.content && (
+            <div className={styles.body}>
+              {isUser ? (
+                <p className={styles.userBody}>{message.content}</p>
+              ) : message.isError ? (
+                <p className={styles.errorText}>{message.content}</p>
+              ) : (
+                <MarkdownContent content={message.content} />
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
