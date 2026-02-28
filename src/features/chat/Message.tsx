@@ -1,10 +1,10 @@
 import { memo } from "react";
-import type { Message as MessageType } from "../../mock/data";
-import { ToolCard } from "./ToolCard";
+import type { Message as MessageType, ToolBlock } from "../../mock/data";
 import { EventLine } from "./EventLine";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { MarkdownContent } from "./MarkdownContent";
 import { WidgetRenderer } from "../../widgets/WidgetRenderer";
+import { ToolTray } from "./ToolTray";
 import styles from "./Message.module.css";
 
 interface MessageProps {
@@ -15,7 +15,16 @@ interface MessageProps {
 export const Message = memo(function Message({ message, isLastStreaming = false }: MessageProps) {
   const isUser = message.role === "user";
   const hasBlocks = !isUser && message.blocks && message.blocks.length > 0;
-  const showDots = isLastStreaming && !isUser && !hasBlocks && !message.content;
+
+  // Separate tool blocks from content blocks
+  const toolBlocks: ToolBlock[] = hasBlocks
+    ? (message.blocks!.filter((b) => b.type === "tool") as ToolBlock[])
+    : [];
+  const visibleBlocks = hasBlocks
+    ? message.blocks!.filter((b) => b.type !== "tool")
+    : [];
+
+  const showDots = isLastStreaming && !isUser && visibleBlocks.length === 0 && !message.content;
 
   return (
     <div className={`${styles.msg} ${!isUser ? styles.agentMsg : styles.userMsg}`}>
@@ -23,15 +32,16 @@ export const Message = memo(function Message({ message, isLastStreaming = false 
         {isUser ? "you" : "sazed"}
       </div>
 
-      {hasBlocks ? (
-        message.blocks!.map((block, i) =>
-          block.type === "tool" ? (
-            <ToolCard key={i} {...block} />
-          ) : block.type === "ui" ? (
+      {/* Inline tool dropdown for this message */}
+      {toolBlocks.length > 0 && <ToolTray tools={toolBlocks} />}
+
+      {visibleBlocks.length > 0 ? (
+        visibleBlocks.map((block, i) =>
+          block.type === "ui" ? (
             <WidgetRenderer key={i} name={block.component} props={block.props} />
           ) : (
             <div key={i} className={styles.body}>
-              <MarkdownContent content={block.content} isStreaming={isLastStreaming && i === message.blocks!.length - 1} />
+              <MarkdownContent content={block.content} isStreaming={isLastStreaming && i === visibleBlocks.length - 1} />
             </div>
           )
         )

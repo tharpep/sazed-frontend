@@ -70,7 +70,8 @@ const BRIEF_PROMPT =
   "Check my emails, calendar, and tasks, then give me a SHORT markdown-formatted brief: " +
   "use bold for key items, bullet points if needed, and keep it to 2\u20134 lines max. " +
   "Focus only on: what to prioritize, anything needing follow-up, and connections between items. " +
-  "Be terse and actionable \u2014 no greetings, no filler, absolutely NO emojis.";
+  "Be terse and actionable \u2014 no greetings, no filler, absolutely no emojis. " +
+  "Start your response with the briefing itself \u2014 your first word should be substance, not a description of what you're about to do.";
 
 const GITHUB_PROMPT =
   "Look at open issues in the tharpep/sazed GitHub repository. " +

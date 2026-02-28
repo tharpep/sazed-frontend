@@ -1,0 +1,43 @@
+.tray {
+  margin: 2px 0 6px;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-family: var(--mono);
+  letter-spacing: 0.03em;
+  transition: color 0.15s;
+}
+
+.toggle:hover {
+  color: var(--text-secondary);
+}
+
+.chevron {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.15s var(--ease);
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.label {
+  font-variant-numeric: tabular-nums;
+}
+
+.grid {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 0 2px;
+}
