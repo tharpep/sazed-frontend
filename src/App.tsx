@@ -24,6 +24,7 @@ function App() {
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
   const toggleFinance = useUiStore((s) => s.toggleFinance);
+  const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const online = useUiStore((s) => s.online);
@@ -42,6 +43,21 @@ function App() {
     const id = setInterval(check, 30_000);
     return () => clearInterval(id);
   }, [setOnline]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        if (historyOpen) setHistoryOpen(false);
+        else if (kbOpen) toggleKb();
+        else if (settingsOpen) setSettingsOpen(false);
+        else if (auditOpen) toggleAudit();
+        else if (financeOpen) toggleFinance();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [historyOpen, kbOpen, settingsOpen, auditOpen, financeOpen,
+      setHistoryOpen, toggleKb, setSettingsOpen, toggleAudit, toggleFinance]);
 
   return (
     <div className={styles.surface}>

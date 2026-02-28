@@ -15,9 +15,17 @@
   max-width: 260px;
 }
 
-/* Backdrop hidden on desktop */
+/* Backdrop — invisible click-catcher on desktop, dimmed on mobile */
 .backdrop {
-  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+}
+
+@media (max-width: 660px), (max-height: 520px) {
+  .backdrop {
+    background: rgba(0, 0, 0, 0.45);
+  }
 }
 
 /* ── Mobile collapse: revert to absolute overlay with translateX ───────────── */
@@ -38,15 +46,6 @@
   .overlay.visible {
     max-width: none;
     transform: translateX(0);
-  }
-
-  /* Dim the content behind the panel — tap to close */
-  .backdrop {
-    display: block;
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    z-index: 19;
   }
 
   /* Bigger header + new-chat button */

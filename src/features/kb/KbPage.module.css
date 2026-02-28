@@ -17,3 +17,16 @@
   min-width: 0;
   overflow: hidden;
 }
+
+@media (max-width: 660px) {
+  .page {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .left,
+  .right {
+    flex: 0 0 auto;
+    min-height: 300px;
+    overflow: auto;
+  }
+}

@@ -4,9 +4,25 @@
   flex-shrink: 0;
 }
 
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 9px;
+  width: 13px;
+  height: 13px;
+  color: var(--text-faint);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
 .input {
   width: 100%;
-  padding: 7px 10px;
+  padding: 7px 30px 7px 30px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--bg);
@@ -25,6 +41,32 @@
   border-color: var(--accent-muted);
 }
 
+.clearBtn {
+  position: absolute;
+  right: 7px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 0;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+
+.clearBtn:hover {
+  color: var(--text-secondary);
+}
+
+.clearBtn svg {
+  width: 11px;
+  height: 11px;
+}
+
 @media (max-width: 660px) {
   .wrapper {
     padding: 12px 12px;
@@ -32,6 +74,18 @@
 
   .input {
     font-size: 16px;
-    padding: 10px 12px;
+    padding: 10px 36px 10px 34px;
+  }
+
+  .searchIcon {
+    left: 10px;
+    width: 15px;
+    height: 15px;
+  }
+
+  .clearBtn {
+    right: 10px;
+    width: 22px;
+    height: 22px;
   }
 }

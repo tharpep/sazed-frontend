@@ -70,7 +70,7 @@ export function HistoryOverlay({ open }: HistoryOverlayProps) {
           +
         </button>
       </div>
-      <HistorySearch value={query} onChange={setQuery} />
+      <HistorySearch value={query} onChange={setQuery} onClear={() => setQuery("")} />
       {sessionsError && (
         <div className={styles.error}>{sessionsError}</div>
       )}

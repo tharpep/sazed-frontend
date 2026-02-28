@@ -28,6 +28,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   const [localBase, setLocalBase] = useState(apiBaseUrl);
   const [localKey, setLocalKey] = useState(apiKey);
   const [saved, setSaved] = useState(false);
+  const [urlError, setUrlError] = useState("");
 
   const [olderThanDays, setOlderThanDays] = useState(30);
   const [archiving, setArchiving] = useState(false);
@@ -57,9 +58,15 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   }, [useBuildDefaults, apiBaseUrl, apiKey]);
 
   function handleSave() {
+    const trimmed = localBase.trim() || BUILD_BASE;
+    if (!localUseBuild && !/^https?:\/\/.+/.test(trimmed)) {
+      setUrlError("Enter a valid URL starting with http:// or https://");
+      return;
+    }
+    setUrlError("");
     save({
       useBuildDefaults: localUseBuild,
-      apiBaseUrl: localBase.trim() || BUILD_BASE,
+      apiBaseUrl: trimmed,
       apiKey: localKey,
     });
     setSaved(true);
@@ -107,7 +114,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
             type="url"
             className={styles.input}
             value={localBase}
-            onChange={(e) => setLocalBase(e.target.value)}
+            onChange={(e) => { setLocalBase(e.target.value); setUrlError(""); }}
             placeholder={BUILD_BASE}
             disabled={localUseBuild}
             autoComplete="url"
@@ -115,6 +122,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
           {localUseBuild && (
             <p className={styles.effective}>Using: {getEffectiveBase()}</p>
           )}
+          {urlError && <p className={styles.urlError}>{urlError}</p>}
         </div>
 
         <div className={styles.section}>
