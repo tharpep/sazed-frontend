@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { GoogleLogin, googleLogout, useGoogleOneTap } from "@react-oauth/google";
+import { GoogleLogin, googleLogout, useGoogleOneTapLogin, CredentialResponse } from "@react-oauth/google";
 import { isTauri } from "../../lib/isTauri";
 import {
   clearToken,
@@ -65,10 +65,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   // Silent background re-auth: fires automatically when token is near expiry or missing.
   // auto_select means Google will re-auth without any UI if the browser session allows it.
-  useGoogleOneTap({
+  useGoogleOneTapLogin({
     disabled: isLocal,
     auto_select: true,
-    onSuccess: (res) => {
+    onSuccess: (res: CredentialResponse) => {
       if (res.credential) handleCredential(res.credential);
     },
     onError: () => {},
