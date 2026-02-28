@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { Message as MessageType } from "../../mock/data";
 import { ToolCard } from "./ToolCard";
 import { EventLine } from "./EventLine";
@@ -11,7 +12,7 @@ interface MessageProps {
   isLastStreaming?: boolean;
 }
 
-export function Message({ message, isLastStreaming = false }: MessageProps) {
+export const Message = memo(function Message({ message, isLastStreaming = false }: MessageProps) {
   const isUser = message.role === "user";
   const hasBlocks = !isUser && message.blocks && message.blocks.length > 0;
   const showDots = isLastStreaming && !isUser && !hasBlocks && !message.content;
@@ -30,7 +31,7 @@ export function Message({ message, isLastStreaming = false }: MessageProps) {
             <WidgetRenderer key={i} name={block.component} props={block.props} />
           ) : (
             <div key={i} className={styles.body}>
-              <MarkdownContent content={block.content} />
+              <MarkdownContent content={block.content} isStreaming={isLastStreaming && i === message.blocks!.length - 1} />
             </div>
           )
         )
@@ -49,7 +50,7 @@ export function Message({ message, isLastStreaming = false }: MessageProps) {
                   <EventLine key={i} time={ev.time} name={ev.name} meta={ev.meta} />
                 ))}
               </div>
-              {message.content && <MarkdownContent content={message.content} />}
+              {message.content && <MarkdownContent content={message.content} isStreaming={isLastStreaming} />}
             </div>
           )}
           {!showDots && (!message.events || message.events.length === 0) && message.content && (
@@ -59,7 +60,7 @@ export function Message({ message, isLastStreaming = false }: MessageProps) {
               ) : message.isError ? (
                 <p className={styles.errorText}>{message.content}</p>
               ) : (
-                <MarkdownContent content={message.content} />
+                <MarkdownContent content={message.content} isStreaming={isLastStreaming} />
               )}
             </div>
           )}
@@ -67,4 +68,4 @@ export function Message({ message, isLastStreaming = false }: MessageProps) {
       )}
     </div>
   );
-}
+});

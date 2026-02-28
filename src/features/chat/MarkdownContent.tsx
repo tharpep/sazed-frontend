@@ -1,9 +1,13 @@
-import React from "react";
+import React, { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import type { Components } from "react-markdown";
 import styles from "./MarkdownContent.module.css";
+
+const REMARK_PLUGINS = [remarkGfm];
+const REHYPE_PLUGINS_FULL = [rehypeHighlight];
+const REHYPE_PLUGINS_NONE: never[] = [];
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = React.useState(false);
@@ -23,6 +27,7 @@ function CopyButton({ text }: { text: string }) {
 
 interface MarkdownContentProps {
   content: string;
+  isStreaming?: boolean;
 }
 
 const components: Components = {
@@ -79,16 +84,16 @@ const components: Components = {
   td: ({ children }) => <td className={styles.td}>{children}</td>,
 };
 
-export function MarkdownContent({ content }: MarkdownContentProps) {
+export const MarkdownContent = memo(function MarkdownContent({ content, isStreaming = false }: MarkdownContentProps) {
   return (
     <div className={styles.root}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
+        remarkPlugins={REMARK_PLUGINS}
+        rehypePlugins={isStreaming ? REHYPE_PLUGINS_NONE : REHYPE_PLUGINS_FULL}
         components={components}
       >
         {content}
       </ReactMarkdown>
     </div>
   );
-}
+});

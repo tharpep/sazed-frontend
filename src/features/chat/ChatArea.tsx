@@ -29,10 +29,11 @@ export function ChatArea() {
     const justStartedStreaming = isStreaming && !prevStreamingRef.current;
     prevStreamingRef.current = isStreaming;
 
-    if (justStartedStreaming || isNearBottom()) {
+    const nearBottom = isNearBottom();
+    if (justStartedStreaming || nearBottom) {
       scrollToBottom();
     }
-    setShowScrollBtn(!isNearBottom());
+    setShowScrollBtn(!nearBottom);
   }, [messages, isStreaming]);
 
   return (
