@@ -11,6 +11,7 @@ export interface StreamCallbacks {
   onToolStart: (name: string) => void;
   onToolDone: (name: string, status: "success" | "error", error?: string) => void;
   onText: (delta: string) => void;
+  onUiBlock?: (block: { component: string; props: Record<string, unknown> }) => void;
   onDone: () => void;
   onError: (err: Error) => void;
 }
@@ -99,6 +100,12 @@ export async function postMessageStream(
             case "done":
               complete = true;
               callbacks.onDone();
+              break;
+            case "ui_block":
+              callbacks.onUiBlock?.({
+                component: data.component as string,
+                props: (data.props ?? {}) as Record<string, unknown>,
+              });
               break;
             case "error":
               complete = true;

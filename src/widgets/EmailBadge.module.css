@@ -1,0 +1,83 @@
+.widget {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.icon {
+  width: 13px;
+  height: 13px;
+  color: var(--pastel-red);
+  flex-shrink: 0;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-faint);
+}
+
+.countRow {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.count {
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--pastel-red);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.countLabel {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.snippets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.snippet {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sender {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subject {
+  font-size: 11px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dim {
+  font-size: 12px;
+  color: var(--text-faint);
+}

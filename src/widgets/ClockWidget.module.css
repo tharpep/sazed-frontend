@@ -1,0 +1,36 @@
+.clock {
+  padding: 12px 4px 4px;
+  flex-shrink: 0;
+}
+
+.time {
+  font-size: 52px;
+  font-weight: 300;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.date {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  letter-spacing: 0.01em;
+}
+
+/* Compact clock on mobile — readable but doesn't dominate */
+@media (max-width: 660px), (max-height: 520px) {
+  .clock {
+    padding: 8px 0 4px;
+  }
+
+  .time {
+    font-size: 42px;
+  }
+
+  .date {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+}

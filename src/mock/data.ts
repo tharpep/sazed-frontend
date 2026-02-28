@@ -8,7 +8,8 @@ export type ToolBlock = {
   status: "pending" | "success" | "error";
   error?: string;
 };
-export type MessageBlock = TextBlock | ToolBlock;
+export type UIBlock = { type: "ui"; component: string; props: Record<string, unknown> };
+export type MessageBlock = TextBlock | ToolBlock | UIBlock;
 
 export interface ToolCall {
   name: string;

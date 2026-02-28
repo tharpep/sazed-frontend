@@ -3,6 +3,7 @@ import { ToolCard } from "./ToolCard";
 import { EventLine } from "./EventLine";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { MarkdownContent } from "./MarkdownContent";
+import { WidgetRenderer } from "../../widgets/WidgetRenderer";
 import styles from "./Message.module.css";
 
 interface MessageProps {
@@ -25,6 +26,8 @@ export function Message({ message, isLastStreaming = false }: MessageProps) {
         message.blocks!.map((block, i) =>
           block.type === "tool" ? (
             <ToolCard key={i} {...block} />
+          ) : block.type === "ui" ? (
+            <WidgetRenderer key={i} name={block.component} props={block.props} />
           ) : (
             <div key={i} className={styles.body}>
               <MarkdownContent content={block.content} />

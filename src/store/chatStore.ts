@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Message, MessageBlock, ToolBlock } from "../mock/data";
+import type { Message, MessageBlock, ToolBlock, UIBlock } from "../mock/data";
 import { postMessageStream } from "../api/chat";
 import { getConversation } from "../api/conversations";
 import type { RawMessage, RawContentBlock } from "../api/conversations";
@@ -113,6 +113,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
               blocks.push({ type: "text", content: delta });
             }
             last.blocks = blocks;
+            messages[messages.length - 1] = last;
+            return { messages };
+          });
+        },
+
+        onUiBlock: ({ component, props }) => {
+          set((s) => {
+            const messages = [...s.messages];
+            const last = { ...messages[messages.length - 1] };
+            const uiBlock: UIBlock = { type: "ui", component, props };
+            last.blocks = [...(last.blocks ?? []), uiBlock];
             messages[messages.length - 1] = last;
             return { messages };
           });
