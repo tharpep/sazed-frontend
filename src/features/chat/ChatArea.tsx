@@ -10,6 +10,10 @@ export function ChatArea() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevStreamingRef = useRef(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const rafId = useRef(0);
+
+  // Cancel pending rAF on unmount
+  useEffect(() => () => { if (rafId.current) cancelAnimationFrame(rafId.current); }, []);
 
   function isNearBottom() {
     const el = areaRef.current;
@@ -18,11 +22,16 @@ export function ChatArea() {
   }
 
   function handleScroll() {
-    setShowScrollBtn(!isNearBottom());
+    if (rafId.current) return;
+    rafId.current = requestAnimationFrame(() => {
+      rafId.current = 0;
+      const next = !isNearBottom();
+      setShowScrollBtn((prev) => (prev === next ? prev : next));
+    });
   }
 
-  function scrollToBottom() {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  function scrollToBottom(smooth = false) {
+    bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "instant" });
   }
 
   useEffect(() => {
@@ -54,7 +63,7 @@ export function ChatArea() {
         <button
           type="button"
           className={styles.scrollBtn}
-          onClick={scrollToBottom}
+          onClick={() => scrollToBottom(true)}
           aria-label="Scroll to bottom"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
