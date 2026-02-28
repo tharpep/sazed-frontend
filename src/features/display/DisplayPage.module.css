@@ -13,10 +13,12 @@
 /* ── Info panel (main content) ───────────────────────────────────────────── */
 .infoPanel {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   padding: 24px 20px 20px;
   transition: padding-bottom 0.2s var(--ease);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .infoPanel.hasFeed {
@@ -28,70 +30,74 @@
   padding-right: 68px;
 }
 
-/* ── Ambient grid — 3 columns on desktop ─────────────────────────────────── */
-.ambientGrid {
+/* ── Card grid — 3×2 on desktop, 2×2 on mobile ─────────────────────────────────── */
+.cardGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 1fr 1fr auto;
   gap: 10px;
   margin-top: 16px;
+  flex: 1;
+  min-height: 0;
 }
 
-/* ── Sazed zone ──────────────────────────────────────────────────────────── */
-.sazedZone {
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
-  margin-top: 16px;
+/* ── Sazed card slot ─────────────────────────────────────────────────────── */
+.sazedCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.sazedHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.sazedLabel {
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--accent-muted);
-}
-
-.dots {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-}
-
-.dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--text-faint);
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.dotActive {
-  background: var(--accent);
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .sazedLoading {
   font-size: 12px;
   color: var(--text-faint);
-  padding: 4px 0;
 }
 
-.sazedEmpty {
+.sazedPlaceholder {
   font-size: 12px;
   color: var(--text-faint);
-  padding: 4px 0;
+  text-align: center;
+}
+
+.sazedText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.sazedText p {
+  margin: 0 0 0.3em;
+}
+
+.sazedText ul,
+.sazedText ol {
+  margin: 0.15em 0;
+  padding-left: 1.4em;
+}
+
+.sazedText li {
+  margin-bottom: 0.15em;
+}
+
+/* Brief card spans full width of grid */
+.briefCard {
+  grid-column: 1 / -1;
+}
+
+/* desktop-only cards — hidden on mobile via media query */
+.desktopOnly {
+  display: block;
 }
 
 /* ── Voice bar (floating top-right overlay) ──────────────────────────────── */
@@ -266,6 +272,7 @@
 @media (max-width: 660px), (max-height: 520px) {
   .infoPanel {
     padding: 16px 16px 16px;
+    overflow: hidden;
   }
 
   .infoPanel.hasFeed {
@@ -276,15 +283,15 @@
     padding-right: 60px;
   }
 
-  .ambientGrid {
+  .cardGrid {
     grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 1fr 1fr auto;
     gap: 8px;
     margin-top: 12px;
   }
 
-  .sazedZone {
-    padding-top: 10px;
-    margin-top: 12px;
+  .desktopOnly {
+    display: none;
   }
 
   .voiceBar {

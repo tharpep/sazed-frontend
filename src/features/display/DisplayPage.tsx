@@ -8,6 +8,8 @@ import { TaskWidget } from "../../widgets/TaskWidget";
 import { EmailBadge } from "../../widgets/EmailBadge";
 import { FinanceWidget } from "../../widgets/FinanceWidget";
 import { WeatherWidget } from "../../widgets/WeatherWidget";
+import { GitHubWidget } from "../../widgets/GitHubWidget";
+import type { GitHubIssue } from "../../widgets/GitHubWidget";
 import { WidgetRenderer } from "../../widgets/WidgetRenderer";
 import { useDisplayData } from "../../hooks/useDisplayData";
 import { postMessageStream } from "../../api/chat";
@@ -61,12 +63,20 @@ const PHASE_LABEL: Record<Phase, string> = {
 
 const VOICE_STORAGE_KEY = "sazed-voice-uri";
 const MUTE_STORAGE_KEY = "sazed-mute";
-const BRIEF_DATE_KEY = "sazed-brief-date";
-const BRIEF_CARDS_KEY = "sazed-brief-cards";
 
 const BRIEF_PROMPT =
-  "Give me a brief summary of my day. Use CalendarWidget for today's events if there are any, " +
-  "and TaskWidget for tasks due today. Keep it to 1–2 sentences of text.";
+  "You are an at-a-glance briefing card on my dashboard. " +
+  "Other cards already show calendar events, tasks, email count, bills, and weather \u2014 do NOT repeat that data. " +
+  "Check my emails, calendar, and tasks, then give me a SHORT markdown-formatted brief: " +
+  "use bold for key items, bullet points if needed, and keep it to 2\u20134 lines max. " +
+  "Focus only on: what to prioritize, anything needing follow-up, and connections between items. " +
+  "Be terse and actionable \u2014 no greetings, no filler, absolutely NO emojis.";
+
+const GITHUB_PROMPT =
+  "Look at open issues in the tharpep/sazed GitHub repository. " +
+  "Pick the top 3 most relevant issues to work on next based on priority, dependencies, and impact. " +
+  "Respond with ONLY valid JSON \u2014 no markdown fences, no explanation, just the array: " +
+  '[{\"number\": 1, \"title\": \"...\", \"reason\": \"short 3-5 word reason\"}]';
 
 export function DisplayPage() {
   const displayData = useDisplayData();
@@ -82,18 +92,14 @@ export function DisplayPage() {
     () => localStorage.getItem(MUTE_STORAGE_KEY) === "true"
   );
 
-  // Sazed zone — cycling queue of UIBlocks from brief + voice interactions
-  const [sazedQueue, setSazedQueue] = useState<UIBlock[]>(() => {
-    try {
-      const stored = localStorage.getItem(BRIEF_CARDS_KEY);
-      return stored ? (JSON.parse(stored) as UIBlock[]) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [activeCardIdx, setActiveCardIdx] = useState(0);
+  // Sazed slot — UIBlock set by voice interactions (overrides brief text)
+  const [sazedSlot, setSazedSlot] = useState<UIBlock | null>(null);
+  const [briefText, setBriefText] = useState("");
   const [briefLoading, setBriefLoading] = useState(false);
-
+  // GitHub card \u2014 Sazed-decided issue picks
+  const [githubIssues, setGithubIssues] = useState<GitHubIssue[]>([]);
+  const [githubLoading, setGithubLoading] = useState(false);
+  const [githubError, setGithubError] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const ttsBufferRef = useRef("");
   const utteranceCountRef = useRef(0);
@@ -156,28 +162,10 @@ export function DisplayPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Sazed zone cycling
+  // Brief — fires on every page load, captures text for the Sazed card
   useEffect(() => {
-    if (sazedQueue.length <= 1) return;
-    const id = setInterval(() => {
-      setActiveCardIdx((prev) => (prev + 1) % sazedQueue.length);
-    }, 30_000);
-    return () => clearInterval(id);
-  }, [sazedQueue.length]);
-
-  // Daily brief — fires once per day on mount
-  useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const briefDate = localStorage.getItem(BRIEF_DATE_KEY);
-    if (briefDate === today) return; // already ran today
-
     setBriefLoading(true);
-    const briefCards: UIBlock[] = [];
-
-    setMessages((prev) => [
-      ...prev,
-      { role: "assistant", content: "", uiBlocks: [] },
-    ]);
+    let text = "";
 
     postMessageStream(
       {
@@ -188,62 +176,51 @@ export function DisplayPage() {
       },
       {
         onSession: (id) => { sessionIdRef.current = id; },
-
-        onToolStart: (name) => {
-          setMessages((prev) => {
-            const msgs = [...prev];
-            const last = { ...msgs[msgs.length - 1] };
-            last.tools = [...(last.tools ?? []), toolCallPending(name)];
-            msgs[msgs.length - 1] = last;
-            return msgs;
-          });
-        },
-
-        onToolDone: () => { /* tool status updates not needed for brief display */ },
-
-        onText: (delta) => {
-          setMessages((prev) => {
-            const msgs = [...prev];
-            const last = { ...msgs[msgs.length - 1] };
-            last.content = last.content + delta;
-            msgs[msgs.length - 1] = last;
-            return msgs;
-          });
-        },
-
+        onToolStart: () => {},
+        onToolDone: () => {},
+        onText: (delta) => { text += delta; },
         onUiBlock: ({ component, props }) => {
-          const block: UIBlock = { type: "ui", component, props };
-          briefCards.push(block);
-          setMessages((prev) => {
-            const msgs = [...prev];
-            const last = { ...msgs[msgs.length - 1] };
-            last.uiBlocks = [...(last.uiBlocks ?? []), block];
-            msgs[msgs.length - 1] = last;
-            return msgs;
-          });
-          setSazedQueue([...briefCards]);
-          setActiveCardIdx(0);
+          setSazedSlot({ type: "ui", component, props });
         },
-
         onDone: () => {
           setBriefLoading(false);
-          localStorage.setItem(BRIEF_DATE_KEY, today);
-          if (briefCards.length > 0) {
-            localStorage.setItem(BRIEF_CARDS_KEY, JSON.stringify(briefCards));
+          if (text.trim()) setBriefText(text.trim());
+        },
+        onError: () => { setBriefLoading(false); },
+      }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // GitHub issues — Sazed picks top 3, fires on every page load
+  useEffect(() => {
+    setGithubLoading(true);
+    let raw = "";
+
+    postMessageStream(
+      {
+        session_id: sessionIdRef.current ?? undefined,
+        message: GITHUB_PROMPT,
+        mode: "display",
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+      {
+        onSession: (id) => { sessionIdRef.current = id; },
+        onToolStart: () => {},
+        onToolDone: () => {},
+        onText: (delta) => { raw += delta; },
+        onUiBlock: () => {},
+        onDone: () => {
+          setGithubLoading(false);
+          try {
+            const parsed = JSON.parse(raw.trim());
+            if (Array.isArray(parsed)) setGithubIssues(parsed as GitHubIssue[]);
+            else setGithubError(true);
+          } catch {
+            setGithubError(true);
           }
         },
-
-        onError: () => {
-          setBriefLoading(false);
-          // Remove empty brief message if nothing came through
-          setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last?.role === "assistant" && !last.content && !last.uiBlocks?.length) {
-              return prev.slice(0, -1);
-            }
-            return prev;
-          });
-        },
+        onError: () => { setGithubLoading(false); setGithubError(true); },
       }
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -405,9 +382,7 @@ export function DisplayPage() {
             msgs[msgs.length - 1] = last;
             return msgs;
           });
-          // Also push to Sazed zone (front of queue)
-          setSazedQueue((prev) => [block, ...prev]);
-          setActiveCardIdx(0);
+          setSazedSlot(block);
         },
 
         onDone: () => {
@@ -492,8 +467,7 @@ export function DisplayPage() {
   }
 
   const isLastStreaming = phase === "thinking" || phase === "speaking";
-  const activeSazedCard = sazedQueue[activeCardIdx] ?? null;
-  const hasFeed = messages.length > 0;
+  const hasFeed = phase !== "idle";
 
   return (
     <div className={styles.page}>
@@ -548,7 +522,7 @@ export function DisplayPage() {
           <ClockWidget />
         </div>
 
-        <div className={styles.ambientGrid}>
+        <div className={styles.cardGrid}>
           <CalendarWidget events={displayData.calendar.data?.events} />
           <TaskWidget
             tasks={displayData.tasks.data?.tasks}
@@ -558,35 +532,30 @@ export function DisplayPage() {
             count={displayData.email.data?.count}
             messages={displayData.email.data?.messages}
           />
-          <FinanceWidget upcoming={displayData.finance.data ?? undefined} />
-          <WeatherWidget />
-        </div>
-
-        <div className={styles.sazedZone}>
-          <div className={styles.sazedHeader}>
-            <span className={styles.sazedLabel}>sazed</span>
-            {sazedQueue.length > 1 && (
-              <div className={styles.dots}>
-                {sazedQueue.map((_, i) => (
-                  <button
-                    key={i}
-                    className={`${styles.dot} ${i === activeCardIdx ? styles.dotActive : ""}`}
-                    onClick={() => setActiveCardIdx(i)}
-                    aria-label={`Card ${i + 1}`}
-                  />
-                ))}
+          <div className={styles.desktopOnly}>
+            <FinanceWidget upcoming={displayData.finance.data ?? undefined} />
+          </div>
+          <div className={styles.desktopOnly}>
+            <WeatherWidget />
+          </div>
+          <GitHubWidget
+            issues={githubIssues}
+            loading={githubLoading}
+            error={githubError}
+          />
+          <div className={`${styles.sazedCard} ${styles.briefCard}`}>
+            {briefLoading && !sazedSlot && !briefText ? (
+              <div className={styles.sazedLoading}>preparing your brief\u2026</div>
+            ) : sazedSlot ? (
+              <WidgetRenderer name={sazedSlot.component} props={sazedSlot.props} />
+            ) : briefText ? (
+              <div className={styles.sazedText}>
+                <MarkdownContent content={briefText} />
               </div>
+            ) : (
+              <div className={styles.sazedPlaceholder}>ask me anything</div>
             )}
           </div>
-          {briefLoading && !activeSazedCard && (
-            <div className={styles.sazedLoading}>preparing your brief…</div>
-          )}
-          {activeSazedCard && (
-            <WidgetRenderer name={activeSazedCard.component} props={activeSazedCard.props} />
-          )}
-          {!briefLoading && !activeSazedCard && (
-            <div className={styles.sazedEmpty}>say something to get started</div>
-          )}
         </div>
       </div>
 

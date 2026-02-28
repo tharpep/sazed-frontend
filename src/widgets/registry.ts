@@ -5,6 +5,7 @@ import { TaskWidget } from "./TaskWidget";
 import { EmailBadge } from "./EmailBadge";
 import { FinanceWidget } from "./FinanceWidget";
 import { WeatherWidget } from "./WeatherWidget";
+import { GitHubWidget } from "./GitHubWidget";
 
 export type WidgetName =
   | "ClockWidget"
@@ -12,7 +13,8 @@ export type WidgetName =
   | "TaskWidget"
   | "EmailBadge"
   | "FinanceWidget"
-  | "WeatherWidget";
+  | "WeatherWidget"
+  | "GitHubWidget";
 
 export interface WidgetMeta {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,6 +70,14 @@ export const WIDGET_REGISTRY: Record<WidgetName, WidgetMeta> = {
       "Current weather stub. Props: { temp?: number, condition?: string, location?: string }. Returns placeholder until Google Weather is integrated.",
     propsSchema:
       '{"temp":{"type":"number"},"condition":{"type":"string"},"location":{"type":"string"}}',
+  },
+  GitHubWidget: {
+    component: GitHubWidget,
+    ownership: "agent",
+    description:
+      "Top GitHub issues to work on. Props: { issues: Array<{ number, title, reason? }> }.",
+    propsSchema:
+      '{"issues":{"type":"array","items":{"type":"object","properties":{"number":{"type":"number"},"title":{"type":"string"},"reason":{"type":"string"}}}}}',
   },
 };
 
