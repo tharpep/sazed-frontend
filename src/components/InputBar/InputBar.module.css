@@ -42,6 +42,11 @@
   display: block;
 }
 
+.input:focus,
+.input:focus-visible {
+  outline: none;
+}
+
 .bar.disabled {
   opacity: 0.85;
 }
