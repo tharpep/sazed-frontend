@@ -47,6 +47,9 @@ export async function getConversation(
 export interface ArchiveResponse {
   sessions_archived: number;
   messages_archived: number;
+  kb_summaries_written?: number;
+  kb_failures?: number;
+  kb_errors?: string[];
 }
 
 export async function archiveSessions(

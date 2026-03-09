@@ -39,10 +39,16 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     setArchiveResult(null);
     try {
       const res = await archiveSessions(olderThanDays);
-      setArchiveResult({
-        ok: true,
-        text: `Archived ${res.sessions_archived} session${res.sessions_archived !== 1 ? "s" : ""} and ${res.messages_archived} message${res.messages_archived !== 1 ? "s" : ""}.`,
-      });
+      const sessionWord = res.sessions_archived !== 1 ? "sessions" : "session";
+      const msgWord = res.messages_archived !== 1 ? "messages" : "message";
+      let text = `Archived ${res.sessions_archived} ${sessionWord} and ${res.messages_archived} ${msgWord}.`;
+      if (res.kb_summaries_written != null) {
+        text += ` ${res.kb_summaries_written} Drive summary${res.kb_summaries_written !== 1 ? "ies" : ""} written.`;
+      }
+      if (res.kb_failures) {
+        text += ` ${res.kb_failures} Drive upload${res.kb_failures !== 1 ? "s" : ""} failed: ${res.kb_errors?.join("; ")}`;
+      }
+      setArchiveResult({ ok: !res.kb_failures, text });
       await loadSessions();
     } catch {
       setArchiveResult({ ok: false, text: "Archive failed. Check the console or API logs." });
