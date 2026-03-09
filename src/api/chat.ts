@@ -4,6 +4,7 @@ export interface PostMessageBody {
   message: string;
   mode?: string;
   timezone?: string;
+  location?: { latitude: number; longitude: number; accuracy?: number };
 }
 
 export interface StreamCallbacks {

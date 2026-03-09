@@ -1,6 +1,24 @@
 import { create } from "zustand";
 import type { Message, MessageBlock, ToolBlock, UIBlock } from "../mock/data";
 import { postMessageStream } from "../api/chat";
+
+// Capture device location once per session and cache it
+let _cachedLocation: { latitude: number; longitude: number; accuracy?: number } | null = null;
+
+async function _getLocation(): Promise<{ latitude: number; longitude: number; accuracy?: number } | undefined> {
+  if (_cachedLocation) return _cachedLocation;
+  if (!navigator.geolocation) return undefined;
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        _cachedLocation = { latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy ?? undefined };
+        resolve(_cachedLocation);
+      },
+      () => resolve(undefined),
+      { timeout: 5000 },
+    );
+  });
+}
 import { getConversation } from "../api/conversations";
 import type { RawMessage, RawContentBlock } from "../api/conversations";
 import { toolUseToToolCall, toolCallPending } from "../lib/toolMap";
@@ -68,8 +86,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isStreaming: true,
     }));
 
+    const location = await _getLocation();
     await postMessageStream(
-      { session_id: sessionId ?? undefined, message: trimmed, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+      { session_id: sessionId ?? undefined, message: trimmed, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, location },
       {
         onSession: (id) => set({ sessionId: id }),
 
