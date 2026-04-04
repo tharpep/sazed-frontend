@@ -4,6 +4,7 @@ export interface RawSession {
   session_id: string;
   message_count: number;
   last_activity: string;
+  title?: string;
 }
 
 export interface RawMessage {

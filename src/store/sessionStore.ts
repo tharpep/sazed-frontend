@@ -52,7 +52,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       const res = await listConversations();
       const sessions: Session[] = res.conversations.map((c) => ({
         id: c.session_id,
-        title: `${c.session_id.slice(0, 8)}…`,
+        title: c.title ?? `${c.session_id.slice(0, 8)}…`,
         time: formatTime(c.last_activity),
         dateGroup: dateGroup(c.last_activity),
       }));
