@@ -27,25 +27,12 @@
   color: var(--text-faint);
 }
 
-.countRow {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  margin-bottom: 6px;
-}
-
-.count {
-  font-size: 28px;
-  font-weight: 300;
+.countBadge {
   color: var(--pastel-red);
-  letter-spacing: -0.02em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.countLabel {
-  font-size: 12px;
-  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .snippets {

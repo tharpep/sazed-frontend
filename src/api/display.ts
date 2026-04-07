@@ -52,7 +52,11 @@ export interface UpcomingPayment {
 }
 
 export interface WeatherData {
-  available: false;
+  temp: number;
+  condition: string;
+  high: number;
+  low: number;
+  precip_chance: number;
 }
 
 // --- Fetch functions ---
@@ -103,7 +107,49 @@ export async function fetchUpcomingPayments(days = 7): Promise<UpcomingPayment[]
   return apiFetch(`/finance/upcoming?days=${days}`) as Promise<UpcomingPayment[]>;
 }
 
-export function fetchWeather(): WeatherData {
-  // Stub — returns unavailable until Google Weather/Places integration is added
-  return { available: false };
+export async function fetchUpcomingCalendar(): Promise<CalendarData> {
+  return apiFetch("/calendar/events?days=7") as Promise<CalendarData>;
+}
+
+const WMO_CONDITIONS: Record<number, string> = {
+  0: "Clear", 1: "Mostly clear", 2: "Partly cloudy", 3: "Cloudy",
+  45: "Foggy", 48: "Freezing fog",
+  51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
+  61: "Light rain", 63: "Rain", 65: "Heavy rain",
+  71: "Light snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains",
+  80: "Showers", 81: "Rain showers", 82: "Heavy showers",
+  85: "Snow showers", 86: "Heavy snow showers",
+  95: "Thunderstorm", 96: "Thunderstorm", 99: "Thunderstorm",
+};
+
+export async function fetchWeather(): Promise<WeatherData | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords: { latitude, longitude } }) => {
+        try {
+          const url =
+            `https://api.open-meteo.com/v1/forecast` +
+            `?latitude=${latitude}&longitude=${longitude}` +
+            `&current=temperature_2m,weather_code` +
+            `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
+            `&temperature_unit=fahrenheit&timezone=auto&forecast_days=1`;
+          const resp = await fetch(url);
+          if (!resp.ok) { resolve(null); return; }
+          const data = await resp.json();
+          resolve({
+            temp: Math.round(data.current.temperature_2m as number),
+            condition: WMO_CONDITIONS[data.current.weather_code as number] ?? "Unknown",
+            high: Math.round(data.daily.temperature_2m_max[0] as number),
+            low: Math.round(data.daily.temperature_2m_min[0] as number),
+            precip_chance: (data.daily.precipitation_probability_max[0] as number) ?? 0,
+          });
+        } catch {
+          resolve(null);
+        }
+      },
+      () => resolve(null),
+      { timeout: 10_000 }
+    );
+  });
 }

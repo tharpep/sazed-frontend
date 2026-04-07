@@ -5,6 +5,7 @@ import {
   fetchTasksDueToday,
   fetchUnreadEmail,
   fetchUpcomingPayments,
+  fetchUpcomingCalendar,
 } from "../api/display";
 
 interface WidgetState<T> {
@@ -15,6 +16,7 @@ interface WidgetState<T> {
 
 export interface DisplayData {
   calendar: WidgetState<CalendarData>;
+  upcoming: WidgetState<CalendarData>;
   tasks: WidgetState<TasksData>;
   email: WidgetState<EmailData>;
   finance: WidgetState<UpcomingPayment[]>;
@@ -22,6 +24,7 @@ export interface DisplayData {
 
 const INTERVALS = {
   calendar: 5 * 60 * 1000,   // 5 min
+  upcoming: 5 * 60 * 1000,   // 5 min
   tasks:    10 * 60 * 1000,  // 10 min
   email:    5 * 60 * 1000,   // 5 min
   finance:  30 * 60 * 1000,  // 30 min
@@ -33,6 +36,7 @@ function init<T>(): WidgetState<T> {
 
 export function useDisplayData(): DisplayData {
   const [calendar, setCalendar] = useState<WidgetState<CalendarData>>(init);
+  const [upcoming, setUpcoming] = useState<WidgetState<CalendarData>>(init);
   const [tasks, setTasks] = useState<WidgetState<TasksData>>(init);
   const [email, setEmail] = useState<WidgetState<EmailData>>(init);
   const [finance, setFinance] = useState<WidgetState<UpcomingPayment[]>>(init);
@@ -59,9 +63,10 @@ export function useDisplayData(): DisplayData {
   }
 
   useEffect(() => poll(fetchCalendarToday, setCalendar, INTERVALS.calendar), []);
+  useEffect(() => poll(fetchUpcomingCalendar, setUpcoming, INTERVALS.upcoming), []);
   useEffect(() => poll(fetchTasksDueToday, setTasks, INTERVALS.tasks), []);
   useEffect(() => poll(fetchUnreadEmail, setEmail, INTERVALS.email), []);
   useEffect(() => poll(fetchUpcomingPayments, setFinance, INTERVALS.finance), []);
 
-  return { calendar, tasks, email, finance };
+  return { calendar, upcoming, tasks, email, finance };
 }

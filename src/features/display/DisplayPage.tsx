@@ -4,14 +4,17 @@ import { StreamingIndicator } from "../chat/StreamingIndicator";
 import { MarkdownContent } from "../chat/MarkdownContent";
 import { ClockWidget } from "../../widgets/ClockWidget";
 import { CalendarWidget } from "../../widgets/CalendarWidget";
+import { UpcomingWidget } from "../../widgets/UpcomingWidget";
 import { TaskWidget } from "../../widgets/TaskWidget";
 import { EmailBadge } from "../../widgets/EmailBadge";
-import { FinanceWidget } from "../../widgets/FinanceWidget";
 import { WeatherWidget } from "../../widgets/WeatherWidget";
 import { GitHubWidget } from "../../widgets/GitHubWidget";
 import type { GitHubIssue } from "../../widgets/GitHubWidget";
 import { WidgetRenderer } from "../../widgets/WidgetRenderer";
 import { useDisplayData } from "../../hooks/useDisplayData";
+import { fetchWeather } from "../../api/display";
+import type { WeatherData } from "../../api/display";
+import { apiFetch } from "../../api/client";
 import { postMessageStream } from "../../api/chat";
 import { toolCallPending } from "../../lib/toolMap";
 import type { ToolCall, UIBlock } from "../../mock/data";
@@ -55,7 +58,7 @@ interface ISpeechRecognition {
 }
 
 const PHASE_LABEL: Record<Phase, string> = {
-  idle: "tap to talk",
+  idle: "ask sazed anything...",
   listening: "listening...",
   thinking: "thinking...",
   speaking: "speaking...",
@@ -77,7 +80,7 @@ const GITHUB_PROMPT =
   "Look at open issues in the tharpep/sazed GitHub repository. " +
   "Pick the top 3 most relevant issues to work on next based on priority, dependencies, and impact. " +
   "Respond with ONLY valid JSON \u2014 no markdown fences, no explanation, just the array: " +
-  '[{\"number\": 1, \"title\": \"...\", \"reason\": \"short 3-5 word reason\"}]';
+  '[{"number": 1, "title": "...", "reason": "short 3-5 word reason"}]';
 
 export function DisplayPage() {
   const displayData = useDisplayData();
@@ -92,15 +95,19 @@ export function DisplayPage() {
   const [muted, setMuted] = useState<boolean>(
     () => localStorage.getItem(MUTE_STORAGE_KEY) === "true"
   );
+  const [inputText, setInputText] = useState("");
+  const [online, setOnline] = useState(true);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
 
   // Sazed slot — UIBlock set by voice interactions (overrides brief text)
   const [sazedSlot, setSazedSlot] = useState<UIBlock | null>(null);
   const [briefText, setBriefText] = useState("");
   const [briefLoading, setBriefLoading] = useState(false);
-  // GitHub card \u2014 Sazed-decided issue picks
   const [githubIssues, setGithubIssues] = useState<GitHubIssue[]>([]);
   const [githubLoading, setGithubLoading] = useState(false);
   const [githubError, setGithubError] = useState(false);
+
   const sessionIdRef = useRef<string | null>(null);
   const ttsBufferRef = useRef("");
   const utteranceCountRef = useRef(0);
@@ -116,6 +123,7 @@ export function DisplayPage() {
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const cancelledListeningRef = useRef(false);
   const mutedRef = useRef(muted);
+  const touchStartY = useRef(0);
 
   // Wake lock
   useEffect(() => {
@@ -134,6 +142,25 @@ export function DisplayPage() {
       document.removeEventListener("visibilitychange", onVisibility);
       wakeLockRef.current?.release();
     };
+  }, []);
+
+  // Health poll
+  useEffect(() => {
+    const check = () =>
+      (apiFetch("/health") as Promise<unknown>)
+        .then(() => setOnline(true))
+        .catch(() => setOnline(false));
+    check();
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Weather fetch
+  useEffect(() => {
+    setWeatherLoading(true);
+    fetchWeather()
+      .then((d) => { setWeather(d); setWeatherLoading(false); })
+      .catch(() => setWeatherLoading(false));
   }, []);
 
   // Load voices
@@ -158,16 +185,15 @@ export function DisplayPage() {
     return () => speechSynthesis.removeEventListener("voiceschanged", load);
   }, []);
 
-  // Auto-scroll
+  // Auto-scroll feed
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Brief — fires on every page load, captures text for the Sazed card
+  // Brief
   useEffect(() => {
     setBriefLoading(true);
     let text = "";
-
     postMessageStream(
       {
         session_id: sessionIdRef.current ?? undefined,
@@ -193,11 +219,10 @@ export function DisplayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // GitHub issues — Sazed picks top 3, fires on every page load
+  // GitHub issues
   useEffect(() => {
     setGithubLoading(true);
     let raw = "";
-
     postMessageStream(
       {
         session_id: sessionIdRef.current ?? undefined,
@@ -227,7 +252,7 @@ export function DisplayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Voice functions (preserved) ──────────────────────────────────────────
+  // ── Voice functions ──────────────────────────────────────────────────────
 
   function startListening() {
     const w = window as unknown as Record<string, unknown>;
@@ -306,6 +331,7 @@ export function DisplayPage() {
 
   async function sendMessage(text: string) {
     setPhase("thinking");
+    setInputText("");
     setMessages((prev) => [
       ...prev,
       { role: "user", content: text },
@@ -331,7 +357,6 @@ export function DisplayPage() {
       },
       {
         onSession: (id) => { sessionIdRef.current = id; },
-
         onToolStart: (name) => {
           setMessages((prev) => {
             const msgs = [...prev];
@@ -341,7 +366,6 @@ export function DisplayPage() {
             return msgs;
           });
         },
-
         onToolDone: (name) => {
           const label = name.replace(/_/g, " ");
           setMessages((prev) => {
@@ -359,7 +383,6 @@ export function DisplayPage() {
             return msgs;
           });
         },
-
         onText: (delta) => {
           setMessages((prev) => {
             const msgs = [...prev];
@@ -373,7 +396,6 @@ export function DisplayPage() {
             flushTtsBuffer(false);
           }
         },
-
         onUiBlock: ({ component, props }) => {
           const block: UIBlock = { type: "ui", component, props };
           setMessages((prev) => {
@@ -385,7 +407,6 @@ export function DisplayPage() {
           });
           setSazedSlot(block);
         },
-
         onDone: () => {
           streamDoneRef.current = true;
           if (!mutedRef.current) flushTtsBuffer(true);
@@ -401,7 +422,6 @@ export function DisplayPage() {
             }, 250);
           }
         },
-
         onError: (err) => {
           setMessages((prev) => {
             const msgs = [...prev];
@@ -414,7 +434,7 @@ export function DisplayPage() {
     );
   }
 
-  function handleTap() {
+  function handleMicTap() {
     if (phase === "speaking") {
       speechSynthesis.cancel();
       finalizedRef.current = true;
@@ -446,6 +466,12 @@ export function DisplayPage() {
     startListening();
   }
 
+  function handleInputSubmit() {
+    const text = inputText.trim();
+    if (!text || phase !== "idle") return;
+    void sendMessage(text);
+  }
+
   function handleVoiceChange(uri: string) {
     setSelectedVoiceUri(uri);
     selectedVoiceUriRef.current = uri;
@@ -467,62 +493,40 @@ export function DisplayPage() {
     });
   }
 
+  // Pull-to-refresh
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartY.current = e.touches[0].clientY;
+  }
+  function handleTouchEnd(e: React.TouchEvent) {
+    const delta = e.changedTouches[0].clientY - touchStartY.current;
+    if (delta > 70) window.location.reload();
+  }
+
   const isLastStreaming = phase === "thinking" || phase === "speaking";
-  const hasFeed = phase !== "idle";
+  const hasFeed = phase !== "idle" || messages.length > 0;
 
   return (
-    <div className={styles.page}>
-      {/* ── Floating voice bar (top-right) ─────────────────────────────── */}
-      <div className={styles.voiceBar}>
-        <div className={styles.voiceControls}>
-          {voices.length > 0 && !muted && (
-            <select
-              className={styles.voiceSelect}
-              value={selectedVoiceUri}
-              onChange={(e) => handleVoiceChange(e.target.value)}
-              aria-label="Select voice"
-            >
-              {voices.map((v) => (
-                <option key={v.voiceURI} value={v.voiceURI}>
-                  {v.name}{v.localService ? " · device" : " · cloud"}
-                </option>
-              ))}
-            </select>
-          )}
-          <button
-            className={`${styles.iconBtn} ${conversationMode ? styles.iconActive : ""}`}
-            onClick={toggleConversationMode}
-            aria-label={conversationMode ? "turn off conversation mode" : "turn on conversation mode"}
-          >
-            <LoopIcon />
-          </button>
-          <button
-            className={`${styles.iconBtn} ${muted ? styles.iconActive : ""}`}
-            onClick={toggleMute}
-            aria-label={muted ? "unmute voice output" : "mute voice output"}
-          >
-            <MuteIcon muted={muted} />
-          </button>
-          <button
-            className={`${styles.micBtn} ${styles[phase]}`}
-            onClick={handleTap}
-            disabled={phase === "thinking"}
-            aria-label={PHASE_LABEL[phase]}
-          >
-            <MicIcon phase={phase} />
-          </button>
-        </div>
-        {phase !== "idle" && (
-          <span className={styles.voiceStatus}>{PHASE_LABEL[phase]}</span>
-        )}
-      </div>
-
-      {/* ── Info panel (main content) ───────────────────────────────────── */}
+    <div
+      className={styles.page}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* ── Info panel ───────────────────────────────────────────────────── */}
       <div className={`${styles.infoPanel} ${hasFeed ? styles.hasFeed : ""}`}>
-        <div className={styles.clockZone}>
+
+        {/* Clock row: clock left, status right */}
+        <div className={styles.clockRow}>
           <ClockWidget />
+          <div className={styles.statusBar}>
+            <span className={`${styles.statusDot} ${online ? styles.online : styles.offline}`}>●</span>
+            <span className={styles.statusText}>{online ? "All systems" : "Offline"}</span>
+            {weather && (
+              <span className={styles.statusTemp}>{weather.temp}°F</span>
+            )}
+          </div>
         </div>
 
+        {/* 3×2 widget grid */}
         <div className={styles.cardGrid}>
           <CalendarWidget events={displayData.calendar.data?.events} />
           <TaskWidget
@@ -533,20 +537,18 @@ export function DisplayPage() {
             count={displayData.email.data?.count}
             messages={displayData.email.data?.messages}
           />
-          <div className={styles.desktopOnly}>
-            <FinanceWidget upcoming={displayData.finance.data ?? undefined} />
-          </div>
-          <div className={styles.desktopOnly}>
-            <WeatherWidget />
-          </div>
+          <UpcomingWidget events={displayData.upcoming.data?.events} />
+          <WeatherWidget data={weather} loading={weatherLoading} />
           <GitHubWidget
             issues={githubIssues}
             loading={githubLoading}
             error={githubError}
           />
+
+          {/* Briefing — full width */}
           <div className={`${styles.sazedCard} ${styles.briefCard}`}>
             {briefLoading && !sazedSlot && !briefText ? (
-              <div className={styles.sazedLoading}>preparing your brief\u2026</div>
+              <div className={styles.sazedLoading}>preparing your brief…</div>
             ) : sazedSlot ? (
               <WidgetRenderer name={sazedSlot.component} props={sazedSlot.props} />
             ) : briefText ? (
@@ -554,13 +556,13 @@ export function DisplayPage() {
                 <MarkdownContent content={briefText} />
               </div>
             ) : (
-              <div className={styles.sazedPlaceholder}>ask me anything</div>
+              <div className={styles.sazedPlaceholder}>sazed briefing</div>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Feed panel (fixed bottom, only when there are messages) ────── */}
+      {/* ── Feed panel (slides up when active) ───────────────────────────── */}
       {hasFeed && (
         <div className={styles.feedPanel}>
           {messages.map((msg, i) => {
@@ -591,16 +593,79 @@ export function DisplayPage() {
           <div ref={bottomRef} />
         </div>
       )}
+
+      {/* ── Bottom bar: voice controls + text input + mic ─────────────────── */}
+      <div className={styles.bottomBar}>
+        <div className={styles.barControls}>
+          <button
+            className={`${styles.iconBtn} ${conversationMode ? styles.iconActive : ""}`}
+            onClick={toggleConversationMode}
+            aria-label={conversationMode ? "turn off conversation mode" : "turn on conversation mode"}
+          >
+            <LoopIcon />
+          </button>
+          <button
+            className={`${styles.iconBtn} ${muted ? styles.iconActive : ""}`}
+            onClick={toggleMute}
+            aria-label={muted ? "unmute" : "mute"}
+          >
+            <MuteIcon muted={muted} />
+          </button>
+        </div>
+
+        <div className={styles.inputWrap}>
+          {phase !== "idle" ? (
+            <span className={styles.phaseLabel}>{PHASE_LABEL[phase]}</span>
+          ) : (
+            <>
+              <span className={styles.inputCaret}>▶</span>
+              <input
+                className={styles.textInput}
+                type="text"
+                placeholder="ask sazed anything..."
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleInputSubmit(); }}
+                aria-label="Ask Sazed"
+              />
+            </>
+          )}
+        </div>
+
+        <button
+          className={`${styles.micBtn} ${styles[phase]}`}
+          onClick={handleMicTap}
+          disabled={phase === "thinking"}
+          aria-label={phase === "idle" ? "tap to talk" : PHASE_LABEL[phase]}
+        >
+          <MicIcon phase={phase} />
+        </button>
+
+        {voices.length > 1 && !muted && (
+          <select
+            className={styles.voiceSelect}
+            value={selectedVoiceUri}
+            onChange={(e) => handleVoiceChange(e.target.value)}
+            aria-label="Select voice"
+          >
+            {voices.map((v) => (
+              <option key={v.voiceURI} value={v.voiceURI}>
+                {v.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
     </div>
   );
 }
 
-// ── Icons (preserved) ──────────────────────────────────────────────────────
+// ── Icons ──────────────────────────────────────────────────────────────────
 
 function MicIcon({ phase }: { phase: Phase }) {
   if (phase === "thinking") {
     return (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden>
         <circle cx="8" cy="16" r="3" fill="currentColor">
           <animate attributeName="opacity" values="0.3;1;0.3" dur="1s" begin="0s" repeatCount="indefinite" />
         </circle>
@@ -615,7 +680,7 @@ function MicIcon({ phase }: { phase: Phase }) {
   }
   if (phase === "speaking") {
     return (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden>
         <rect x="4" y="14" width="4" height="4" rx="2" fill="currentColor">
           <animate attributeName="height" values="4;20;4" dur="0.9s" begin="0s" repeatCount="indefinite" />
           <animate attributeName="y" values="14;6;14" dur="0.9s" begin="0s" repeatCount="indefinite" />
@@ -636,7 +701,7 @@ function MicIcon({ phase }: { phase: Phase }) {
     );
   }
   return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden>
       <rect x="11" y="2" width="10" height="16" rx="5" fill="currentColor" />
       <path d="M6 16a10 10 0 0 0 20 0" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none" />
       <line x1="16" y1="26" x2="16" y2="30" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
@@ -647,7 +712,7 @@ function MicIcon({ phase }: { phase: Phase }) {
 
 function LoopIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M17 2l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M3 11V9a4 4 0 0 1 4-4h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path d="M7 22l-4-4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -659,7 +724,7 @@ function LoopIcon() {
 function MuteIcon({ muted }: { muted: boolean }) {
   if (muted) {
     return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
         <path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor" />
         <line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         <line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -667,7 +732,7 @@ function MuteIcon({ muted }: { muted: boolean }) {
     );
   }
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor" />
       <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

@@ -10,35 +10,72 @@
   flex-direction: column;
 }
 
-/* ── Info panel (main content) ───────────────────────────────────────────── */
+/* ── Info panel (scrollable content above bottom bar) ────────────────────── */
 .infoPanel {
   flex: 1;
-  overflow: hidden;
-  padding: 24px 20px 20px;
-  transition: padding-bottom 0.2s var(--ease);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 16px 12px;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  scrollbar-width: none;
+  /* Center content vertically when shorter than viewport */
+  justify-content: center;
 }
+.infoPanel::-webkit-scrollbar { display: none; }
 
+/* When feed panel is visible, leave room for it */
 .infoPanel.hasFeed {
-  padding-bottom: calc(35dvh + 20px);
+  padding-bottom: calc(32dvh + 12px);
+  justify-content: flex-start;
 }
 
-/* Reserve space on the right for the floating voice bar */
-.clockZone {
-  padding-right: 68px;
+/* ── Clock row: clock left, status right ─────────────────────────────────── */
+.clockRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-shrink: 0;
 }
 
-/* ── Card grid — 3×2 on desktop, 2×2 on mobile ─────────────────────────────────── */
+/* ── Status bar (top-right of clock row) ─────────────────────────────────── */
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 16px;
+  flex-shrink: 0;
+}
+
+.statusDot {
+  font-size: 9px;
+  line-height: 1;
+}
+.online  { color: var(--pastel-green); }
+.offline { color: var(--pastel-red, #e88); }
+
+.statusText {
+  font-size: 12px;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+}
+
+.statusTemp {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-family: var(--mono);
+  margin-left: 4px;
+}
+
+/* ── Card grid — 3×2 always ──────────────────────────────────────────────── */
 .cardGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: 1fr 1fr auto;
-  gap: 10px;
-  margin-top: 16px;
-  flex: 1;
-  min-height: 0;
+  grid-template-rows: minmax(130px, auto) minmax(130px, auto) auto;
+  gap: 8px;
+  margin-top: 12px;
+  flex-shrink: 0;
 }
 
 /* ── Sazed card slot ─────────────────────────────────────────────────────── */
@@ -47,11 +84,14 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 12px 14px;
+  min-height: 56px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 0;
-  overflow: hidden;
+}
+
+.briefCard {
+  grid-column: 1 / -1;
 }
 
 .sazedLoading {
@@ -67,61 +107,119 @@
 
 .sazedText {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.55;
   color: var(--text);
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
 }
 
-.sazedText p {
-  margin: 0 0 0.3em;
-}
+.sazedText p { margin: 0 0 0.3em; }
+.sazedText ul, .sazedText ol { margin: 0.15em 0; padding-left: 1.4em; }
+.sazedText li { margin-bottom: 0.15em; }
 
-.sazedText ul,
-.sazedText ol {
-  margin: 0.15em 0;
-  padding-left: 1.4em;
-}
-
-.sazedText li {
-  margin-bottom: 0.15em;
-}
-
-/* Brief card spans full width of grid */
-.briefCard {
-  grid-column: 1 / -1;
-}
-
-/* desktop-only cards — hidden on mobile via media query */
-.desktopOnly {
-  display: block;
-}
-
-/* ── Voice bar (floating top-right overlay) ──────────────────────────────── */
-.voiceBar {
+/* ── Feed panel (fixed, above bottom bar) ────────────────────────────────── */
+.feedPanel {
   position: fixed;
-  top: 16px;
-  right: 16px;
+  bottom: 60px; /* height of bottom bar */
+  left: 0;
+  right: 0;
+  max-height: 32dvh;
+  background: var(--bg-outer);
+  border-top: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 10px 16px 12px;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
+  gap: 14px;
+  z-index: 15;
+}
+
+/* ── Conversation messages ───────────────────────────────────────────────── */
+.msg { display: flex; flex-direction: column; gap: 4px; }
+
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.user .label      { color: var(--text-tertiary); }
+.assistant .label { color: var(--accent-muted); }
+
+.body p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.user .body p      { color: var(--text-secondary); }
+.assistant .body p { color: var(--text); }
+
+/* ── Bottom bar ──────────────────────────────────────────────────────────── */
+.bottomBar {
+  height: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid var(--border);
+  background: var(--bg-outer);
   z-index: 20;
 }
 
-.voiceControls {
+.barControls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+/* ── Text input area ─────────────────────────────────────────────────────── */
+.inputWrap {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0 14px;
+  height: 38px;
+  overflow: hidden;
+}
+
+.inputCaret {
+  font-size: 9px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.textInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text);
+  min-width: 0;
+}
+
+.textInput::placeholder { color: var(--text-faint); }
+
+.phaseLabel {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+  width: 100%;
+  text-align: center;
 }
 
 /* ── Mic button ──────────────────────────────────────────────────────────── */
 .micBtn {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   border: none;
   display: flex;
@@ -129,13 +227,13 @@
   justify-content: center;
   cursor: pointer;
   position: relative;
+  flex-shrink: 0;
   transition: transform 0.15s var(--ease), background 0.2s var(--ease);
   -webkit-tap-highlight-color: transparent;
 }
-
 .micBtn:disabled { cursor: default; }
 
-.idle { background: var(--bg-surface); color: var(--accent); }
+.idle     { background: var(--bg-surface);    color: var(--accent); }
 .idle:hover { background: var(--bg-hover); transform: scale(1.06); }
 .idle:active { transform: scale(0.92); }
 
@@ -146,7 +244,7 @@
 .listening::after {
   content: "";
   position: absolute;
-  inset: -8px;
+  inset: -6px;
   border-radius: 50%;
   border: 2px solid var(--pastel-red);
   animation: pulse-ring 1.4s var(--ease) infinite;
@@ -158,8 +256,8 @@
 
 /* ── Icon-only control buttons ───────────────────────────────────────────── */
 .iconBtn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
@@ -168,99 +266,23 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: color 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+  transition: color 0.15s var(--ease), border-color 0.15s var(--ease);
   -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
 }
-
-.iconBtn:hover {
-  border-color: var(--border-strong);
-  color: var(--text-secondary);
-}
+.iconBtn:hover { border-color: var(--border-strong); color: var(--text-secondary); }
 
 .iconActive {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent);
 }
+.iconActive:hover { background: var(--accent-hover); color: var(--accent); }
 
-.iconActive:hover {
-  background: var(--accent-hover);
-  color: var(--accent);
-}
-
-/* ── Voice select ─────────────────────────────────────────────────────────── */
+/* ── Voice select (hidden by default on small screens) ───────────────────── */
 .voiceSelect {
-  appearance: none;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-family: var(--font);
-  padding: 6px 12px;
-  cursor: pointer;
-  max-width: 140px;
-  outline: none;
-  transition: border-color 0.15s var(--ease), color 0.15s var(--ease);
-  -webkit-tap-highlight-color: transparent;
+  display: none;
 }
-
-.voiceSelect:focus {
-  border-color: var(--border-strong);
-  color: var(--text);
-}
-
-/* ── Voice status ─────────────────────────────────────────────────────────── */
-.voiceStatus {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  letter-spacing: 0.04em;
-  text-align: right;
-  padding-right: 4px;
-}
-
-/* ── Feed panel (fixed bottom, only when messages exist) ─────────────────── */
-.feedPanel {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-height: 35dvh;
-  background: var(--bg-outer);
-  border-top: 1px solid var(--border);
-  overflow-y: auto;
-  padding: 12px 20px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  z-index: 15;
-}
-
-/* ── Conversation messages ───────────────────────────────────────────────── */
-.msg {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.label {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.user .label { color: var(--text-tertiary); }
-.assistant .label { color: var(--accent-muted); }
-
-.body p {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.user .body p { color: var(--text-secondary); }
-.assistant .body p { color: var(--text); }
 
 @keyframes pulse-ring {
   0%   { transform: scale(1);    opacity: 0.6; }
@@ -268,57 +290,81 @@
   100% { transform: scale(1.35); opacity: 0;   }
 }
 
-/* ── Mobile / Dock layout (portrait ≤660px or short screen) ─────────────── */
-@media (max-width: 660px), (max-height: 520px) {
+/* ── Desktop: max-width container + larger clock ────────────────────────── */
+@media (min-width: 661px) {
   .infoPanel {
-    padding: 16px 16px 16px;
-    overflow: hidden;
+    align-items: center;
+    padding: 24px 24px 14px;
   }
 
-  .infoPanel.hasFeed {
-    padding-bottom: calc(40dvh + 16px);
+  .clockRow,
+  .cardGrid {
+    width: 100%;
+    max-width: 1080px;
+  }
+}
+
+/* ── Landscape mode (phone on side) ─────────────────────────────────────── */
+@media (orientation: landscape) and (max-height: 520px) {
+  .infoPanel {
+    padding: 8px 12px 8px;
   }
 
-  .clockZone {
-    padding-right: 60px;
+  .clockRow {
+    align-items: center;
+  }
+
+  .statusBar {
+    padding-top: 0;
   }
 
   .cardGrid {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: 1fr 1fr auto;
-    gap: 8px;
-    margin-top: 12px;
+    grid-template-columns: repeat(6, 1fr);
+    margin-top: 8px;
+    gap: 6px;
   }
 
-  .desktopOnly {
-    display: none;
+  /* Brief spans full 6 cols in landscape */
+  .briefCard {
+    grid-column: 1 / -1;
   }
 
-  .voiceBar {
-    top: 12px;
-    right: 12px;
-    gap: 4px;
-  }
-
-  .micBtn {
-    width: 40px;
-    height: 40px;
-  }
-
-  .iconBtn {
-    width: 28px;
-    height: 28px;
-  }
-
-  .voiceSelect {
-    max-width: 110px;
-    font-size: 10px;
+  .bottomBar {
+    height: 50px;
   }
 
   .feedPanel {
+    bottom: 50px;
     max-height: 40dvh;
-    padding: 10px 16px;
-    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
-    gap: 12px;
+  }
+}
+
+/* ── Compact adjustments for narrow portrait (≤480px) ───────────────────── */
+@media (max-width: 480px) {
+  .infoPanel {
+    padding: 14px 12px 10px;
+  }
+
+  .statusText {
+    display: none; /* hide "All systems" label on very narrow; keep dot + temp */
+  }
+
+  .cardGrid {
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .bottomBar {
+    padding: 0 10px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    gap: 6px;
+  }
+
+  .inputWrap {
+    padding: 0 10px;
+  }
+
+  .feedPanel {
+    padding: 8px 12px 10px;
   }
 }

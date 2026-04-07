@@ -15,7 +15,7 @@
 .icon {
   width: 13px;
   height: 13px;
-  color: var(--pastel-amber);
+  color: var(--pastel-purple);
   flex-shrink: 0;
 }
 
@@ -27,37 +27,36 @@
   color: var(--text-faint);
 }
 
-.mainRow {
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.event {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 6px;
+  min-width: 0;
 }
 
-.temp {
-  font-size: 28px;
-  font-weight: 300;
-  color: var(--text-secondary);
-  letter-spacing: -0.02em;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.condition {
+.title {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   line-height: 1.3;
 }
 
-.detailRow {
-  display: flex;
-  gap: 10px;
-  margin-top: 6px;
-}
-
-.detail {
+.date {
   font-size: 11px;
   font-family: var(--mono);
-  color: var(--text-faint);
+  color: var(--pastel-purple);
+  flex-shrink: 0;
+  text-align: right;
 }
 
 .dim {

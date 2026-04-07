@@ -41,27 +41,26 @@ export function EmailBadge({ count: propCount, messages: propMessages }: EmailBa
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
           <polyline points="22,6 12,13 2,6" />
         </svg>
-        <span className={styles.label}>Mail</span>
+        <span className={styles.label}>
+          Mail
+          {!loading && count > 0 && (
+            <span className={styles.countBadge}> · {count} new</span>
+          )}
+        </span>
       </div>
       {loading ? (
         <span className={styles.dim}>loading…</span>
-      ) : (
-        <>
-          <div className={styles.countRow}>
-            <span className={styles.count}>{count}</span>
-            <span className={styles.countLabel}>unread</span>
-          </div>
-          {preview.length > 0 && (
-            <div className={styles.snippets}>
-              {preview.map((m) => (
-                <div key={m.id} className={styles.snippet}>
-                  <span className={styles.sender}>{senderName(m.sender)}</span>
-                  <span className={styles.subject}>{m.subject}</span>
-                </div>
-              ))}
+      ) : preview.length > 0 ? (
+        <div className={styles.snippets}>
+          {preview.map((m) => (
+            <div key={m.id} className={styles.snippet}>
+              <span className={styles.sender}>{senderName(m.sender)}</span>
+              <span className={styles.subject}>{m.subject}</span>
             </div>
-          )}
-        </>
+          ))}
+        </div>
+      ) : (
+        <span className={styles.dim}>inbox clear</span>
       )}
     </div>
   );

@@ -1,14 +1,12 @@
+import type { WeatherData } from "../api/display";
 import styles from "./WeatherWidget.module.css";
 
 interface WeatherWidgetProps {
-  temp?: number;
-  condition?: string;
-  location?: string;
+  data?: WeatherData | null;
+  loading?: boolean;
 }
 
-export function WeatherWidget({ temp, condition, location }: WeatherWidgetProps) {
-  const hasData = temp !== undefined;
-
+export function WeatherWidget({ data, loading }: WeatherWidgetProps) {
   return (
     <div className={styles.widget}>
       <div className={styles.header}>
@@ -21,17 +19,22 @@ export function WeatherWidget({ temp, condition, location }: WeatherWidgetProps)
         </svg>
         <span className={styles.label}>Weather</span>
       </div>
-      {hasData ? (
+      {loading ? (
+        <span className={styles.dim}>loading…</span>
+      ) : data ? (
         <>
-          <div className={styles.temp}>{Math.round(temp!)}°</div>
-          {condition && <div className={styles.condition}>{condition}</div>}
-          {location && <div className={styles.location}>{location}</div>}
+          <div className={styles.mainRow}>
+            <span className={styles.temp}>{data.temp}°</span>
+            <span className={styles.condition}>{data.condition}</span>
+          </div>
+          <div className={styles.detailRow}>
+            <span className={styles.detail}>H: {data.high}°</span>
+            <span className={styles.detail}>L: {data.low}°</span>
+            <span className={styles.detail}>{data.precip_chance}% rain</span>
+          </div>
         </>
       ) : (
-        <>
-          <div className={styles.temp}>—°</div>
-          <div className={styles.soon}>coming soon</div>
-        </>
+        <span className={styles.dim}>no data</span>
       )}
     </div>
   );
