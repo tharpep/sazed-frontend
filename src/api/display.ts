@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { gatewayFetch } from "./client";
 
 // --- Types (mirror gateway Pydantic models) ---
 
@@ -62,11 +62,11 @@ export interface WeatherData {
 // --- Fetch functions ---
 
 export async function fetchCalendarToday(): Promise<CalendarData> {
-  return apiFetch("/calendar/today") as Promise<CalendarData>;
+  return gatewayFetch("/calendar/today") as Promise<CalendarData>;
 }
 
 export async function fetchTasksDueToday(): Promise<TasksData> {
-  const listsRes = (await apiFetch("/tasks/lists")) as {
+  const listsRes = (await gatewayFetch("/tasks/lists")) as {
     lists: { id: string; title: string }[];
     count: number;
   };
@@ -81,7 +81,7 @@ export async function fetchTasksDueToday(): Promise<TasksData> {
   await Promise.all(
     lists.map(async (list) => {
       try {
-        const res = (await apiFetch(
+        const res = (await gatewayFetch(
           `/tasks/lists/${list.id}/tasks?include_completed=false`
         )) as { tasks: Task[]; count: number };
         allTasks.push(...(res.tasks ?? []));
@@ -100,15 +100,15 @@ export async function fetchTasksDueToday(): Promise<TasksData> {
 }
 
 export async function fetchUnreadEmail(): Promise<EmailData> {
-  return apiFetch("/email/unread") as Promise<EmailData>;
+  return gatewayFetch("/email/unread") as Promise<EmailData>;
 }
 
 export async function fetchUpcomingPayments(days = 7): Promise<UpcomingPayment[]> {
-  return apiFetch(`/finance/upcoming?days=${days}`) as Promise<UpcomingPayment[]>;
+  return gatewayFetch(`/finance/upcoming?days=${days}`) as Promise<UpcomingPayment[]>;
 }
 
 export async function fetchUpcomingCalendar(): Promise<CalendarData> {
-  return apiFetch("/calendar/events?days=7") as Promise<CalendarData>;
+  return gatewayFetch("/calendar/events?days=7") as Promise<CalendarData>;
 }
 
 const WMO_CONDITIONS: Record<number, string> = {

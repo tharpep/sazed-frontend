@@ -1,0 +1,126 @@
+/* ── Dashboard landing (replaces empty state) ────────────────────────────── */
+.dashboard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.dashboard::-webkit-scrollbar { display: none; }
+
+.content {
+  width: 100%;
+  max-width: 1080px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Greeting row ────────────────────────────────────────────────────────── */
+.greetRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.greeting {
+  font-size: 22px;
+  font-weight: 300;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.tempBadge {
+  font-size: 13px;
+  font-family: var(--mono);
+  color: var(--text-secondary);
+}
+
+/* ── Card grid — 3×2 + brief ────────────────────────────────────────────── */
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: minmax(120px, auto) minmax(120px, auto) auto;
+  gap: 8px;
+}
+
+/* ── Briefing card ───────────────────────────────────────────────────────── */
+.briefCard {
+  grid-column: 1 / -1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.briefLoading {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.briefPlaceholder {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.briefText {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.briefText p { margin: 0 0 0.3em; }
+.briefText ul, .briefText ol { margin: 0.15em 0; padding-left: 1.4em; }
+.briefText li { margin-bottom: 0.15em; }
+
+/* ── Quick-action pills ──────────────────────────────────────────────────── */
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.pill {
+  padding: 7px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+  letter-spacing: 0.01em;
+}
+
+.pill:hover {
+  border-color: var(--accent-muted);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ── Mobile: 2-col grid ──────────────────────────────────────────────────── */
+@media (max-width: 660px) {
+  .dashboard {
+    padding: 16px;
+  }
+
+  .cardGrid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto;
+  }
+
+  .greeting {
+    font-size: 18px;
+  }
+}

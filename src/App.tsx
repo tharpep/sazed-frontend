@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { TopBar } from "./components/TopBar/TopBar";
 import { InputBar } from "./components/InputBar/InputBar";
-import { EmptyState } from "./features/chat/EmptyState";
+import { DashboardEmpty } from "./features/chat/DashboardEmpty";
 import { ChatArea } from "./features/chat/ChatArea";
 import { HistoryOverlay } from "./features/history/HistoryOverlay";
 import { KbPage } from "./features/kb/KbPage";
@@ -88,7 +88,7 @@ function App() {
             ) : kbOpen ? (
               <KbPage />
             ) : view === "empty" ? (
-              <EmptyState />
+              <DashboardEmpty />
             ) : (
               <ChatArea />
             )}
