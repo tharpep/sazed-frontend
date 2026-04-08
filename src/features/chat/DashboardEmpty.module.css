@@ -81,6 +81,17 @@
 .briefText ul, .briefText ol { margin: 0.15em 0; padding-left: 1.4em; }
 .briefText li { margin-bottom: 0.15em; }
 
+/* ── Clock card ─────────────────────────────────────────────────────────── */
+.clockCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+}
+
 /* ── Quick-action pills ──────────────────────────────────────────────────── */
 .actions {
   display: flex;

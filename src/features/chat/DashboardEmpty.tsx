@@ -4,6 +4,7 @@ import { UpcomingWidget } from "../../widgets/UpcomingWidget";
 import { TaskWidget } from "../../widgets/TaskWidget";
 import { EmailBadge } from "../../widgets/EmailBadge";
 import { WeatherWidget } from "../../widgets/WeatherWidget";
+import { ClockWidget } from "../../widgets/ClockWidget";
 import { useDisplayData } from "../../hooks/useDisplayData";
 import { fetchWeather } from "../../api/display";
 import type { WeatherData } from "../../api/display";
@@ -60,6 +61,9 @@ export function DashboardEmpty() {
           />
           <UpcomingWidget events={displayData.upcoming.data?.events} />
           <WeatherWidget data={weather} loading={weatherLoading} />
+          <div className={styles.clockCard}>
+            <ClockWidget />
+          </div>
         </div>
 
         <div className={styles.actions}>
