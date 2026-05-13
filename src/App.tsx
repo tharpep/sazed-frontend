@@ -8,6 +8,7 @@ import { KbPage } from "./features/kb/KbPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { AuditPage } from "./features/audit/AuditPage";
 import { FinancePage } from "./features/finance/FinancePage";
+import { JournalPage } from "./features/journal/JournalPage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
 import { apiFetch } from "./api/client";
@@ -19,11 +20,13 @@ function App() {
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const auditOpen = useUiStore((s) => s.auditOpen);
   const financeOpen = useUiStore((s) => s.financeOpen);
+  const journalOpen = useUiStore((s) => s.journalOpen);
   const toggleHistory = useUiStore((s) => s.toggleHistory);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
   const toggleFinance = useUiStore((s) => s.toggleFinance);
+  const toggleJournal = useUiStore((s) => s.toggleJournal);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const setOnline = useUiStore((s) => s.setOnline);
@@ -32,7 +35,7 @@ function App() {
   const send = useChatStore((s) => s.send);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const view = messages.length === 0 ? "empty" : "chat";
-  const viewKey = settingsOpen ? "settings" : auditOpen ? "audit" : financeOpen ? "finance" : kbOpen ? "kb" : view;
+  const viewKey = settingsOpen ? "settings" : auditOpen ? "audit" : financeOpen ? "finance" : journalOpen ? "journal" : kbOpen ? "kb" : view;
 
   useEffect(() => {
     const check = () =>
@@ -52,12 +55,13 @@ function App() {
         else if (settingsOpen) setSettingsOpen(false);
         else if (auditOpen) toggleAudit();
         else if (financeOpen) toggleFinance();
+        else if (journalOpen) toggleJournal();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [historyOpen, kbOpen, settingsOpen, auditOpen, financeOpen,
-      setHistoryOpen, toggleKb, setSettingsOpen, toggleAudit, toggleFinance]);
+  }, [historyOpen, kbOpen, settingsOpen, auditOpen, financeOpen, journalOpen,
+      setHistoryOpen, toggleKb, setSettingsOpen, toggleAudit, toggleFinance, toggleJournal]);
 
   return (
     <div className={styles.surface}>
@@ -71,11 +75,13 @@ function App() {
             settingsOpen={settingsOpen}
             auditOpen={auditOpen}
             financeOpen={financeOpen}
+            journalOpen={journalOpen}
             onToggleHistory={toggleHistory}
             onToggleKb={toggleKb}
             onToggleSettings={toggleSettings}
             onToggleAudit={toggleAudit}
             onToggleFinance={toggleFinance}
+            onToggleJournal={toggleJournal}
             online={online}
           />
           <div key={viewKey} className={styles.viewContainer}>
@@ -85,6 +91,8 @@ function App() {
               <AuditPage />
             ) : financeOpen ? (
               <FinancePage />
+            ) : journalOpen ? (
+              <JournalPage />
             ) : kbOpen ? (
               <KbPage />
             ) : view === "empty" ? (
@@ -93,7 +101,7 @@ function App() {
               <ChatArea />
             )}
           </div>
-          {!kbOpen && !settingsOpen && !auditOpen && !financeOpen && (
+          {!kbOpen && !settingsOpen && !auditOpen && !financeOpen && !journalOpen && (
             <InputBar
               onSend={send}
               disabled={isStreaming}

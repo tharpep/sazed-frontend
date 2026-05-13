@@ -1,0 +1,258 @@
+.page {
+  padding: 20px 24px;
+  overflow-y: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.heading {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+.state {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.stateError {
+  font-size: 13px;
+  color: var(--pastel-red);
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filterSelect {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+  cursor: pointer;
+}
+
+.newBtn {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 12px;
+  padding: 4px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.newBtn:hover {
+  background: var(--accent-hover);
+}
+
+/* Entry list */
+.entryList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dateGroup {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.dateGroup:first-child {
+  margin-top: 0;
+}
+
+.entryRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.entryRow:hover {
+  background: var(--bg-hover);
+}
+
+.entryRowActive {
+  background: var(--bg-surface);
+}
+
+.entryProject {
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.entryTitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entryTags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* Entry form / detail */
+.formPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.formRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.formLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.formInput {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  padding: 6px 10px;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.formInput:focus {
+  border-color: var(--text-faint);
+}
+
+.formInput::placeholder {
+  color: var(--text-faint);
+}
+
+.formTextarea {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  flex: 1;
+  min-height: 120px;
+  resize: vertical;
+  font-family: var(--font);
+  line-height: 1.5;
+}
+
+.formTextarea:focus {
+  border-color: var(--text-faint);
+}
+
+.formTextarea::placeholder {
+  color: var(--text-faint);
+}
+
+.formActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.saveBtn {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 12px;
+  padding: 4px 14px;
+  cursor: pointer;
+}
+
+.saveBtn:hover {
+  background: var(--accent-hover);
+}
+
+.cancelBtn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 4px 14px;
+  cursor: pointer;
+}
+
+.cancelBtn:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.deleteBtn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  margin-right: auto;
+}
+
+.deleteBtn:hover {
+  color: var(--pastel-red);
+  border-color: var(--pastel-red);
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--text-faint);
+  text-align: center;
+  padding: 40px 0;
+}
