@@ -22,16 +22,17 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 - `src/styles/` — `tokens.css` (CSS custom properties from `ui_reference.html`) and `reset.css` (box-sizing, body, `@font-face`). Both imported in `main.tsx`. Only global CSS.
 - `src/assets/fonts/` — Self-hosted DM Sans + JetBrains Mono woff2.
 - `src/mock/data.ts` — TypeScript interfaces only: `Message`, `Session`, `ToolCall`. No hardcoded message/session data; content comes from the API.
-- `src/api/` — `client.ts` (apiFetch), `chat.ts` (postMessage), `conversations.ts` (list, get, process), `memory.ts` (get, put, delete).
+- `src/api/` — `client.ts` (apiFetch), `chat.ts` (postMessage), `conversations.ts` (list, get, process), `memory.ts` (get, put, delete), `journal.ts` (listEntries with cursor pagination, CRUD, listSubcategories).
 - `src/store/` — Zustand: `chatStore` (messages, sessionId, send, newSession, loadSession), `sessionStore` (sessions, loadSessions, selectSession), `uiStore` (historyOpen, online, toggles).
 - `src/components/` — TopBar/ (TrafficLights, StatusDot, IconButton, TopBar), InputBar/.
 - `src/features/chat/` — ChatArea, Message, ToolCard, ToolsRow, EventLine, TaskLine, StreamingIndicator, EmptyState.
 - `src/features/history/` — HistoryOverlay, HistoryItem, HistorySearch.
+- `src/features/journal/` — JournalPage (responsive two-pane/single-pane), inline Editor with react-markdown render + raw textarea, FAB, search, "load more" cursor pagination, per-category default subcategory pinned in localStorage. `ACTIVE_CATEGORY` constant in JournalPage.tsx gates personal — the schema/API support it but the UI surface is off until the constant is removed in favor of a switcher.
 - `src-tauri/` — Tauri shell. Window 900×620, min 600×480, `decorations: false`. TopBar uses `-webkit-app-region: drag`; interactive children use `no-drag`.
 
 ## Conventions
 
 - CSS Modules only on components; no global class names except in `src/styles/`.
-- No media queries — desktop layout only.
-- No markdown renderer in message bodies.
+- Default to desktop-only layouts without media queries. The journal feature is the deliberate exception: it ships a responsive layout (two-pane ≥900px, single-pane below) because it's used on mobile.
+- No markdown renderer in chat message bodies. The journal editor's read view is the deliberate exception, using `react-markdown` + `remark-gfm`.
 - Before UI changes, read `ui_reference.html` in the repo root as the design reference.
