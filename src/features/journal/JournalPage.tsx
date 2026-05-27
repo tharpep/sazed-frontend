@@ -25,6 +25,17 @@ const ACTIVE_CATEGORY: JournalCategory = "career";
 
 const PAGE_SIZE = 30;
 const AUTOSAVE_MS = 2000;
+const SAVED_FLASH_MS = 1500;
+
+// Curated default subcategories per category. The editor dropdown shows
+// these merged with the subcategories that already exist in the DB, deduped.
+// Edit this list to add or remove options.
+const DEFAULT_SUBCATEGORIES: Record<JournalCategory, string[]> = {
+  career: ["Eli Lilly", "Side Projects", "Learning"],
+  personal: [],
+};
+
+const ADD_NEW_VALUE = "__add_new__";
 
 // ── localStorage helpers ─────────────────────────────────────────────────
 
@@ -73,9 +84,9 @@ function groupByDate(entries: JournalEntry[]): [string, JournalEntry[]][] {
 interface EditorProps {
   entry: JournalEntry | null; // null = new entry
   category: JournalCategory;
-  subcategories: string[];
+  subcategories: string[]; // merged defaults ∪ existing
   defaultSubcategory: string;
-  onSaved: (entry: JournalEntry, wasNew: boolean) => void;
+  onSaved: (entry: JournalEntry, wasNew: boolean, explicit: boolean) => void;
   onDeleted: (id: string) => void;
   onBack: () => void;
   onPinDefault: (value: string) => void;
@@ -103,6 +114,7 @@ function Editor({
   const [currentId, setCurrentId] = useState<string | null>(entry?.id ?? null);
 
   const dirtyRef = useRef(false);
+  const inFlightRef = useRef(false);
   const saveTimer = useRef<number | null>(null);
   const titleRef = useRef<HTMLInputElement | null>(null);
 
@@ -117,51 +129,78 @@ function Editor({
     [tagsStr],
   );
 
-  const canSave = subcategory.trim().length > 0 && (title.trim().length > 0 || body.trim().length > 0);
+  const canSave =
+    subcategory.trim().length > 0 &&
+    (title.trim().length > 0 || body.trim().length > 0);
 
-  const save = useCallback(async () => {
-    if (!dirtyRef.current || !canSave) return;
-    setStatus("saving");
-    try {
-      if (currentId) {
-        const patch: JournalEntryUpdate = {
-          title: title.trim() || "Untitled",
-          body,
-          subcategory: subcategory.trim(),
-          entry_date: entryDate,
-          tags,
-        };
-        const updated = await updateEntry(currentId, patch);
-        dirtyRef.current = false;
-        setStatus("saved");
-        onSaved(updated, false);
-      } else {
-        const payload: JournalEntryCreate = {
-          category,
-          subcategory: subcategory.trim(),
-          title: title.trim() || "Untitled",
-          body,
-          entry_date: entryDate,
-          tags,
-        };
-        const created = await createEntry(payload);
-        dirtyRef.current = false;
-        setCurrentId(created.id);
-        setStatus("saved");
-        onSaved(created, true);
+  // Subcategory dropdown options: keep current value visible even if it isn't
+  // in the list (e.g. a freshly-added subcategory before reload).
+  const subOptions = useMemo(() => {
+    const out = [...subcategories];
+    const trimmed = subcategory.trim();
+    if (trimmed && !out.includes(trimmed)) out.unshift(trimmed);
+    return out;
+  }, [subcategories, subcategory]);
+
+  const save = useCallback(
+    async (opts: { explicit: boolean } = { explicit: false }) => {
+      // Guard against re-entry — manual taps, autosave, blur, and the
+      // cmd+enter shortcut can all race otherwise.
+      if (inFlightRef.current) return;
+      if (!dirtyRef.current && !opts.explicit) return;
+      if (!canSave) return;
+
+      // Cancel any pending autosave; this call supersedes it.
+      if (saveTimer.current) {
+        window.clearTimeout(saveTimer.current);
+        saveTimer.current = null;
       }
-    } catch (err) {
-      console.error(err);
-      setStatus("error");
-    }
-  }, [canSave, currentId, title, body, subcategory, entryDate, tags, category, onSaved]);
+      inFlightRef.current = true;
+      setStatus("saving");
+      try {
+        if (currentId) {
+          const patch: JournalEntryUpdate = {
+            title: title.trim() || "Untitled",
+            body,
+            subcategory: subcategory.trim(),
+            entry_date: entryDate,
+            tags,
+          };
+          const updated = await updateEntry(currentId, patch);
+          dirtyRef.current = false;
+          setStatus("saved");
+          onSaved(updated, false, opts.explicit);
+        } else {
+          const payload: JournalEntryCreate = {
+            category,
+            subcategory: subcategory.trim(),
+            title: title.trim() || "Untitled",
+            body,
+            entry_date: entryDate,
+            tags,
+          };
+          const created = await createEntry(payload);
+          dirtyRef.current = false;
+          setCurrentId(created.id);
+          setStatus("saved");
+          onSaved(created, true, opts.explicit);
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus("error");
+      } finally {
+        inFlightRef.current = false;
+      }
+    },
+    [canSave, currentId, title, body, subcategory, entryDate, tags, category, onSaved],
+  );
 
   function markDirty() {
     dirtyRef.current = true;
     setStatus("idle");
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => {
-      void save();
+      void save({ explicit: false });
     }, AUTOSAVE_MS);
   }
 
@@ -169,21 +208,32 @@ function Editor({
   useEffect(() => {
     return () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
-      if (dirtyRef.current) void save();
+      if (dirtyRef.current && !inFlightRef.current) {
+        void save({ explicit: false });
+      }
     };
   }, [save]);
 
-  // Keyboard: cmd/ctrl+enter saves.
+  // Keyboard: cmd/ctrl+enter saves and closes (explicit).
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
-        void save();
+        void save({ explicit: true });
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [save]);
+
+  async function handleExplicitSave() {
+    await save({ explicit: true });
+    // save() clears dirtyRef only on success; on error it stays true and the
+    // editor stays open so the user sees the error state and can retry.
+    if (!dirtyRef.current) {
+      onBack();
+    }
+  }
 
   async function handleDelete() {
     if (!currentId) {
@@ -193,6 +243,20 @@ function Editor({
     if (!window.confirm("Delete this entry? This can't be undone.")) return;
     await deleteEntry(currentId);
     onDeleted(currentId);
+  }
+
+  function handleSubChange(value: string) {
+    if (value === ADD_NEW_VALUE) {
+      const name = window.prompt("New subcategory name:");
+      const trimmed = name?.trim() ?? "";
+      if (trimmed) {
+        setSubcategory(trimmed);
+        markDirty();
+      }
+      return;
+    }
+    setSubcategory(value);
+    markDirty();
   }
 
   const isDefault = subcategory.trim() === defaultSubcategory && subcategory.trim() !== "";
@@ -217,30 +281,40 @@ function Editor({
             setTitle(e.target.value);
             markDirty();
           }}
-          onBlur={() => dirtyRef.current && save()}
+          onBlur={() => dirtyRef.current && save({ explicit: false })}
         />
         <span className={styles.saveStatus} aria-live="polite">
           {status === "saving" ? "saving…" : status === "saved" ? "saved" : status === "error" ? "error" : ""}
         </span>
+        {currentId && (
+          <button
+            className={styles.trashBtn}
+            onClick={handleDelete}
+            aria-label="Delete entry"
+            title="Delete entry"
+          >
+            🗑
+          </button>
+        )}
       </div>
 
       <div className={styles.editorSubrow}>
-        <input
-          className={styles.subcategoryInput}
-          list="journal-subcategories"
-          placeholder="subcategory"
-          value={subcategory}
-          onChange={(e) => {
-            setSubcategory(e.target.value);
-            markDirty();
-          }}
-          onBlur={() => dirtyRef.current && save()}
-        />
-        <datalist id="journal-subcategories">
-          {subcategories.map((s) => (
-            <option key={s} value={s} />
+        <select
+          className={styles.subcategorySelect}
+          value={subOptions.includes(subcategory) ? subcategory : ""}
+          onChange={(e) => handleSubChange(e.target.value)}
+          onBlur={() => dirtyRef.current && save({ explicit: false })}
+        >
+          <option value="" disabled>
+            — pick subcategory —
+          </option>
+          {subOptions.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
-        </datalist>
+          <option value={ADD_NEW_VALUE}>+ Add new…</option>
+        </select>
         <button
           className={`${styles.pinBtn} ${isDefault ? styles.pinBtnActive : ""}`}
           onClick={() => onPinDefault(isDefault ? "" : subcategory.trim())}
@@ -271,7 +345,7 @@ function Editor({
                 setEntryDate(e.target.value);
                 markDirty();
               }}
-              onBlur={() => dirtyRef.current && save()}
+              onBlur={() => dirtyRef.current && save({ explicit: false })}
             />
           </label>
           <label className={styles.metaRow}>
@@ -284,7 +358,7 @@ function Editor({
                 setTagsStr(e.target.value);
                 markDirty();
               }}
-              onBlur={() => dirtyRef.current && save()}
+              onBlur={() => dirtyRef.current && save({ explicit: false })}
             />
           </label>
         </div>
@@ -301,7 +375,7 @@ function Editor({
               markDirty();
             }}
             onBlur={() => {
-              if (dirtyRef.current) save();
+              if (dirtyRef.current) save({ explicit: false });
               if (body.trim()) setEditingBody(false);
             }}
             autoFocus={!isNew}
@@ -328,14 +402,13 @@ function Editor({
       </div>
 
       <div className={styles.editorFooter}>
-        {currentId && (
-          <button className={styles.deleteBtn} onClick={handleDelete}>
-            delete
-          </button>
-        )}
         <span className={styles.footerSpacer} />
-        <button className={styles.saveBtn} onClick={save} disabled={!canSave}>
-          save
+        <button
+          className={styles.saveBtn}
+          onClick={handleExplicitSave}
+          disabled={!canSave || status === "saving"}
+        >
+          {status === "saving" ? "saving…" : "save & close"}
         </button>
       </div>
     </div>
@@ -358,6 +431,16 @@ export function JournalPage() {
   const [selected, setSelected] = useState<JournalEntry | null>(null);
   const [creating, setCreating] = useState(false);
   const [defaultSub, setDefaultSub] = useState<string>(() => getDefaultSubcategory(ACTIVE_CATEGORY));
+  const [lastSavedId, setLastSavedId] = useState<string | null>(null);
+
+  // Subcategory dropdown options: curated defaults ∪ existing-in-DB, deduped.
+  const editorSubOptions = useMemo(() => {
+    const out = [...DEFAULT_SUBCATEGORIES[category]];
+    for (const s of subcategories) {
+      if (!out.includes(s)) out.push(s);
+    }
+    return out;
+  }, [category, subcategories]);
 
   // Debounce search input.
   useEffect(() => {
@@ -420,7 +503,7 @@ export function JournalPage() {
     setCreating(false);
   }
 
-  function handleSaved(saved: JournalEntry, wasNew: boolean) {
+  function handleSaved(saved: JournalEntry, wasNew: boolean, explicit: boolean) {
     setEntries((prev) => {
       if (wasNew) return [saved, ...prev];
       return prev.map((e) => (e.id === saved.id ? saved : e));
@@ -428,6 +511,19 @@ export function JournalPage() {
     if (saved.subcategory && !subcategories.includes(saved.subcategory)) {
       setSubcategories((prev) => [...prev, saved.subcategory].sort());
     }
+
+    if (explicit) {
+      // Editor closes itself; flash the row briefly so it's obvious where
+      // the entry landed in the list.
+      setLastSavedId(saved.id);
+      window.setTimeout(() => {
+        setLastSavedId((id) => (id === saved.id ? null : id));
+      }, SAVED_FLASH_MS);
+      return;
+    }
+
+    // Silent (autosave / blur) path: keep the user in the editor, but make
+    // sure a newly-created entry has its id so subsequent autosaves PATCH.
     if (wasNew) {
       setSelected(saved);
       setCreating(false);
@@ -521,24 +617,36 @@ export function JournalPage() {
               {grouped.map(([date, group]) => (
                 <div key={date}>
                   <div className={styles.dateGroup}>{fmtDateLabel(date)}</div>
-                  {group.map((entry) => (
-                    <button
-                      key={entry.id}
-                      className={`${styles.entryRow} ${selected?.id === entry.id ? styles.entryRowActive : ""}`}
-                      onClick={() => {
-                        setCreating(false);
-                        setSelected(entry);
-                      }}
-                    >
-                      <span className={styles.entryTitle}>{entry.title}</span>
-                      <span className={styles.entryMeta}>
-                        <span className={styles.entrySub}>{entry.subcategory}</span>
-                        {entry.tags.slice(0, 2).map((t) => (
-                          <span key={t} className={styles.tag}>{t}</span>
-                        ))}
-                      </span>
-                    </button>
-                  ))}
+                  {group.map((entry) => {
+                    const classes = [
+                      styles.entryRow,
+                      selected?.id === entry.id ? styles.entryRowActive : "",
+                      lastSavedId === entry.id ? styles.entryRowFlash : "",
+                    ].filter(Boolean).join(" ");
+                    return (
+                      <button
+                        key={entry.id}
+                        className={classes}
+                        onClick={() => {
+                          setCreating(false);
+                          setSelected(entry);
+                        }}
+                      >
+                        <span className={styles.entryTitle}>{entry.title}</span>
+                        <span className={styles.entryMeta}>
+                          <span className={styles.entrySub}>{entry.subcategory}</span>
+                          {entry.tags.slice(0, 2).map((t) => (
+                            <span key={t} className={styles.tag}>{t}</span>
+                          ))}
+                        </span>
+                        {lastSavedId === entry.id && (
+                          <span className={styles.savedBadge} aria-hidden>
+                            saved ✓
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               ))}
               {nextCursor && (
@@ -570,7 +678,7 @@ export function JournalPage() {
             key={editorKey}
             entry={selected}
             category={category}
-            subcategories={subcategories}
+            subcategories={editorSubOptions}
             defaultSubcategory={defaultSub}
             onSaved={handleSaved}
             onDeleted={handleDeleted}
