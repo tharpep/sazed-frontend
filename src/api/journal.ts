@@ -1,9 +1,12 @@
 import { apiFetch } from "./client";
 
+export type JournalCategory = "career" | "personal";
+
 export interface JournalEntry {
   id: string;
   entry_date: string;
-  project: string;
+  category: JournalCategory;
+  subcategory: string;
   title: string;
   body: string;
   tags: string[];
@@ -12,7 +15,8 @@ export interface JournalEntry {
 }
 
 export interface JournalEntryCreate {
-  project: string;
+  category: JournalCategory;
+  subcategory: string;
   title: string;
   body: string;
   entry_date?: string;
@@ -20,7 +24,8 @@ export interface JournalEntryCreate {
 }
 
 export interface JournalEntryUpdate {
-  project?: string;
+  category?: JournalCategory;
+  subcategory?: string;
   title?: string;
   body?: string;
   entry_date?: string;
@@ -28,22 +33,32 @@ export interface JournalEntryUpdate {
 }
 
 export interface ListParams {
-  project?: string;
+  category?: JournalCategory;
+  subcategory?: string;
   tag?: string;
+  q?: string;
   start_date?: string;
   end_date?: string;
   limit?: number;
+  cursor?: string;
 }
 
-export async function listEntries(params?: ListParams): Promise<JournalEntry[]> {
-  const qs = new URLSearchParams();
-  if (params?.project) qs.set("project", params.project);
-  if (params?.tag) qs.set("tag", params.tag);
-  if (params?.start_date) qs.set("start_date", params.start_date);
-  if (params?.end_date) qs.set("end_date", params.end_date);
-  if (params?.limit) qs.set("limit", String(params.limit));
-  const query = qs.toString();
-  return apiFetch(`/journal/entries${query ? `?${query}` : ""}`) as Promise<JournalEntry[]>;
+export interface EntryPage {
+  entries: JournalEntry[];
+  next_cursor: string | null;
+}
+
+function qs(params: Record<string, string | number | undefined | null>): string {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
+  }
+  const s = sp.toString();
+  return s ? `?${s}` : "";
+}
+
+export async function listEntries(params?: ListParams): Promise<EntryPage> {
+  return apiFetch(`/journal/entries${qs({ ...params })}`) as Promise<EntryPage>;
 }
 
 export async function getEntry(id: string): Promise<JournalEntry> {
@@ -68,6 +83,6 @@ export async function deleteEntry(id: string): Promise<void> {
   await apiFetch(`/journal/entries/${id}`, { method: "DELETE" });
 }
 
-export async function listProjects(): Promise<string[]> {
-  return apiFetch("/journal/projects") as Promise<string[]>;
+export async function listSubcategories(category?: JournalCategory): Promise<string[]> {
+  return apiFetch(`/journal/subcategories${qs({ category })}`) as Promise<string[]>;
 }
