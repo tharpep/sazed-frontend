@@ -35,6 +35,7 @@ export async function gatewayFetch(path: string, options?: RequestInit): Promise
     const text = await res.text();
     throw new Error(text || `HTTP ${res.status}`);
   }
+  if (res.status === 204) return null;
   const contentType = res.headers.get("Content-Type") ?? "";
   if (contentType.includes("application/json")) {
     return res.json() as Promise<unknown>;
@@ -65,6 +66,7 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<unk
     const text = await res.text();
     throw new Error(text || `HTTP ${res.status}`);
   }
+  if (res.status === 204) return null;
   const contentType = res.headers.get("Content-Type") ?? "";
   if (contentType.includes("application/json")) {
     return res.json() as Promise<unknown>;

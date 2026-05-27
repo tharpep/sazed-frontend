@@ -241,7 +241,13 @@ function Editor({
       return;
     }
     if (!window.confirm("Delete this entry? This can't be undone.")) return;
-    await deleteEntry(currentId);
+    try {
+      await deleteEntry(currentId);
+    } catch (err) {
+      console.error("Delete failed:", err);
+      setStatus("error");
+      return;
+    }
     onDeleted(currentId);
     onBack();
   }
