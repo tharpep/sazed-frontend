@@ -243,6 +243,7 @@ function Editor({
     if (!window.confirm("Delete this entry? This can't be undone.")) return;
     await deleteEntry(currentId);
     onDeleted(currentId);
+    onBack();
   }
 
   function handleSubChange(value: string) {
@@ -293,7 +294,11 @@ function Editor({
             aria-label="Delete entry"
             title="Delete entry"
           >
-            🗑
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M3 5h12" />
+              <path d="M7 5V3h4v2" />
+              <path d="M6 5l.75 10h6.5L14 5" />
+            </svg>
           </button>
         )}
       </div>
