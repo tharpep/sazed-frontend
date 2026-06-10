@@ -22,15 +22,15 @@
 
 .input {
   width: 100%;
-  padding: 7px 30px 7px 30px;
-  border-radius: 6px;
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-8);
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--dur-fast) var(--ease);
 }
 
 .input::placeholder {

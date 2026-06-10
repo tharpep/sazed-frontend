@@ -26,12 +26,13 @@
 }
 
 .title {
-  font-family: var(--font);
-  font-size: 18px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: var(--fs-xl);
+  font-weight: var(--weight-medium);
   color: var(--text);
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--ls-tight);
 }
 
 .closeBtn {
@@ -192,17 +193,18 @@
   font-family: var(--font);
   font-size: 13px;
   font-weight: 500;
-  color: #c0392b;
+  color: var(--danger);
   background: transparent;
-  border: 1px solid #c0392b55;
+  border: 1px solid var(--danger-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease),
+    opacity var(--dur-fast) var(--ease);
 }
 
 .dangerBtn:hover {
-  background: #c0392b14;
-  border-color: #c0392b;
+  background: var(--danger-soft);
+  border-color: var(--danger);
 }
 
 .dangerBtn:disabled {
@@ -252,5 +254,5 @@
 }
 
 .archiveResult.error {
-  color: #c0392b;
+  color: var(--danger);
 }

@@ -1,13 +1,13 @@
 .item {
-  padding: 9px 10px;
-  border-radius: 7px;
+  padding: var(--space-2-5) var(--space-2-5);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.15s, transform 0.15s var(--ease);
+  transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 
 .item:hover {
   background: var(--bg-hover);
-  transform: translateX(6px);
+  transform: translateX(4px);
 }
 
 .item.active {
@@ -15,8 +15,8 @@
 }
 
 .title {
-  font-size: 13px;
-  font-weight: 400;
+  font-size: var(--fs-base);
+  font-weight: var(--weight-regular);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -28,13 +28,13 @@
 }
 
 .time {
-  font-size: 11px;
-  color: var(--text-faint);
-  margin-top: 2px;
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-0-5);
 }
 
 @media (max-width: 660px) {
   .item {
-    padding: 14px 10px;
+    padding: var(--space-3) var(--space-2-5);
   }
 }

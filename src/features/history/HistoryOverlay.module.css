@@ -90,8 +90,9 @@
   background: transparent;
   color: var(--text-faint);
   cursor: pointer;
-  transition: all 0.15s;
-  font-size: 14px;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+  font-size: var(--fs-base);
 }
 
 .newBtn:hover {

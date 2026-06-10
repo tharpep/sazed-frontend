@@ -107,11 +107,11 @@
 }
 
 .dateGroup {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-faint);
+  color: var(--text-tertiary);
   padding: 14px 12px 4px 12px;
 }
 
@@ -177,8 +177,8 @@
   display: flex;
   gap: 6px;
   align-items: center;
-  font-size: 11px;
-  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
 }
 
 .entrySub {
@@ -231,8 +231,8 @@
 .empty {
   padding: 32px 16px;
   text-align: center;
-  font-size: 13px;
-  color: var(--text-faint);
+  font-size: var(--fs-base);
+  color: var(--text-tertiary);
 }
 
 /* ─ FAB ──────────────────────────────────────────────────────────────── */
@@ -302,8 +302,11 @@
   background: transparent;
   border: 0;
   color: var(--text);
-  font-size: 20px;
-  font-weight: 500;
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: var(--fs-xl);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--ls-tight);
   padding: 6px 4px;
   outline: none;
   min-width: 0;
@@ -461,23 +464,23 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-size: 14px;
-  line-height: 1.55;
-  padding: 12px 14px;
+  font-size: var(--fs-md);
+  line-height: var(--lh-normal);
+  padding: var(--space-3) var(--space-4);
   outline: none;
   resize: none;
   font-family: var(--font);
 }
 
-.bodyTextarea:focus { border-color: var(--text-faint); }
+.bodyTextarea:focus { border-color: var(--accent-muted); }
 .bodyTextarea::placeholder { color: var(--text-faint); }
 
 .bodyRendered {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 14px;
-  font-size: 14px;
-  line-height: 1.6;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--fs-md);
+  line-height: var(--lh-relaxed);
   color: var(--text);
   cursor: text;
   border-radius: var(--radius-sm);

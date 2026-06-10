@@ -1,10 +1,13 @@
-/* Outer surface — fills the entire viewport */
+/* Outer surface — the void. The app panel rests inside it with a small inset,
+   so the frameless window reads as a crafted object rather than a flat fill. */
 .surface {
   width: 100vw;
   height: 100dvh;
-  background: var(--bg);
+  background: var(--bg-outer);
   display: flex;
   position: relative;
+  padding: var(--space-2);
+  padding-top: var(--space-1-5);
 }
 
 /* Invisible drag strip pinned to the very top of the Tauri window.
@@ -17,16 +20,23 @@
   right: 0;
   height: 28px;
   -webkit-app-region: drag;
-  z-index: 9999;
+  z-index: var(--z-drag);
 }
 
-/* Full-viewport layout */
+/* The floating panel — a distinct elevated object inside the void. */
 .floatingUnit {
-  width: 100%;
-  height: 100dvh;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: row;
   overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-window);
+  /* Deep drop shadow + a faint top-edge highlight so the panel reads as a
+     physical object lit from above. */
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Main chat panel — fills remaining width after history sidebar */
@@ -51,12 +61,20 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: pageIn 0.2s var(--ease) both;
+  animation: pageIn var(--dur-base) var(--ease) both;
 }
 
-/* Mobile: ensure relative positioning for history overlay */
+/* Mobile: full-bleed — drop the inset, radius and shadow; the panel fills the
+   screen and history reverts to an absolute drawer. */
 @media (max-width: 660px), (max-height: 520px) {
+  .surface {
+    padding: 0;
+  }
+
   .floatingUnit {
     position: relative;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
   }
 }

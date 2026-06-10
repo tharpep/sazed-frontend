@@ -1,5 +1,5 @@
-/* Fonts: load via @import so no HTML link is needed. For full self-host, add woff2 to src/assets/fonts/ and use @font-face. */
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=JetBrains+Mono:wght@400;500&display=swap");
+/* Fonts are loaded in index.html via <link rel="preconnect"> + stylesheet so they
+   download in parallel with the app instead of blocking CSS parse (@import does). */
 
 * {
   margin: 0;
@@ -7,17 +7,41 @@
   box-sizing: border-box;
 }
 
+html {
+  color-scheme: dark;
+}
+
 body {
   font-family: var(--font);
   background: var(--bg-outer);
   color: var(--text);
+  font-size: var(--fs-md);
+  line-height: var(--lh-normal);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   overflow-x: hidden;
+}
+
+/* Text selection — tinted to the brand accent rather than the OS default blue. */
+::selection {
+  background: var(--accent-hover);
+  color: var(--text);
+}
+
+/* Inputs/buttons inherit the type system instead of falling back to UA defaults. */
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
 }
 
 /* Custom scrollbar — thin and themed for all scrollable areas */
 ::-webkit-scrollbar {
   width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -37,4 +61,19 @@ body {
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+/* ── Reduced motion — global guard ───────────────────────────────────────────
+   Honour the OS preference everywhere. Individual components may still define
+   richer reduced-motion fallbacks; this is the safety net so nothing animates
+   against a user's explicit wish. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

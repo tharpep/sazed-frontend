@@ -22,18 +22,21 @@
 }
 
 .title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: var(--fs-lg);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--ls-tight);
+  color: var(--text);
   margin: 0;
 }
 
 .statsChip {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-tertiary);
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   padding: 2px 8px;
 }
 
@@ -49,10 +52,10 @@
   background: var(--accent-soft);
   border: 1px solid var(--accent-muted);
   color: var(--accent);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 
 .syncBtn:hover:not(:disabled) {
@@ -71,9 +74,9 @@
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 
 .syncBtnSecondary:hover:not(:disabled) {
@@ -171,8 +174,8 @@
 
 .empty {
   padding: 32px 18px;
-  font-size: 13px;
-  color: var(--text-faint);
+  font-size: var(--fs-base);
+  color: var(--text-tertiary);
   text-align: center;
 }
 
@@ -217,7 +220,7 @@
 .catRed   { background: var(--pastel-red-bg);    color: var(--pastel-red);    }
 
 .filename {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -232,7 +235,7 @@
 }
 
 .meta {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-tertiary);
 }
 
@@ -247,7 +250,8 @@
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
   display: flex;
   align-items: center;
   justify-content: center;

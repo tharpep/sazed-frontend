@@ -9,7 +9,7 @@
   background: transparent;
   color: var(--text-faint);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 
 .btn:hover {

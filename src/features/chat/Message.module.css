@@ -1,16 +1,31 @@
 .msg {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--space-1-5);
   contain: content;
+  /* Each message rises in once on mount. .msg is memoized, so streaming updates
+     to its children never re-trigger this. Reduced-motion handled globally. */
+  animation: msgIn var(--dur-base) var(--ease) both;
 }
 
+@keyframes msgIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Agent: full-width, no container — the words carry it (no side-stripe). */
 .agentMsg {
-  border-left: 2px solid rgba(139, 171, 241, 0.25);
-  padding-left: 12px;
+  align-self: stretch;
 }
 
+/* User: a compact bubble pinned to the right. */
 .userMsg {
   align-self: flex-end;
   max-width: 85%;
@@ -23,41 +38,47 @@
 .userMsg .body {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  border-radius: var(--radius);
+  border-top-right-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
 }
 
+/* Bylines — serif italic, like an editorial exchange rather than chat labels.
+   "presence" voice extended from the dashboard into the conversation. */
 .label {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: var(--fs-base);
+  font-weight: var(--weight-regular);
+  font-style: italic;
+  letter-spacing: var(--ls-normal);
 }
 
 .you {
-  color: var(--accent);
+  color: var(--text-tertiary);
 }
 
+/* Sazed's byline wears the warm presence accent. */
 .agent {
-  color: var(--text-faint);
+  color: var(--gold);
 }
 
 .body {
-  font-size: 15px;
-  line-height: 1.65;
+  font-size: var(--fs-md);
+  line-height: var(--lh-relaxed);
   color: var(--text);
 }
 
 .bodyAfterTools {
-  margin-top: 6px;
+  margin-top: var(--space-1-5);
 }
 
 .body p + p {
-  margin-top: 10px;
+  margin-top: var(--space-3);
 }
 
 .eventsBlock {
-  margin: 8px 0 12px;
+  margin: var(--space-2) 0 var(--space-3);
 }
 
 .userBody {
@@ -66,6 +87,6 @@
 
 .errorText {
   color: var(--pastel-red);
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-family: var(--mono);
 }

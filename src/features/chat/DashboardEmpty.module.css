@@ -4,47 +4,100 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 24px;
+  justify-content: flex-start;
+  padding: var(--space-6);
   overflow-y: auto;
   scrollbar-width: none;
+  /* A faint warm wash from the top — Sazed's presence, barely there. */
+  background: radial-gradient(120% 60% at 50% -8%, var(--gold-glow), transparent 60%);
 }
 .dashboard::-webkit-scrollbar { display: none; }
 
+/* margin: auto 0 vertically centers the block when there's room, but pins it to
+   the top and scrolls cleanly once content outgrows the viewport (avoids the
+   flex justify-content:center overflow-clip trap). */
 .content {
   width: 100%;
-  max-width: 1080px;
+  max-width: 850px;
+  margin: auto 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-5);
 }
 
-/* ── Greeting row ────────────────────────────────────────────────────────── */
-.greetRow {
+.composerSlot {
+  width: 100%;
+  animation: dashItemIn var(--dur-slow) var(--ease) both;
+  animation-delay: 0.08s;
+}
+
+/* ── Hero — the greeting + Sazed's prepared brief ────────────────────────── */
+.hero {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  animation: dashItemIn var(--dur-slow) var(--ease) both;
 }
 
 .greeting {
-  font-size: 22px;
-  font-weight: 300;
-  color: var(--text);
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: var(--weight-light);
+  line-height: var(--lh-tight);
+  color: var(--gold);
+  letter-spacing: var(--ls-tight);
+  text-wrap: balance;
 }
 
-.tempBadge {
-  font-size: 13px;
-  font-family: var(--mono);
+/* The name carries the warm presence accent — italic serif gold. */
+.name {
+  font-style: italic;
+  font-weight: var(--weight-regular);
+  color: var(--gold);
+}
+
+.brief {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: var(--fs-lg);
+  font-weight: var(--weight-regular);
+  line-height: var(--lh-snug);
   color: var(--text-secondary);
+  max-width: 46ch;
+  text-wrap: pretty;
 }
 
-/* ── Card grid — 3×2 + brief ────────────────────────────────────────────── */
+/* ── Card grid — 3×2 widgets ─────────────────────────────────────────────── */
 .cardGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: minmax(120px, auto) minmax(120px, auto) auto;
-  gap: 8px;
+  gap: var(--space-3);
+}
+
+/* Cards rise in together with a light stagger — a calm first impression,
+   not a one-size entrance. Reduced-motion is handled globally. */
+.cardGrid > * {
+  animation: dashItemIn var(--dur-slow) var(--ease) both;
+}
+.cardGrid > *:nth-child(1) { animation-delay: 0.03s; }
+.cardGrid > *:nth-child(2) { animation-delay: 0.06s; }
+.cardGrid > *:nth-child(3) { animation-delay: 0.09s; }
+.cardGrid > *:nth-child(4) { animation-delay: 0.12s; }
+.cardGrid > *:nth-child(5) { animation-delay: 0.15s; }
+.cardGrid > *:nth-child(6) { animation-delay: 0.18s; }
+
+@keyframes dashItemIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Briefing card ───────────────────────────────────────────────────────── */
@@ -53,7 +106,7 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-4);
   min-height: 52px;
   display: flex;
   flex-direction: column;
@@ -61,19 +114,19 @@
 }
 
 .briefLoading {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-faint);
 }
 
 .briefPlaceholder {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-faint);
   text-align: center;
 }
 
 .briefText {
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
   color: var(--text);
 }
 
@@ -95,22 +148,25 @@
 /* ── Quick-action pills ──────────────────────────────────────────────────── */
 .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   justify-content: center;
-  margin-top: 4px;
+  margin-top: var(--space-1);
+  animation: dashItemIn var(--dur-slow) var(--ease) both;
+  animation-delay: 0.2s;
 }
 
 .pill {
-  padding: 7px 14px;
-  border-radius: 100px;
+  padding: var(--space-1-5) var(--space-3-5, 14px);
+  border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-tertiary);
   font-family: var(--font);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   cursor: pointer;
-  transition: all 0.2s var(--ease);
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
   letter-spacing: 0.01em;
 }
 
@@ -120,10 +176,14 @@
   background: var(--accent-soft);
 }
 
+.pill:active {
+  transform: translateY(1px);
+}
+
 /* ── Mobile: 2-col grid ──────────────────────────────────────────────────── */
 @media (max-width: 660px) {
   .dashboard {
-    padding: 16px;
+    padding: var(--space-4);
   }
 
   .cardGrid {
@@ -132,6 +192,6 @@
   }
 
   .greeting {
-    font-size: 18px;
+    font-size: var(--fs-xl);
   }
 }

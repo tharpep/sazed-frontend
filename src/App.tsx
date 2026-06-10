@@ -101,8 +101,9 @@ function App() {
               <ChatArea />
             )}
           </div>
-          {!kbOpen && !settingsOpen && !auditOpen && !financeOpen && !journalOpen && (
+          {viewKey === "chat" && (
             <InputBar
+              variant="docked"
               onSend={send}
               disabled={isStreaming}
               historyOpen={historyOpen}
