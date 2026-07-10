@@ -1,5 +1,6 @@
-import "./styles/tokens.css";
-import "./styles/reset.css";
+import "geist/font/sans";
+import "geist/font/mono";
+import "./styles/globals.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";

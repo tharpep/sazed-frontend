@@ -1,0 +1,75 @@
+@import "tailwindcss";
+@import "@fontsource-variable/fraunces";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+
+  --color-primary-light: oklch(0.560 0.150 340);
+  --color-primary-dark: oklch(0.680 0.160 340);
+  --color-accent-light: oklch(0.620 0.140 75);
+  --color-accent-dark: oklch(0.780 0.130 75);
+  --color-bg-light: oklch(1.000 0.000 0);
+  --color-bg-dark: oklch(0.090 0.000 0);
+  --color-surface-light: oklch(0.970 0.002 340);
+  --color-surface-dark: oklch(0.160 0.004 340);
+  --color-ink-light: oklch(0.180 0.008 340);
+  --color-ink-dark: oklch(0.930 0.004 340);
+  --color-muted-light: oklch(0.550 0.006 340);
+  --color-muted-dark: oklch(0.620 0.006 340);
+
+  --shadow-floating: 0 8px 24px oklch(0 0 0 / 0.12);
+}
+
+/* Light is the default; dark overrides via the .dark class on <html>. */
+:root {
+  --color-primary: var(--color-primary-light);
+  --color-accent: var(--color-accent-light);
+  --color-bg: var(--color-bg-light);
+  --color-surface: var(--color-surface-light);
+  --color-ink: var(--color-ink-light);
+  --color-muted: var(--color-muted-light);
+}
+
+.dark {
+  --color-primary: var(--color-primary-dark);
+  --color-accent: var(--color-accent-dark);
+  --color-bg: var(--color-bg-dark);
+  --color-surface: var(--color-surface-dark);
+  --color-ink: var(--color-ink-dark);
+  --color-muted: var(--color-muted-dark);
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-accent: var(--color-accent);
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-ink: var(--color-ink);
+  --color-muted: var(--color-muted);
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
