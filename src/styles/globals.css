@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "@fontsource-variable/fraunces";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -24,7 +26,16 @@
   --shadow-floating: 0 8px 24px oklch(0 0 0 / 0.12);
 }
 
-/* Light is the default; dark overrides via the .dark class on <html>. */
+/*
+ * Light is the default; dark overrides via the .dark class on <html>.
+ * The --background/--foreground/--card/... names below are shadcn's structural
+ * vocabulary (every scaffolded ui/ primitive references them). They are kept
+ * as thin aliases onto the DESIGN.md tokens above so there is one source of
+ * truth for brand color, not two competing palettes. --destructive and --radius
+ * have no DESIGN.md-specified value yet (Components section intentionally
+ * omitted in the seed DESIGN.md) and keep shadcn's sane defaults until a real
+ * error state / component pass defines them.
+ */
 :root {
   --color-primary: var(--color-primary-light);
   --color-accent: var(--color-accent-light);
@@ -32,6 +43,35 @@
   --color-surface: var(--color-surface-light);
   --color-ink: var(--color-ink-light);
   --color-muted: var(--color-muted-light);
+
+  --background: var(--color-bg-light);
+  --foreground: var(--color-ink-light);
+  --card: var(--color-surface-light);
+  --card-foreground: var(--color-ink-light);
+  --popover: var(--color-surface-light);
+  --popover-foreground: var(--color-ink-light);
+  --primary: var(--color-primary-light);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: var(--color-surface-light);
+  --secondary-foreground: var(--color-ink-light);
+  --muted: var(--color-surface-light);
+  --muted-foreground: var(--color-muted-light);
+  --accent: var(--color-surface-light);
+  --accent-foreground: var(--color-ink-light);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.180 0.008 340 / 12%);
+  --input: oklch(0.180 0.008 340 / 12%);
+  --ring: var(--color-primary-light);
+  --radius: 0.625rem;
+  --sidebar: var(--color-surface-light);
+  --sidebar-foreground: var(--color-ink-light);
+  --sidebar-primary: var(--color-primary-light);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: var(--color-surface-light);
+  --sidebar-accent-foreground: var(--color-ink-light);
+  --sidebar-border: oklch(0.180 0.008 340 / 12%);
+  --sidebar-ring: var(--color-primary-light);
 }
 
 .dark {
@@ -41,6 +81,34 @@
   --color-surface: var(--color-surface-dark);
   --color-ink: var(--color-ink-dark);
   --color-muted: var(--color-muted-dark);
+
+  --background: var(--color-bg-dark);
+  --foreground: var(--color-ink-dark);
+  --card: var(--color-surface-dark);
+  --card-foreground: var(--color-ink-dark);
+  --popover: var(--color-surface-dark);
+  --popover-foreground: var(--color-ink-dark);
+  --primary: var(--color-primary-dark);
+  --primary-foreground: var(--color-bg-dark);
+  --secondary: var(--color-surface-dark);
+  --secondary-foreground: var(--color-ink-dark);
+  --muted: var(--color-surface-dark);
+  --muted-foreground: var(--color-muted-dark);
+  --accent: var(--color-surface-dark);
+  --accent-foreground: var(--color-ink-dark);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.145 0 0);
+  --border: oklch(0.930 0.004 340 / 14%);
+  --input: oklch(0.930 0.004 340 / 14%);
+  --ring: var(--color-primary-dark);
+  --sidebar: var(--color-surface-dark);
+  --sidebar-foreground: var(--color-ink-dark);
+  --sidebar-primary: var(--color-primary-dark);
+  --sidebar-primary-foreground: var(--color-bg-dark);
+  --sidebar-accent: var(--color-surface-dark);
+  --sidebar-accent-foreground: var(--color-ink-dark);
+  --sidebar-border: oklch(0.930 0.004 340 / 14%);
+  --sidebar-ring: var(--color-primary-dark);
 }
 
 @theme inline {
@@ -50,11 +118,46 @@
   --color-surface: var(--color-surface);
   --color-ink: var(--color-ink);
   --color-muted: var(--color-muted);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 @layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
   body {
-    @apply bg-bg text-ink font-sans antialiased;
+    @apply font-sans antialiased bg-background text-foreground;
   }
   :focus-visible {
     outline: 2px solid var(--color-primary);
