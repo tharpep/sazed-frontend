@@ -1,21 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ArrowLeft, Plus, Star, Trash2 } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 import {
   createEntry,
   deleteEntry,
   listEntries,
   listSubcategories,
   updateEntry,
-} from "../../api/journal";
+} from "@/api/journal";
 import type {
   EntryPage,
   JournalCategory,
   JournalEntry,
   JournalEntryCreate,
   JournalEntryUpdate,
-} from "../../api/journal";
-import styles from "./JournalPage.module.css";
+} from "@/api/journal";
 
 // ── Constants ────────────────────────────────────────────────────────────
 
@@ -269,19 +271,18 @@ function Editor({
   const isDefault = subcategory.trim() === defaultSubcategory && subcategory.trim() !== "";
 
   return (
-    <div className={styles.editor}>
-      <div className={styles.editorHeader}>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
         <button
-          className={styles.iconBtn}
           onClick={onBack}
           aria-label="Back to list"
           title="Back"
+          className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink"
         >
-          ←
+          <ArrowLeft className="size-4" aria-hidden="true" />
         </button>
         <input
           ref={titleRef}
-          className={styles.titleInput}
           placeholder="Title"
           value={title}
           onChange={(e) => {
@@ -289,32 +290,29 @@ function Editor({
             markDirty();
           }}
           onBlur={() => dirtyRef.current && save({ explicit: false })}
+          className="min-w-0 flex-1 bg-transparent text-lg font-medium text-ink outline-none placeholder:text-muted"
         />
-        <span className={styles.saveStatus} aria-live="polite">
+        <span className="shrink-0 text-xs text-muted" aria-live="polite">
           {status === "saving" ? "saving…" : status === "saved" ? "saved" : status === "error" ? "error" : ""}
         </span>
         {currentId && (
           <button
-            className={styles.trashBtn}
             onClick={handleDelete}
             aria-label="Delete entry"
             title="Delete entry"
+            className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M3 5h12" />
-              <path d="M7 5V3h4v2" />
-              <path d="M6 5l.75 10h6.5L14 5" />
-            </svg>
+            <Trash2 className="size-4" aria-hidden="true" />
           </button>
         )}
       </div>
 
-      <div className={styles.editorSubrow}>
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2">
         <select
-          className={styles.subcategorySelect}
           value={subOptions.includes(subcategory) ? subcategory : ""}
           onChange={(e) => handleSubChange(e.target.value)}
           onBlur={() => dirtyRef.current && save({ explicit: false })}
+          className="rounded-md border border-border bg-bg px-2 py-1 text-sm text-ink outline-none focus-visible:border-primary"
         >
           <option value="" disabled>
             — pick subcategory —
@@ -327,42 +325,44 @@ function Editor({
           <option value={ADD_NEW_VALUE}>+ Add new…</option>
         </select>
         <button
-          className={`${styles.pinBtn} ${isDefault ? styles.pinBtnActive : ""}`}
           onClick={() => onPinDefault(isDefault ? "" : subcategory.trim())}
           disabled={!subcategory.trim()}
           title={isDefault ? "Default for this category" : "Set as default for this category"}
           aria-pressed={isDefault}
+          className={cn(
+            "flex size-7 items-center justify-center rounded-md transition-colors disabled:opacity-40",
+            isDefault ? "text-accent" : "text-muted hover:text-ink"
+          )}
         >
-          {isDefault ? "★" : "☆"}
+          <Star className="size-4" fill={isDefault ? "currentColor" : "none"} aria-hidden="true" />
         </button>
         <button
-          className={styles.metaToggle}
           onClick={() => setShowMeta((v) => !v)}
           aria-expanded={showMeta}
+          className="ml-auto rounded-md px-2 py-1 text-xs text-muted transition-colors hover:text-ink"
         >
           {showMeta ? "less" : "more"}
         </button>
       </div>
 
       {showMeta && (
-        <div className={styles.metaPanel}>
-          <label className={styles.metaRow}>
-            <span className={styles.metaLabel}>date</span>
+        <div className="flex flex-wrap gap-4 border-b border-border px-4 py-2">
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-muted">date</span>
             <input
               type="date"
-              className={styles.metaInput}
               value={entryDate}
               onChange={(e) => {
                 setEntryDate(e.target.value);
                 markDirty();
               }}
               onBlur={() => dirtyRef.current && save({ explicit: false })}
+              className="rounded-md border border-border bg-bg px-2 py-1 text-ink outline-none focus-visible:border-primary"
             />
           </label>
-          <label className={styles.metaRow}>
-            <span className={styles.metaLabel}>tags</span>
+          <label className="flex flex-1 items-center gap-2 text-sm">
+            <span className="text-muted">tags</span>
             <input
-              className={styles.metaInput}
               placeholder="comma-separated"
               value={tagsStr}
               onChange={(e) => {
@@ -370,15 +370,15 @@ function Editor({
                 markDirty();
               }}
               onBlur={() => dirtyRef.current && save({ explicit: false })}
+              className="min-w-0 flex-1 rounded-md border border-border bg-bg px-2 py-1 text-ink outline-none placeholder:text-muted focus-visible:border-primary"
             />
           </label>
         </div>
       )}
 
-      <div className={styles.editorBody}>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {editingBody ? (
           <textarea
-            className={styles.bodyTextarea}
             placeholder="What's on your mind? Markdown supported."
             value={body}
             onChange={(e) => {
@@ -390,34 +390,34 @@ function Editor({
               if (body.trim()) setEditingBody(false);
             }}
             autoFocus={!isNew}
+            className="size-full min-h-[240px] resize-none bg-transparent text-[0.9375rem] leading-[1.55] text-ink outline-none placeholder:text-muted"
           />
         ) : (
           <div
-            className={styles.bodyRendered}
             onClick={() => setEditingBody(true)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === "Enter") setEditingBody(true);
             }}
+            className="min-h-[240px] cursor-text text-[0.9375rem] leading-[1.55] text-ink"
           >
             {body.trim() ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
+              <div className="prose-journal">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
+              </div>
             ) : (
-              <span className={styles.bodyPlaceholder}>
-                Tap to start writing. Markdown supported.
-              </span>
+              <span className="text-muted">Tap to start writing. Markdown supported.</span>
             )}
           </div>
         )}
       </div>
 
-      <div className={styles.editorFooter}>
-        <span className={styles.footerSpacer} />
+      <div className="flex items-center justify-end border-t border-border px-4 py-3">
         <button
-          className={styles.saveBtn}
           onClick={handleExplicitSave}
           disabled={!canSave || status === "saving"}
+          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-bg transition-opacity disabled:opacity-40"
         >
           {status === "saving" ? "saving…" : "save & close"}
         </button>
@@ -580,32 +580,55 @@ export function JournalPage() {
   const editorKey = creating ? "new" : selected?.id ?? "none";
 
   return (
-    <div className={styles.page} data-view={view}>
-      <aside className={styles.sidebar}>
-        <div className={styles.sidebarHeader}>
+    <div className="grid h-full min-h-0 grid-cols-1 overflow-hidden bg-bg min-[900px]:grid-cols-[340px_1fr]">
+      <aside
+        className={cn(
+          "relative min-h-0 flex-col overflow-hidden border-r border-border min-[900px]:flex",
+          view === "list" ? "flex" : "hidden"
+        )}
+      >
+        <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
           <input
             id="journal-search"
-            className={styles.searchInput}
             type="search"
             placeholder="Search entries…"
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
+            className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary"
           />
+          <button
+            onClick={handleNew}
+            aria-label="New entry"
+            title="New entry (n)"
+            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-bg transition-opacity hover:opacity-90"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+          </button>
         </div>
 
         {subcategories.length > 0 && (
-          <div className={styles.chipRow}>
+          <div className="flex flex-wrap gap-1.5 border-b border-border px-3 py-2">
             <button
-              className={`${styles.chip} ${subFilter === null ? styles.chipActive : ""}`}
               onClick={() => setSubFilter(null)}
+              className={cn(
+                "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                subFilter === null
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border text-muted hover:text-ink"
+              )}
             >
               all
             </button>
             {subcategories.map((s) => (
               <button
                 key={s}
-                className={`${styles.chip} ${subFilter === s ? styles.chipActive : ""}`}
                 onClick={() => setSubFilter(s)}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                  subFilter === s
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-border text-muted hover:text-ink"
+                )}
               >
                 {s}
               </button>
@@ -613,12 +636,12 @@ export function JournalPage() {
           </div>
         )}
 
-        <div className={styles.listScroll}>
-          {loading && <p className={styles.state}>Loading…</p>}
-          {error && <p className={styles.stateError}>{error}</p>}
+        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+          {loading && <p className="px-2 py-1 text-sm text-muted">Loading…</p>}
+          {error && <p className="px-2 py-1 text-sm text-destructive">{error}</p>}
 
           {!loading && !error && entries.length === 0 && (
-            <p className={styles.empty}>
+            <p className="px-2 py-1 text-sm text-muted">
               {q ? `No entries match "${q}".` : "No entries yet. Tap + to start logging."}
             </p>
           )}
@@ -627,44 +650,45 @@ export function JournalPage() {
             <>
               {grouped.map(([date, group]) => (
                 <div key={date}>
-                  <div className={styles.dateGroup}>{fmtDateLabel(date)}</div>
-                  {group.map((entry) => {
-                    const classes = [
-                      styles.entryRow,
-                      selected?.id === entry.id ? styles.entryRowActive : "",
-                      lastSavedId === entry.id ? styles.entryRowFlash : "",
-                    ].filter(Boolean).join(" ");
-                    return (
-                      <button
-                        key={entry.id}
-                        className={classes}
-                        onClick={() => {
-                          setCreating(false);
-                          setSelected(entry);
-                        }}
-                      >
-                        <span className={styles.entryTitle}>{entry.title}</span>
-                        <span className={styles.entryMeta}>
-                          <span className={styles.entrySub}>{entry.subcategory}</span>
-                          {entry.tags.slice(0, 2).map((t) => (
-                            <span key={t} className={styles.tag}>{t}</span>
-                          ))}
-                        </span>
-                        {lastSavedId === entry.id && (
-                          <span className={styles.savedBadge} aria-hidden>
-                            saved ✓
+                  <div className="px-2 py-1 text-xs font-medium tracking-wide text-muted">
+                    {fmtDateLabel(date)}
+                  </div>
+                  {group.map((entry) => (
+                    <button
+                      key={entry.id}
+                      onClick={() => {
+                        setCreating(false);
+                        setSelected(entry);
+                      }}
+                      className={cn(
+                        "relative flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-surface",
+                        selected?.id === entry.id && "bg-surface",
+                        lastSavedId === entry.id && "bg-primary/10"
+                      )}
+                    >
+                      <span className="w-full truncate text-sm text-ink">{entry.title}</span>
+                      <span className="flex w-full items-center gap-1.5 text-xs text-muted">
+                        <span>{entry.subcategory}</span>
+                        {entry.tags.slice(0, 2).map((t) => (
+                          <span key={t} className="rounded bg-surface px-1 py-0.5">
+                            {t}
                           </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                        ))}
+                      </span>
+                      {lastSavedId === entry.id && (
+                        <span className="absolute right-2 top-1.5 text-xs text-primary" aria-hidden>
+                          saved ✓
+                        </span>
+                      )}
+                    </button>
+                  ))}
                 </div>
               ))}
               {nextCursor && (
                 <button
-                  className={styles.loadMoreBtn}
                   onClick={loadMore}
                   disabled={loadingMore}
+                  className="w-full rounded-md px-2 py-1.5 text-xs text-muted transition-colors hover:text-ink disabled:opacity-50"
                 >
                   {loadingMore ? "loading…" : "load more"}
                 </button>
@@ -672,18 +696,14 @@ export function JournalPage() {
             </>
           )}
         </div>
-
-        <button
-          className={styles.fab}
-          onClick={handleNew}
-          aria-label="New entry"
-          title="New entry (n)"
-        >
-          +
-        </button>
       </aside>
 
-      <main className={styles.main}>
+      <main
+        className={cn(
+          "min-h-0 flex-col overflow-hidden min-[900px]:flex",
+          view === "editor" ? "flex" : "hidden"
+        )}
+      >
         {view === "editor" ? (
           <Editor
             key={editorKey}
@@ -697,9 +717,11 @@ export function JournalPage() {
             onPinDefault={handlePinDefault}
           />
         ) : (
-          <div className={styles.placeholder}>
-            <p className={styles.placeholderTitle}>Select an entry</p>
-            <p className={styles.placeholderHint}>or press <kbd>n</kbd> for a new entry</p>
+          <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
+            <p className="text-sm text-ink">Select an entry</p>
+            <p className="text-xs text-muted">
+              or press <kbd className="rounded border border-border px-1 py-0.5">n</kbd> for a new entry
+            </p>
           </div>
         )}
       </main>

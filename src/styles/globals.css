@@ -206,3 +206,49 @@
 .hljs-params {
   color: var(--color-ink);
 }
+
+/* Minimal prose baseline for the journal's rendered markdown read-view,
+   which renders ReactMarkdown with no per-element component overrides. */
+.prose-journal :is(h1, h2, h3) {
+  margin: 1.25em 0 0.5em;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.prose-journal :is(h1, h2, h3):first-child {
+  margin-top: 0;
+}
+.prose-journal p {
+  margin: 0 0 0.9em;
+}
+.prose-journal p:last-child {
+  margin-bottom: 0;
+}
+.prose-journal :is(ul, ol) {
+  margin: 0 0 0.9em;
+  padding-left: 1.4em;
+}
+.prose-journal ul {
+  list-style: disc;
+}
+.prose-journal ol {
+  list-style: decimal;
+}
+.prose-journal a {
+  color: var(--color-primary);
+  text-underline-offset: 2px;
+}
+.prose-journal a:hover {
+  text-decoration: underline;
+}
+.prose-journal code {
+  background: var(--color-surface);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+.prose-journal blockquote {
+  border-left: 2px solid var(--border);
+  padding-left: 0.9em;
+  color: var(--color-muted);
+}
