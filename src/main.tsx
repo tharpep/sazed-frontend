@@ -1,6 +1,7 @@
 import "geist/font/sans";
 import "geist/font/mono";
 import "./styles/globals.css";
+import "./styles/legacy-compat.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
