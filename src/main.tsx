@@ -1,5 +1,3 @@
-import "geist/font/sans";
-import "geist/font/mono";
 import "./styles/globals.css";
 import "./styles/legacy-compat.css";
 import React from "react";
