@@ -176,3 +176,33 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* rehype-highlight code block syntax colors, mapped onto DESIGN.md tokens */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in {
+  color: var(--color-primary);
+}
+.hljs-string,
+.hljs-attr {
+  color: var(--color-accent);
+}
+.hljs-number,
+.hljs-literal {
+  color: var(--color-accent);
+}
+.hljs-comment,
+.hljs-meta {
+  color: var(--color-muted);
+  font-style: italic;
+}
+.hljs-title,
+.hljs-function,
+.hljs-name {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+.hljs-variable,
+.hljs-params {
+  color: var(--color-ink);
+}

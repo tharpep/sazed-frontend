@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { AppShell } from "./components/layout/AppShell";
-import { InputBar } from "./components/InputBar/InputBar";
-import { DashboardEmpty } from "./features/chat/DashboardEmpty";
-import { ChatArea } from "./features/chat/ChatArea";
+import { Composer } from "./features/chat/Composer";
+import { EmptyState } from "./features/chat/EmptyState";
+import { MessageList } from "./features/chat/MessageList";
 import { KbPage } from "./features/kb/KbPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { AuditPage } from "./features/audit/AuditPage";
@@ -19,7 +19,6 @@ function App() {
   const financeOpen = useUiStore((s) => s.financeOpen);
   const journalOpen = useUiStore((s) => s.journalOpen);
   const historyOpen = useUiStore((s) => s.historyOpen);
-  const toggleHistory = useUiStore((s) => s.toggleHistory);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
@@ -95,20 +94,12 @@ function App() {
         ) : kbOpen ? (
           <KbPage />
         ) : view === "empty" ? (
-          <DashboardEmpty />
+          <EmptyState />
         ) : (
-          <ChatArea />
+          <MessageList />
         )}
       </div>
-      {viewKey === "chat" && (
-        <InputBar
-          variant="docked"
-          onSend={send}
-          disabled={isStreaming}
-          historyOpen={historyOpen}
-          onToggleHistory={toggleHistory}
-        />
-      )}
+      {viewKey === "chat" && <Composer variant="docked" onSend={send} disabled={isStreaming} />}
     </AppShell>
   );
 }

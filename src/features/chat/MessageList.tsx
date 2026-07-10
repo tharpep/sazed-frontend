@@ -1,9 +1,10 @@
-import { useRef, useEffect, useState } from "react";
-import { useChatStore } from "../../store/chatStore";
-import { Message } from "./Message";
-import styles from "./ChatArea.module.css";
+import { useEffect, useRef, useState } from "react";
+import { ArrowDown } from "lucide-react";
 
-export function ChatArea() {
+import { useChatStore } from "@/store/chatStore";
+import { MessageBlock } from "@/features/chat/MessageBlock";
+
+export function MessageList() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const areaRef = useRef<HTMLDivElement>(null);
@@ -12,8 +13,9 @@ export function ChatArea() {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const rafId = useRef(0);
 
-  // Cancel pending rAF on unmount
-  useEffect(() => () => { if (rafId.current) cancelAnimationFrame(rafId.current); }, []);
+  useEffect(() => () => {
+    if (rafId.current) cancelAnimationFrame(rafId.current);
+  }, []);
 
   function isNearBottom() {
     const el = areaRef.current;
@@ -46,15 +48,11 @@ export function ChatArea() {
   }, [messages, isStreaming]);
 
   return (
-    <div className={styles.wrapper}>
-      <div className={styles.area} ref={areaRef} onScroll={handleScroll}>
-        <div className={styles.content}>
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <div ref={areaRef} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-6">
           {messages.map((msg, i) => (
-            <Message
-              key={i}
-              message={msg}
-              isLastStreaming={isStreaming && i === messages.length - 1}
-            />
+            <MessageBlock key={i} message={msg} isLastStreaming={isStreaming && i === messages.length - 1} />
           ))}
           <div ref={bottomRef} />
         </div>
@@ -62,14 +60,11 @@ export function ChatArea() {
       {showScrollBtn && (
         <button
           type="button"
-          className={styles.scrollBtn}
           onClick={() => scrollToBottom(true)}
           aria-label="Scroll to bottom"
+          className="absolute bottom-4 left-1/2 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-bg text-muted shadow-floating transition-colors hover:text-ink"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <polyline points="19 12 12 19 5 12" />
-          </svg>
+          <ArrowDown className="size-4" aria-hidden="true" />
         </button>
       )}
     </div>

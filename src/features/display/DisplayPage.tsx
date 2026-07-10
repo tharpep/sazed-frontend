@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ToolsRow } from "../chat/ToolsRow";
-import { StreamingIndicator } from "../chat/StreamingIndicator";
-import { MarkdownContent } from "../chat/MarkdownContent";
+import { ToolsRow } from "./ToolsRow";
+import { StreamingIndicator } from "./StreamingIndicator";
+import { MarkdownContent } from "./MarkdownContent";
 import { ClockWidget } from "../../widgets/ClockWidget";
 import { CalendarWidget } from "../../widgets/CalendarWidget";
 import { UpcomingWidget } from "../../widgets/UpcomingWidget";
