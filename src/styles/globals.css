@@ -1,0 +1,256 @@
+@import "tailwindcss";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-sans: "Geist Variable", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", monospace;
+
+  --color-primary-light: oklch(0.560 0.150 340);
+  --color-primary-dark: oklch(0.680 0.160 340);
+  --color-accent-light: oklch(0.620 0.140 75);
+  --color-accent-dark: oklch(0.780 0.130 75);
+  --color-bg-light: oklch(1.000 0.000 0);
+  --color-bg-dark: oklch(0.090 0.000 0);
+  --color-surface-light: oklch(0.970 0.002 340);
+  --color-surface-dark: oklch(0.160 0.004 340);
+  --color-ink-light: oklch(0.180 0.008 340);
+  --color-ink-dark: oklch(0.930 0.004 340);
+  --color-muted-light: oklch(0.550 0.006 340);
+  --color-muted-dark: oklch(0.620 0.006 340);
+
+  --shadow-floating: 0 8px 24px oklch(0 0 0 / 0.12);
+}
+
+/*
+ * Light is the default; dark overrides via the .dark class on <html>.
+ * The --background/--foreground/--card/... names below are shadcn's structural
+ * vocabulary (every scaffolded ui/ primitive references them). They are kept
+ * as thin aliases onto the DESIGN.md tokens above so there is one source of
+ * truth for brand color, not two competing palettes. --destructive and --radius
+ * have no DESIGN.md-specified value yet (Components section intentionally
+ * omitted in the seed DESIGN.md) and keep shadcn's sane defaults until a real
+ * error state / component pass defines them.
+ */
+:root {
+  --color-primary: var(--color-primary-light);
+  --color-accent: var(--color-accent-light);
+  --color-bg: var(--color-bg-light);
+  --color-surface: var(--color-surface-light);
+  --color-ink: var(--color-ink-light);
+  --color-muted: var(--color-muted-light);
+
+  --background: var(--color-bg-light);
+  --foreground: var(--color-ink-light);
+  --card: var(--color-surface-light);
+  --card-foreground: var(--color-ink-light);
+  --popover: var(--color-surface-light);
+  --popover-foreground: var(--color-ink-light);
+  --primary: var(--color-primary-light);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: var(--color-surface-light);
+  --secondary-foreground: var(--color-ink-light);
+  --muted: var(--color-surface-light);
+  --muted-foreground: var(--color-muted-light);
+  --accent: var(--color-surface-light);
+  --accent-foreground: var(--color-ink-light);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.180 0.008 340 / 12%);
+  --input: oklch(0.180 0.008 340 / 12%);
+  --ring: var(--color-primary-light);
+  --radius: 0.625rem;
+  --sidebar: var(--color-surface-light);
+  --sidebar-foreground: var(--color-ink-light);
+  --sidebar-primary: var(--color-primary-light);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: var(--color-surface-light);
+  --sidebar-accent-foreground: var(--color-ink-light);
+  --sidebar-border: oklch(0.180 0.008 340 / 12%);
+  --sidebar-ring: var(--color-primary-light);
+}
+
+.dark {
+  --color-primary: var(--color-primary-dark);
+  --color-accent: var(--color-accent-dark);
+  --color-bg: var(--color-bg-dark);
+  --color-surface: var(--color-surface-dark);
+  --color-ink: var(--color-ink-dark);
+  --color-muted: var(--color-muted-dark);
+
+  --background: var(--color-bg-dark);
+  --foreground: var(--color-ink-dark);
+  --card: var(--color-surface-dark);
+  --card-foreground: var(--color-ink-dark);
+  --popover: var(--color-surface-dark);
+  --popover-foreground: var(--color-ink-dark);
+  --primary: var(--color-primary-dark);
+  --primary-foreground: var(--color-bg-dark);
+  --secondary: var(--color-surface-dark);
+  --secondary-foreground: var(--color-ink-dark);
+  --muted: var(--color-surface-dark);
+  --muted-foreground: var(--color-muted-dark);
+  --accent: var(--color-surface-dark);
+  --accent-foreground: var(--color-ink-dark);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.145 0 0);
+  --border: oklch(0.930 0.004 340 / 14%);
+  --input: oklch(0.930 0.004 340 / 14%);
+  --ring: var(--color-primary-dark);
+  --sidebar: var(--color-surface-dark);
+  --sidebar-foreground: var(--color-ink-dark);
+  --sidebar-primary: var(--color-primary-dark);
+  --sidebar-primary-foreground: var(--color-bg-dark);
+  --sidebar-accent: var(--color-surface-dark);
+  --sidebar-accent-foreground: var(--color-ink-dark);
+  --sidebar-border: oklch(0.930 0.004 340 / 14%);
+  --sidebar-ring: var(--color-primary-dark);
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-accent: var(--color-accent);
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-ink: var(--color-ink);
+  --color-muted: var(--color-muted);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* rehype-highlight code block syntax colors, mapped onto DESIGN.md tokens */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in {
+  color: var(--color-primary);
+}
+.hljs-string,
+.hljs-attr {
+  color: var(--color-accent);
+}
+.hljs-number,
+.hljs-literal {
+  color: var(--color-accent);
+}
+.hljs-comment,
+.hljs-meta {
+  color: var(--color-muted);
+  font-style: italic;
+}
+.hljs-title,
+.hljs-function,
+.hljs-name {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+.hljs-variable,
+.hljs-params {
+  color: var(--color-ink);
+}
+
+/* Minimal prose baseline for the journal's rendered markdown read-view,
+   which renders ReactMarkdown with no per-element component overrides. */
+.prose-journal :is(h1, h2, h3) {
+  margin: 1.25em 0 0.5em;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.prose-journal :is(h1, h2, h3):first-child {
+  margin-top: 0;
+}
+.prose-journal p {
+  margin: 0 0 0.9em;
+}
+.prose-journal p:last-child {
+  margin-bottom: 0;
+}
+.prose-journal :is(ul, ol) {
+  margin: 0 0 0.9em;
+  padding-left: 1.4em;
+}
+.prose-journal ul {
+  list-style: disc;
+}
+.prose-journal ol {
+  list-style: decimal;
+}
+.prose-journal a {
+  color: var(--color-primary);
+  text-underline-offset: 2px;
+}
+.prose-journal a:hover {
+  text-decoration: underline;
+}
+.prose-journal code {
+  background: var(--color-surface);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+.prose-journal blockquote {
+  border-left: 2px solid var(--border);
+  padding-left: 0.9em;
+  color: var(--color-muted);
+}
