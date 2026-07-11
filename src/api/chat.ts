@@ -7,6 +7,15 @@ export interface PostMessageBody {
   location?: { latitude: number; longitude: number; accuracy?: number };
 }
 
+export interface EditMessageBody {
+  session_id: string;
+  message_index: number;
+  message: string;
+  mode?: string;
+  timezone?: string;
+  location?: { latitude: number; longitude: number; accuracy?: number };
+}
+
 export interface StreamCallbacks {
   onSession: (sessionId: string) => void;
   onToolStart: (name: string) => void;
@@ -17,9 +26,15 @@ export interface StreamCallbacks {
   onError: (err: Error) => void;
 }
 
-export async function postMessageStream(
-  body: PostMessageBody,
-  callbacks: StreamCallbacks
+function isAbortError(err: unknown): boolean {
+  return err instanceof Error && err.name === "AbortError";
+}
+
+async function streamRequest(
+  path: string,
+  body: object,
+  callbacks: StreamCallbacks,
+  signal?: AbortSignal
 ): Promise<void> {
   const { useSettingsStore } = await import("../store/settingsStore");
   const base = useSettingsStore.getState().getEffectiveBase() || "http://localhost:8000";
@@ -30,12 +45,19 @@ export async function postMessageStream(
 
   let res: Response;
   try {
-    res = await fetch(`${base.replace(/\/$/, "")}/chat/stream`, {
+    res = await fetch(`${base.replace(/\/$/, "")}${path}`, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
+      signal,
     });
   } catch (err) {
+    // A cancelled request before the response even arrived is a clean stop, not an error —
+    // whatever text had streamed so far (there may be none) stays as the final content.
+    if (isAbortError(err)) {
+      callbacks.onDone();
+      return;
+    }
     callbacks.onError(err instanceof Error ? err : new Error(String(err)));
     return;
   }
@@ -121,7 +143,31 @@ export async function postMessageStream(
     if (!complete) {
       callbacks.onError(new Error("Stream ended unexpectedly"));
     }
+  } catch (err) {
+    // Cancelled mid-stream — treat like a clean stop so the partial assistant text that
+    // already rendered stays as the final content instead of flashing an error state.
+    if (isAbortError(err)) {
+      callbacks.onDone();
+    } else {
+      callbacks.onError(err instanceof Error ? err : new Error(String(err)));
+    }
   } finally {
     reader.releaseLock();
   }
+}
+
+export async function postMessageStream(
+  body: PostMessageBody,
+  callbacks: StreamCallbacks,
+  signal?: AbortSignal
+): Promise<void> {
+  return streamRequest("/chat/stream", body, callbacks, signal);
+}
+
+export async function postEditMessageStream(
+  body: EditMessageBody,
+  callbacks: StreamCallbacks,
+  signal?: AbortSignal
+): Promise<void> {
+  return streamRequest("/chat/edit/stream", body, callbacks, signal);
 }

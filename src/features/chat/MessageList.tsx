@@ -52,7 +52,12 @@ export function MessageList() {
       <div ref={areaRef} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-6">
           {messages.map((msg, i) => (
-            <MessageBlock key={i} message={msg} isLastStreaming={isStreaming && i === messages.length - 1} />
+            <MessageBlock
+              key={i}
+              message={msg}
+              index={i}
+              isLastStreaming={isStreaming && i === messages.length - 1}
+            />
           ))}
           <div ref={bottomRef} />
         </div>

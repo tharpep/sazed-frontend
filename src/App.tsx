@@ -28,6 +28,7 @@ function App() {
   const setOnline = useUiStore((s) => s.setOnline);
   const messages = useChatStore((s) => s.messages);
   const send = useChatStore((s) => s.send);
+  const stop = useChatStore((s) => s.stop);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const view = messages.length === 0 ? "empty" : "chat";
   const viewKey = settingsOpen
@@ -99,7 +100,15 @@ function App() {
           <MessageList />
         )}
       </div>
-      {viewKey === "chat" && <Composer variant="docked" onSend={send} disabled={isStreaming} />}
+      {viewKey === "chat" && (
+        <Composer
+          variant="docked"
+          onSend={send}
+          disabled={isStreaming}
+          isStreaming={isStreaming}
+          onStop={stop}
+        />
+      )}
     </AppShell>
   );
 }
