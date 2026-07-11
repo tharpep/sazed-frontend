@@ -1,11 +1,13 @@
 import { useCallback, useRef, useState } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 interface ComposerProps {
   onSend: (text: string) => void;
   disabled?: boolean;
+  isStreaming?: boolean;
+  onStop?: () => void;
   variant?: "docked" | "hero";
   placeholder?: string;
   autoFocus?: boolean;
@@ -14,6 +16,8 @@ interface ComposerProps {
 export function Composer({
   onSend,
   disabled = false,
+  isStreaming = false,
+  onStop,
   variant = "docked",
   placeholder = "Ask Sazed anything…",
   autoFocus = false,
@@ -69,18 +73,29 @@ export function Composer({
           placeholder={placeholder}
           className="max-h-40 flex-1 resize-none bg-transparent py-1 text-[0.9375rem] leading-[1.55] text-ink outline-none placeholder:text-muted"
         />
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={!canSend}
-          aria-label="Send message"
-          className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-full transition-colors",
-            canSend ? "bg-primary text-bg" : "bg-surface text-muted"
-          )}
-        >
-          <ArrowUp className="size-4" aria-hidden="true" />
-        </button>
+        {isStreaming ? (
+          <button
+            type="button"
+            onClick={onStop}
+            aria-label="Stop generating"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-bg transition-colors"
+          >
+            <Square className="size-3" fill="currentColor" aria-hidden="true" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!canSend}
+            aria-label="Send message"
+            className={cn(
+              "flex size-7 shrink-0 items-center justify-center rounded-full transition-colors",
+              canSend ? "bg-primary text-bg" : "bg-surface text-muted"
+            )}
+          >
+            <ArrowUp className="size-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
     </div>
   );

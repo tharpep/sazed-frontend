@@ -4,12 +4,14 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import type { Components } from "react-markdown";
+import { Pencil } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { Message as MessageType, ToolBlock } from "@/mock/data";
 import { ToolCallCard } from "@/features/chat/ToolCallCard";
 import { StreamingIndicator } from "@/features/chat/StreamingIndicator";
 import { WidgetRenderer } from "@/widgets/WidgetRenderer";
+import { useChatStore } from "@/store/chatStore";
 
 const REMARK_PLUGINS = [remarkGfm];
 const REHYPE_PLUGINS_FULL = [rehypeHighlight];
@@ -116,13 +118,47 @@ function MessageMarkdown({ content, isStreaming }: { content: string; isStreamin
 
 interface MessageBlockProps {
   message: MessageType;
+  index?: number;
   isLastStreaming?: boolean;
 }
 
-export const MessageBlock = memo(function MessageBlock({ message, isLastStreaming = false }: MessageBlockProps) {
+export const MessageBlock = memo(function MessageBlock({ message, index, isLastStreaming = false }: MessageBlockProps) {
   const isUser = message.role === "user";
   const prefersReducedMotion = useReducedMotion();
   const hasBlocks = !isUser && message.blocks && message.blocks.length > 0;
+  const isStreaming = useChatStore((s) => s.isStreaming);
+  const editMessage = useChatStore((s) => s.editMessage);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(message.content);
+
+  const canEdit = isUser && index !== undefined && !message.isError && !isStreaming;
+
+  function startEdit() {
+    setDraft(message.content);
+    setIsEditing(true);
+  }
+
+  function cancelEdit() {
+    setIsEditing(false);
+  }
+
+  function saveEdit() {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== message.content && index !== undefined) {
+      editMessage(index, trimmed);
+    }
+    setIsEditing(false);
+  }
+
+  function handleEditKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      saveEdit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelEdit();
+    }
+  }
 
   const toolBlocks: ToolBlock[] = hasBlocks
     ? (message.blocks!.filter((b) => b.type === "tool") as ToolBlock[])
@@ -161,9 +197,42 @@ export const MessageBlock = memo(function MessageBlock({ message, isLastStreamin
         <StreamingIndicator />
       ) : message.content ? (
         isUser ? (
-          <p className={cn("whitespace-pre-wrap text-[0.9375rem] leading-[1.55]", "text-right text-ink")}>
-            {message.content}
-          </p>
+          isEditing ? (
+            <div className="flex flex-col items-end gap-2">
+              <textarea
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={handleEditKeyDown}
+                rows={Math.min(8, draft.split("\n").length || 1)}
+                className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-right text-[0.9375rem] leading-[1.55] text-ink outline-none"
+              />
+              <div className="flex gap-3">
+                <button type="button" onClick={cancelEdit} className="text-xs text-muted transition-colors hover:text-ink">
+                  Cancel
+                </button>
+                <button type="button" onClick={saveEdit} className="text-xs font-medium text-primary hover:underline">
+                  Save &amp; submit
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="group/msg flex items-start justify-end gap-1.5">
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={startEdit}
+                  aria-label="Edit message"
+                  className="mt-1 shrink-0 text-muted opacity-0 transition-opacity hover:text-ink group-hover/msg:opacity-100"
+                >
+                  <Pencil className="size-3.5" aria-hidden="true" />
+                </button>
+              )}
+              <p className={cn("whitespace-pre-wrap text-[0.9375rem] leading-[1.55]", "text-right text-ink")}>
+                {message.content}
+              </p>
+            </div>
+          )
         ) : message.isError ? (
           <p className="text-[0.9375rem] leading-[1.55] text-destructive">{message.content}</p>
         ) : (
