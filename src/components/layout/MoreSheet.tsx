@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { ScrollText, Settings as SettingsIcon } from "lucide-react";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useUiStore } from "@/store/uiStore";
 
 /** Phone-only overflow sheet for the destinations that don't fit in the
@@ -12,6 +14,15 @@ export function MoreSheet() {
   const setMoreOpen = useUiStore((s) => s.setMoreOpen);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
+  const isMobile = useIsMobile();
+
+  // SheetContent is sm:hidden, but the primitive's backdrop isn't scoped to
+  // that breakpoint — without this, resizing/rotating past sm while the
+  // sheet is open leaves an invisible full-viewport overlay eating the next
+  // click on the desktop layout underneath.
+  useEffect(() => {
+    if (!isMobile && moreOpen) setMoreOpen(false);
+  }, [isMobile, moreOpen, setMoreOpen]);
 
   return (
     <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
