@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 
 import { TitleBar } from "@/components/layout/TitleBar";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { BottomTabBar } from "@/components/layout/BottomTabBar";
+import { MoreSheet } from "@/components/layout/MoreSheet";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -11,6 +13,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Sidebar />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
       </div>
+      <BottomTabBar />
+      <MoreSheet />
     </div>
   );
 }

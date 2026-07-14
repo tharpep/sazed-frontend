@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { MessageSquarePlus } from "lucide-react";
 import { AppShell } from "./components/layout/AppShell";
 import { Composer } from "./features/chat/Composer";
 import { EmptyState } from "./features/chat/EmptyState";
@@ -30,6 +31,7 @@ function App() {
   const send = useChatStore((s) => s.send);
   const stop = useChatStore((s) => s.stop);
   const isStreaming = useChatStore((s) => s.isStreaming);
+  const newSession = useChatStore((s) => s.newSession);
   const view = messages.length === 0 ? "empty" : "chat";
   const viewKey = settingsOpen
     ? "settings"
@@ -84,6 +86,19 @@ function App() {
   return (
     <AppShell>
       <div key={viewKey} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {viewKey === "chat" && messages.length > 0 && (
+          <div className="flex items-center justify-end border-b border-border px-3 py-2 sm:hidden">
+            <button
+              type="button"
+              onClick={newSession}
+              aria-label="New chat"
+              title="New chat"
+              className="flex size-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink"
+            >
+              <MessageSquarePlus className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+        )}
         {settingsOpen ? (
           <SettingsPage onClose={() => setSettingsOpen(false)} />
         ) : auditOpen ? (

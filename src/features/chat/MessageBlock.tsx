@@ -223,7 +223,7 @@ export const MessageBlock = memo(function MessageBlock({ message, index, isLastS
                   type="button"
                   onClick={startEdit}
                   aria-label="Edit message"
-                  className="mt-1 shrink-0 text-muted opacity-0 transition-opacity hover:text-ink group-hover/msg:opacity-100"
+                  className="-mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md text-muted opacity-60 transition-opacity hover:bg-surface hover:text-ink hover:opacity-100 focus-visible:opacity-100 active:opacity-100"
                 >
                   <Pencil className="size-3.5" aria-hidden="true" />
                 </button>

@@ -7,6 +7,7 @@ interface UiState {
   auditOpen: boolean;
   financeOpen: boolean;
   journalOpen: boolean;
+  moreOpen: boolean;
   online: boolean;
   toggleHistory: () => void;
   setHistoryOpen: (v: boolean) => void;
@@ -17,25 +18,38 @@ interface UiState {
   toggleAudit: () => void;
   toggleFinance: () => void;
   toggleJournal: () => void;
+  toggleMore: () => void;
+  setMoreOpen: (v: boolean) => void;
+  closeAll: () => void;
   setOnline: (v: boolean) => void;
 }
 
-export const useUiStore = create<UiState>((set) => ({
+// Every overlay/panel is mutually exclusive — opening one always closes the
+// rest. Spreading this before the toggled key keeps that invariant in one place.
+const ALL_CLOSED = {
   historyOpen: false,
   kbOpen: false,
   settingsOpen: false,
   auditOpen: false,
   financeOpen: false,
   journalOpen: false,
+  moreOpen: false,
+} as const;
+
+export const useUiStore = create<UiState>((set) => ({
+  ...ALL_CLOSED,
   online: false,
-  toggleHistory: () => set((s) => ({ historyOpen: !s.historyOpen, kbOpen: false, settingsOpen: false, auditOpen: false, financeOpen: false, journalOpen: false })),
-  setHistoryOpen: (v) => set({ historyOpen: v }),
-  toggleKb: () => set((s) => ({ kbOpen: !s.kbOpen, historyOpen: false, settingsOpen: false, auditOpen: false, financeOpen: false, journalOpen: false })),
-  setKbOpen: (v) => set({ kbOpen: v }),
-  toggleSettings: () => set((s) => ({ settingsOpen: !s.settingsOpen, historyOpen: false, kbOpen: false, auditOpen: false, financeOpen: false, journalOpen: false })),
-  setSettingsOpen: (v) => set({ settingsOpen: v }),
-  toggleAudit: () => set((s) => ({ auditOpen: !s.auditOpen, historyOpen: false, kbOpen: false, settingsOpen: false, financeOpen: false, journalOpen: false })),
-  toggleFinance: () => set((s) => ({ financeOpen: !s.financeOpen, historyOpen: false, kbOpen: false, settingsOpen: false, auditOpen: false, journalOpen: false })),
-  toggleJournal: () => set((s) => ({ journalOpen: !s.journalOpen, historyOpen: false, kbOpen: false, settingsOpen: false, auditOpen: false, financeOpen: false })),
+  toggleHistory: () => set((s) => ({ ...ALL_CLOSED, historyOpen: !s.historyOpen })),
+  setHistoryOpen: (v) => set({ ...ALL_CLOSED, historyOpen: v }),
+  toggleKb: () => set((s) => ({ ...ALL_CLOSED, kbOpen: !s.kbOpen })),
+  setKbOpen: (v) => set({ ...ALL_CLOSED, kbOpen: v }),
+  toggleSettings: () => set((s) => ({ ...ALL_CLOSED, settingsOpen: !s.settingsOpen })),
+  setSettingsOpen: (v) => set({ ...ALL_CLOSED, settingsOpen: v }),
+  toggleAudit: () => set((s) => ({ ...ALL_CLOSED, auditOpen: !s.auditOpen })),
+  toggleFinance: () => set((s) => ({ ...ALL_CLOSED, financeOpen: !s.financeOpen })),
+  toggleJournal: () => set((s) => ({ ...ALL_CLOSED, journalOpen: !s.journalOpen })),
+  toggleMore: () => set((s) => ({ ...ALL_CLOSED, moreOpen: !s.moreOpen })),
+  setMoreOpen: (v) => set({ ...ALL_CLOSED, moreOpen: v }),
+  closeAll: () => set({ ...ALL_CLOSED }),
   setOnline: (v) => set({ online: v }),
 }));

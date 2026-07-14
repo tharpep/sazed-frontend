@@ -18,6 +18,9 @@ function resolveSystemTheme(): "light" | "dark" {
 function applyTheme(theme: Theme) {
   const resolved = theme === "system" ? resolveSystemTheme() : theme;
   document.documentElement.classList.toggle("dark", resolved === "dark");
+  // Keeps native chrome (scrollbars, form controls, mobile status bar) in
+  // sync with the resolved theme instead of the static <meta color-scheme>.
+  document.documentElement.style.colorScheme = resolved;
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

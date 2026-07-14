@@ -9,11 +9,22 @@ const OPTIONS = [
   { value: "system", label: "Match system theme", icon: Monitor },
 ] as const;
 
-export function ThemeToggle() {
+interface ThemeToggleProps {
+  orientation?: "vertical" | "horizontal";
+}
+
+export function ThemeToggle({ orientation = "vertical" }: ThemeToggleProps) {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="flex flex-col items-center gap-1 rounded-lg bg-surface p-1" role="radiogroup" aria-label="Theme">
+    <div
+      className={cn(
+        "flex gap-1 rounded-lg bg-surface p-1",
+        orientation === "vertical" ? "flex-col items-center" : "flex-row items-center"
+      )}
+      role="radiogroup"
+      aria-label="Theme"
+    >
       {OPTIONS.map(({ value, label, icon: Icon }) => (
         <button
           key={value}

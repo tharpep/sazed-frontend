@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useDisplayData } from "@/hooks/useDisplayData";
 import type { DisplayData } from "@/hooks/useDisplayData";
 import { fetchWeather } from "@/api/display";
@@ -65,6 +66,7 @@ export function EmptyState() {
   const send = useChatStore((s) => s.send);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const displayData = useDisplayData();
+  const isMobile = useIsMobile();
 
   const [weather, setWeather] = useState<WeatherData | null>(null);
 
@@ -86,7 +88,7 @@ export function EmptyState() {
         <p className="mt-2 text-[0.9375rem] text-muted">{brief}</p>
 
         <div className="mt-6">
-          <Composer onSend={send} disabled={isStreaming} variant="hero" autoFocus />
+          <Composer onSend={send} disabled={isStreaming} variant="hero" autoFocus={!isMobile} />
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
