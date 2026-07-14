@@ -151,7 +151,7 @@ export const MessageBlock = memo(function MessageBlock({ message, index, isLastS
   }
 
   function handleEditKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       saveEdit();
     } else if (e.key === "Escape") {
@@ -205,7 +205,8 @@ export const MessageBlock = memo(function MessageBlock({ message, index, isLastS
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={handleEditKeyDown}
                 rows={Math.min(8, draft.split("\n").length || 1)}
-                className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-right text-[0.9375rem] leading-[1.55] text-ink outline-none"
+                enterKeyHint="send"
+                className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-right text-base leading-[1.55] text-ink outline-none sm:text-[0.9375rem]"
               />
               <div className="flex gap-3">
                 <button type="button" onClick={cancelEdit} className="text-xs text-muted transition-colors hover:text-ink">

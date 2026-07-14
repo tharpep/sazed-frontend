@@ -3,22 +3,35 @@ import type { Message, MessageBlock, ToolBlock, UIBlock } from "../mock/data";
 import { postEditMessageStream, postMessageStream } from "../api/chat";
 import type { StreamCallbacks } from "../api/chat";
 
-// Capture device location once per session and cache it
+// Device location enriches requests but must never gate them: geolocation can
+// take seconds (or sit on a permission prompt) before resolving. Request it
+// once in the background and read back whatever's cached at send time instead
+// of awaiting it inline, so a slow/denied prompt can't stall every message.
 let _cachedLocation: { latitude: number; longitude: number; accuracy?: number } | null = null;
+let _locationRequested = false;
 
-async function _getLocation(): Promise<{ latitude: number; longitude: number; accuracy?: number } | undefined> {
-  if (_cachedLocation) return _cachedLocation;
-  if (!navigator.geolocation) return undefined;
-  return new Promise((resolve) => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        _cachedLocation = { latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy ?? undefined };
-        resolve(_cachedLocation);
-      },
-      () => resolve(undefined),
-      { timeout: 5000 },
-    );
-  });
+function _requestLocationInBackground(): void {
+  if (_locationRequested || !navigator.geolocation) return;
+  _locationRequested = true;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      _cachedLocation = {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy ?? undefined,
+      };
+    },
+    () => {
+      // Denied or unavailable — leave _cachedLocation null. Not retried:
+      // a stalled/dismissed prompt shouldn't reattempt on every message.
+    },
+    { timeout: 5000 },
+  );
+}
+
+function _getLocation(): { latitude: number; longitude: number; accuracy?: number } | undefined {
+  _requestLocationInBackground();
+  return _cachedLocation ?? undefined;
 }
 import { getConversation } from "../api/conversations";
 import type { RawMessage, RawContentBlock } from "../api/conversations";
@@ -176,7 +189,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         controller,
       }));
 
-      const location = await _getLocation();
+      const location = _getLocation();
       await postMessageStream(
         {
           session_id: sessionId ?? undefined,
@@ -215,7 +228,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         controller,
       });
 
-      const location = await _getLocation();
+      const location = _getLocation();
       await postEditMessageStream(
         {
           session_id: sessionId,

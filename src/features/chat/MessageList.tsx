@@ -7,6 +7,7 @@ import { MessageBlock } from "@/features/chat/MessageBlock";
 export function MessageList() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
+  const sessionId = useChatStore((s) => s.sessionId);
   const areaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevStreamingRef = useRef(false);
@@ -46,6 +47,12 @@ export function MessageList() {
     }
     setShowScrollBtn(!nearBottom);
   }, [messages, isStreaming]);
+
+  // Switching to a different conversation (via History) should land on its
+  // most recent turn, not wherever the scroll container happened to be.
+  useEffect(() => {
+    scrollToBottom();
+  }, [sessionId]);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">

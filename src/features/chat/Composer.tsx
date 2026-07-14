@@ -33,7 +33,14 @@ export function Composer({
     if (!trimmed || disabled) return;
     onSend(trimmed);
     setValue("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    // Clicking Send (as opposed to pressing Enter) moves focus to the button —
+    // reclaim it so the mobile keyboard stays open and typing can continue
+    // without an extra tap.
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.focus();
+    }
   }, [value, disabled, onSend]);
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -44,7 +51,7 @@ export function Composer({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSend();
     }
@@ -71,7 +78,8 @@ export function Composer({
           onBlur={() => setFocused(false)}
           autoFocus={autoFocus}
           placeholder={placeholder}
-          className="max-h-40 flex-1 resize-none bg-transparent py-1 text-[0.9375rem] leading-[1.55] text-ink outline-none placeholder:text-muted"
+          enterKeyHint="send"
+          className="max-h-40 flex-1 resize-none bg-transparent py-1 text-base leading-[1.55] text-ink outline-none placeholder:text-muted sm:text-[0.9375rem]"
         />
         {isStreaming ? (
           <button
