@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { ArrowUp, Square } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface ComposerProps {
   onSend: (text: string) => void;
@@ -25,6 +26,7 @@ export function Composer({
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isMobile = useIsMobile();
 
   const canSend = value.trim() !== "" && !disabled;
 
@@ -51,7 +53,10 @@ export function Composer({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+    // Mobile: Enter always inserts a newline (default textarea behavior,
+    // untouched here) — only the send button sends. Desktop: Enter sends,
+    // Shift+Enter inserts a newline.
+    if (e.key === "Enter" && !e.shiftKey && !isMobile && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSend();
     }
@@ -78,7 +83,7 @@ export function Composer({
           onBlur={() => setFocused(false)}
           autoFocus={autoFocus}
           placeholder={placeholder}
-          enterKeyHint="send"
+          enterKeyHint={isMobile ? "enter" : "send"}
           className="max-h-40 flex-1 resize-none bg-transparent py-1 text-base leading-[1.55] text-ink outline-none placeholder:text-muted sm:text-[0.9375rem]"
         />
         {isStreaming ? (
