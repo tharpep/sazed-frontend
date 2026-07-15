@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { MessageSquarePlus } from "lucide-react";
+import { MessageSquarePlus, X } from "lucide-react";
 import { AppShell } from "./components/layout/AppShell";
 import { Composer } from "./features/chat/Composer";
 import { EmptyState } from "./features/chat/EmptyState";
@@ -32,6 +32,8 @@ function App() {
   const stop = useChatStore((s) => s.stop);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const newSession = useChatStore((s) => s.newSession);
+  const sessionLoadError = useChatStore((s) => s.sessionLoadError);
+  const dismissSessionLoadError = useChatStore((s) => s.dismissSessionLoadError);
   const view = messages.length === 0 ? "empty" : "chat";
   const viewKey = settingsOpen
     ? "settings"
@@ -85,6 +87,19 @@ function App() {
 
   return (
     <AppShell>
+      {sessionLoadError && (
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <span>{sessionLoadError}</span>
+          <button
+            type="button"
+            onClick={dismissSessionLoadError}
+            aria-label="Dismiss"
+            className="flex size-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-destructive/10"
+          >
+            <X className="size-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
       <div key={viewKey} className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {viewKey === "chat" && messages.length > 0 && (
           <div className="flex items-center justify-end border-b border-border px-3 py-2 sm:hidden">
