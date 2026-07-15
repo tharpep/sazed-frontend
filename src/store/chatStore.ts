@@ -78,11 +78,13 @@ interface ChatState {
   messages: Message[];
   isStreaming: boolean;
   controller: AbortController | null;
+  sessionLoadError: string | null;
   send: (text: string) => Promise<void>;
   stop: () => void;
   editMessage: (atIndex: number, newText: string) => Promise<void>;
   newSession: () => void;
   loadSession: (id: string) => Promise<void>;
+  dismissSessionLoadError: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => {
@@ -172,10 +174,13 @@ export const useChatStore = create<ChatState>((set, get) => {
     messages: [],
     isStreaming: false,
     controller: null,
+    sessionLoadError: null,
 
     send: async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed) return;
+      // isStreaming guard prevents a double-click (or a rapid Enter-then-click)
+      // from firing two concurrent streams into the same conversation.
+      if (!trimmed || get().isStreaming) return;
       const { sessionId } = get();
 
       const controller = new AbortController();
@@ -208,7 +213,7 @@ export const useChatStore = create<ChatState>((set, get) => {
 
     editMessage: async (atIndex: number, newText: string) => {
       const trimmed = newText.trim();
-      if (!trimmed) return;
+      if (!trimmed || get().isStreaming) return;
       const { sessionId, messages } = get();
       if (!sessionId) return;
       if (messages[atIndex]?.role !== "user") return;
@@ -244,18 +249,34 @@ export const useChatStore = create<ChatState>((set, get) => {
 
     newSession: () => {
       get().controller?.abort();
-      set({ sessionId: null, messages: [], isStreaming: false, controller: null });
+      set({ sessionId: null, messages: [], isStreaming: false, controller: null, sessionLoadError: null });
       useSessionStore.setState({ activeSessionId: null });
     },
 
     loadSession: async (id: string) => {
+      // Abort any in-flight stream from the conversation we're leaving —
+      // otherwise its callbacks keep firing after the switch and mutate
+      // whatever conversation just loaded (they index off "the last message",
+      // which is now a different conversation's last message).
+      get().controller?.abort();
       try {
         const res = await getConversation(id);
         const messages = rawMessagesToMessages(res.messages);
-        set({ sessionId: id, messages });
-      } catch {
-        // Sazed offline or session not found — leave current messages unchanged
+        set({
+          sessionId: id,
+          messages,
+          isStreaming: false,
+          controller: null,
+          sessionLoadError: null,
+        });
+      } catch (err) {
+        set({
+          sessionLoadError:
+            err instanceof Error ? err.message : "Couldn't load that conversation.",
+        });
       }
     },
+
+    dismissSessionLoadError: () => set({ sessionLoadError: null }),
   };
 });
