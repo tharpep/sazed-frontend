@@ -12,6 +12,7 @@ import { ToolCallCard } from "@/features/chat/ToolCallCard";
 import { StreamingIndicator } from "@/features/chat/StreamingIndicator";
 import { WidgetRenderer } from "@/widgets/WidgetRenderer";
 import { useChatStore } from "@/store/chatStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const REMARK_PLUGINS = [remarkGfm];
 const REHYPE_PLUGINS_FULL = [rehypeHighlight];
@@ -130,6 +131,7 @@ export const MessageBlock = memo(function MessageBlock({ message, index, isLastS
   const editMessage = useChatStore((s) => s.editMessage);
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
+  const isMobile = useIsMobile();
 
   const canEdit = isUser && index !== undefined && !message.isError && !isStreaming;
 
@@ -151,7 +153,9 @@ export const MessageBlock = memo(function MessageBlock({ message, index, isLastS
   }
 
   function handleEditKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+    // Mobile: Enter always inserts a newline; only explicit Save sends.
+    // Desktop: Enter saves, Shift+Enter inserts a newline.
+    if (e.key === "Enter" && !e.shiftKey && !isMobile && !e.nativeEvent.isComposing) {
       e.preventDefault();
       saveEdit();
     } else if (e.key === "Escape") {
@@ -205,7 +209,7 @@ export const MessageBlock = memo(function MessageBlock({ message, index, isLastS
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={handleEditKeyDown}
                 rows={Math.min(8, draft.split("\n").length || 1)}
-                enterKeyHint="send"
+                enterKeyHint={isMobile ? "enter" : "send"}
                 className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-right text-base leading-[1.55] text-ink outline-none sm:text-[0.9375rem]"
               />
               <div className="flex gap-3">
