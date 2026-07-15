@@ -56,11 +56,14 @@ export function decodeEmail(credential: string): string | null {
   }
 }
 
-// Used on page load to verify a stored token — Google checks the signature server-side
+// Used on page load to verify a stored token — Google checks the signature server-side.
+// Bounded so a stalled connection (easy to hit right after a mobile OAuth
+// redirect) can't leave the app stuck on the blank "checking" screen indefinitely.
 export async function verifyStoredToken(credential: string): Promise<string | null> {
   try {
     const res = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`,
+      { signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) {
       clearToken();
