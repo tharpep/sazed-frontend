@@ -1,0 +1,74 @@
+# Build on GitHub-hosted runners (CT 106 has too little RAM for a Vite build), then deploy
+# from the self-hosted runner on CT 106. Caddy serves /srv/sazed-console/current; each deploy
+# is a new release dir and an atomic symlink swap, so a bad build is a one-line rollback.
+name: Deploy to Homelab
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-homelab
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Same-origin paths: Caddy on CT 106 proxies them and injects the API keys,
+      # so no key is ever bundled into the client.
+      - name: Build
+        env:
+          VITE_SAZED_URL: /api
+          VITE_GATEWAY_URL: /gw
+        run: pnpm build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted, sazed-frontend]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Release and switch
+        run: |
+          set -euo pipefail
+          ROOT=/srv/sazed-console
+          REL="$ROOT/releases/$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA:0:7}"
+          mkdir -p "$REL"
+          cp -a dist/. "$REL/"
+          chmod -R a+rX "$REL"
+          ln -sfn "$REL" "$ROOT/current.tmp"
+          mv -T "$ROOT/current.tmp" "$ROOT/current"
+          echo "Live: $REL"
+
+      - name: Health check
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)
+          [ "$code" = "200" ] || { echo "UI returned $code"; exit 1; }
+
+      - name: Prune old releases
+        run: ls -1dt /srv/sazed-console/releases/* | tail -n +6 | xargs -r rm -rf
