@@ -13,6 +13,9 @@ interface UiState {
   backlogOpen: boolean;
   moreOpen: boolean;
   online: boolean;
+  // Backlog item to open, from a ?page=backlog&item=<id> link (Pushover buttons)
+  linkedBacklogItem: string | null;
+  setLinkedBacklogItem: (id: string | null) => void;
   toggleHistory: () => void;
   setHistoryOpen: (v: boolean) => void;
   toggleKb: () => void;
@@ -51,6 +54,8 @@ const ALL_CLOSED = {
 export const useUiStore = create<UiState>((set) => ({
   ...ALL_CLOSED,
   online: false,
+  linkedBacklogItem: null,
+  setLinkedBacklogItem: (id) => set({ linkedBacklogItem: id }),
   toggleHistory: () => set((s) => ({ ...ALL_CLOSED, historyOpen: !s.historyOpen })),
   setHistoryOpen: (v) => set({ ...ALL_CLOSED, historyOpen: v }),
   toggleKb: () => set((s) => ({ ...ALL_CLOSED, kbOpen: !s.kbOpen })),

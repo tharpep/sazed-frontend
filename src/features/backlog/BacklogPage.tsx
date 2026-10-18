@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   createBacklogItem,
+  getBacklogItem,
   listBacklog,
   type BacklogItem,
   type BacklogType,
@@ -12,6 +13,7 @@ import {
 } from "@/api/backlog";
 import { errorText } from "@/api/homelab";
 import { JobSheet } from "@/features/jobs/JobSheet";
+import { useUiStore } from "@/store/uiStore";
 import { BacklogSheet } from "./BacklogSheet";
 import { STATUS_LABEL, TYPE_LABEL, ageLabel, sourceLabel, workLabel } from "./format";
 
@@ -42,6 +44,17 @@ export function BacklogPage() {
     summary: "",
   });
   const [addError, setAddError] = useState<string | null>(null);
+
+  const linkedItem = useUiStore((s) => s.linkedBacklogItem);
+  const setLinkedItem = useUiStore((s) => s.setLinkedBacklogItem);
+
+  useEffect(() => {
+    if (!linkedItem) return;
+    setLinkedItem(null);
+    getBacklogItem(linkedItem)
+      .then(setOpenItem)
+      .catch((err) => setError(errorText(err)));
+  }, [linkedItem, setLinkedItem]);
 
   const load = useCallback(async () => {
     setLoading(true);

@@ -39,6 +39,7 @@ function App() {
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
+  const setLinkedBacklogItem = useUiStore((s) => s.setLinkedBacklogItem);
   const messages = useChatStore((s) => s.messages);
   const send = useChatStore((s) => s.send);
   const stop = useChatStore((s) => s.stop);
@@ -66,6 +67,25 @@ function App() {
             : kbOpen
               ? "kb"
               : view;
+
+  // Links from Pushover open a page directly: /?page=backlog&item=<id>. Views are uiStore flags,
+  // not routes, so read the query once and then drop it from the address bar.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const page = params.get("page");
+    if (!page) return;
+    const ui = useUiStore.getState();
+    const open: Record<string, () => void> = {
+      backlog: ui.toggleBacklog,
+      automations: ui.toggleAutomations,
+      homelab: ui.toggleHomelab,
+      kb: ui.toggleKb,
+      journal: ui.toggleJournal,
+    };
+    open[page]?.();
+    if (page === "backlog") setLinkedBacklogItem(params.get("item"));
+    window.history.replaceState(null, "", window.location.pathname);
+  }, [setLinkedBacklogItem]);
 
   useEffect(() => {
     const check = () =>

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { CalendarClock, Lightbulb, ScrollText, Server, Settings as SettingsIcon, Waypoints } from "lucide-react";
+import { BookOpen, History as HistoryIcon, Lightbulb, ScrollText, Settings as SettingsIcon, Waypoints } from "lucide-react";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -7,15 +7,15 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { useUiStore } from "@/store/uiStore";
 
 /** Phone-only overflow sheet for the destinations that don't fit in the
- * 5-slot bottom tab bar (Homelab, Gateway, Automations, Backlog, Settings, Tool log) plus the appearance toggle
+ * 5-slot bottom tab bar (Conversations, Gateway, Journal, Backlog, Settings, Tool log) plus the appearance toggle
  * that lives at the bottom of the desktop rail. */
 export function MoreSheet() {
   const moreOpen = useUiStore((s) => s.moreOpen);
   const setMoreOpen = useUiStore((s) => s.setMoreOpen);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
-  const toggleHomelab = useUiStore((s) => s.toggleHomelab);
+  const toggleHistory = useUiStore((s) => s.toggleHistory);
+  const toggleJournal = useUiStore((s) => s.toggleJournal);
   const toggleGateway = useUiStore((s) => s.toggleGateway);
-  const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const isMobile = useIsMobile();
@@ -37,11 +37,11 @@ export function MoreSheet() {
         <div className="flex flex-col gap-1 px-4 pb-2">
           <button
             type="button"
-            onClick={toggleHomelab}
+            onClick={toggleHistory}
             className="flex items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm text-ink transition-colors hover:bg-surface"
           >
-            <Server className="size-4 text-muted" aria-hidden="true" />
-            Homelab
+            <HistoryIcon className="size-4 text-muted" aria-hidden="true" />
+            Conversations
           </button>
           <button
             type="button"
@@ -53,11 +53,11 @@ export function MoreSheet() {
           </button>
           <button
             type="button"
-            onClick={toggleAutomations}
+            onClick={toggleJournal}
             className="flex items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm text-ink transition-colors hover:bg-surface"
           >
-            <CalendarClock className="size-4 text-muted" aria-hidden="true" />
-            Automations
+            <BookOpen className="size-4 text-muted" aria-hidden="true" />
+            Journal
           </button>
           <button
             type="button"

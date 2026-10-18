@@ -219,7 +219,9 @@ export function Sidebar() {
           width with the transcript. */}
       <div
         className={cn(
-          "fixed inset-0 z-40 flex-col bg-bg sm:hidden",
+          // Fixed to the viewport, so it skips AppShell's safe-area padding and needs its own
+          // (status bar / Dynamic Island on top, home indicator below).
+          "fixed inset-0 z-40 flex-col bg-bg pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] sm:hidden",
           historyOpen ? "flex" : "hidden"
         )}
       >

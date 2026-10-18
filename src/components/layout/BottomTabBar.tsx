@@ -1,10 +1,10 @@
 import type { ComponentType } from "react";
-import { BookOpen, History as HistoryIcon, Library, MessageCircle, MoreHorizontal } from "lucide-react";
+import { CalendarClock, Library, MessageCircle, MoreHorizontal, Server } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/uiStore";
 
-type TabKey = "chat" | "history" | "journal" | "kb" | "more";
+type TabKey = "chat" | "homelab" | "automations" | "kb" | "more";
 
 interface TabDef {
   key: TabKey;
@@ -14,8 +14,8 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: "chat", label: "Chat", icon: MessageCircle },
-  { key: "history", label: "History", icon: HistoryIcon },
-  { key: "journal", label: "Journal", icon: BookOpen },
+  { key: "homelab", label: "Homelab", icon: Server },
+  { key: "automations", label: "Automations", icon: CalendarClock },
   { key: "kb", label: "Knowledge", icon: Library },
   { key: "more", label: "More", icon: MoreHorizontal },
 ];
@@ -33,26 +33,26 @@ export function BottomTabBar() {
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
   const moreOpen = useUiStore((s) => s.moreOpen);
-  const toggleHistory = useUiStore((s) => s.toggleHistory);
-  const toggleJournal = useUiStore((s) => s.toggleJournal);
+  const toggleHomelab = useUiStore((s) => s.toggleHomelab);
+  const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const toggleMore = useUiStore((s) => s.toggleMore);
   const closeAll = useUiStore((s) => s.closeAll);
 
-  const active: TabKey = historyOpen
-    ? "history"
-    : journalOpen
-      ? "journal"
+  const active: TabKey = homelabOpen
+    ? "homelab"
+    : automationsOpen
+      ? "automations"
       : kbOpen
         ? "kb"
-        : settingsOpen || auditOpen || homelabOpen || gatewayOpen || automationsOpen || backlogOpen || moreOpen
+        : settingsOpen || auditOpen || historyOpen || gatewayOpen || journalOpen || backlogOpen || moreOpen
           ? "more"
           : "chat";
 
   function handleTap(key: TabKey) {
     if (key === "chat") closeAll();
-    else if (key === "history") toggleHistory();
-    else if (key === "journal") toggleJournal();
+    else if (key === "homelab") toggleHomelab();
+    else if (key === "automations") toggleAutomations();
     else if (key === "kb") toggleKb();
     else toggleMore();
   }

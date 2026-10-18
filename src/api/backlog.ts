@@ -36,6 +36,10 @@ export async function listBacklog(view: BacklogView, type?: BacklogType): Promis
   return data.items;
 }
 
+export async function getBacklogItem(id: string): Promise<BacklogItem> {
+  return apiFetch(`/backlog/${encodeURIComponent(id)}`) as Promise<BacklogItem>;
+}
+
 export async function createBacklogItem(input: {
   type: BacklogType;
   title: string;
