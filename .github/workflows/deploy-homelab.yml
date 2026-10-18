@@ -59,7 +59,8 @@ jobs:
           ROOT=/srv/sazed-console
           REL="$ROOT/releases/$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA:0:7}"
           mkdir -p "$REL"
-          cp -a dist/. "$REL/"
+          # Not cp -a: it would copy the reused dist/ folder's old timestamp onto the release.
+          cp -r dist/. "$REL/"
           chmod -R a+rX "$REL"
           ln -sfn "$REL" "$ROOT/current.tmp"
           mv -T "$ROOT/current.tmp" "$ROOT/current"
@@ -70,5 +71,13 @@ jobs:
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)
           [ "$code" = "200" ] || { echo "UI returned $code"; exit 1; }
 
+      # Keep the 5 newest by name (names start with a UTC timestamp) and never the live one.
+      # Sorting by mtime once deleted the release that had just gone live (all mtimes were
+      # equal), leaving `current` dangling and the console blank.
       - name: Prune old releases
-        run: ls -1dt /srv/sazed-console/releases/* | tail -n +6 | xargs -r rm -rf
+        run: |
+          set -euo pipefail
+          live=$(readlink -f /srv/sazed-console/current)
+          old=$(ls -1d /srv/sazed-console/releases/* | sort -r | tail -n +6 | { grep -vxF "$live" || true; })
+          [ -z "$old" ] || printf '%s\n' "$old" | xargs -r rm -rf
+          [ -f "$live/index.html" ] || { echo "live release missing after prune: $live"; exit 1; }
