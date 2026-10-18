@@ -8,6 +8,7 @@ import {
   History as HistoryIcon,
   ScrollText,
   CalendarClock,
+  Lightbulb,
   Server,
   Waypoints,
   Settings as SettingsIcon,
@@ -61,6 +62,7 @@ export function Sidebar() {
   const homelabOpen = useUiStore((s) => s.homelabOpen);
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
+  const backlogOpen = useUiStore((s) => s.backlogOpen);
   const auditOpen = useUiStore((s) => s.auditOpen);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const toggleHistory = useUiStore((s) => s.toggleHistory);
@@ -69,6 +71,7 @@ export function Sidebar() {
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
   const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
+  const toggleBacklog = useUiStore((s) => s.toggleBacklog);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
@@ -134,6 +137,9 @@ export function Sidebar() {
           </RailButton>
           <RailButton label="Automations" active={automationsOpen} onClick={toggleAutomations}>
             <CalendarClock className="size-4" aria-hidden="true" />
+          </RailButton>
+          <RailButton label="Backlog" active={backlogOpen} onClick={toggleBacklog}>
+            <Lightbulb className="size-4" aria-hidden="true" />
           </RailButton>
           <RailButton label="Tool log" active={auditOpen} onClick={toggleAudit}>
             <ScrollText className="size-4" aria-hidden="true" />

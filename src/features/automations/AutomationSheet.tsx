@@ -159,6 +159,12 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
             <p className="text-sm text-muted">
               Calls the gateway directly: <code className="text-ink">{detail.action.method} {detail.action.path}</code>
             </p>
+          ) : isGateway && detail?.action.type === "pipeline" ? (
+            <p className="text-sm text-muted">
+              {detail.action.name === "scout"
+                ? `Built-in scout: researches ideas for your stack, gets a second opinion, and files at most ${detail.action.max_ideas ?? 3} new ones in the Backlog.`
+                : "Built-in triage: ranks open Backlog ideas, shortlists the top two, and marks month-old untouched ideas stale."}
+            </p>
           ) : isGateway && detail?.action.type === "job" ? (
             <div className="flex flex-col gap-1 text-sm">
               <p className="text-muted">

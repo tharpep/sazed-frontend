@@ -12,6 +12,7 @@ import { JournalPage } from "./features/journal/JournalPage";
 import { HomelabPage } from "./features/homelab/HomelabPage";
 import { GatewayPage } from "./features/gateway/GatewayPage";
 import { AutomationsPage } from "./features/automations/AutomationsPage";
+import { BacklogPage } from "./features/backlog/BacklogPage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
 import { apiFetch } from "./api/client";
@@ -25,6 +26,7 @@ function App() {
   const homelabOpen = useUiStore((s) => s.homelabOpen);
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
+  const backlogOpen = useUiStore((s) => s.backlogOpen);
   const historyOpen = useUiStore((s) => s.historyOpen);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
@@ -34,6 +36,7 @@ function App() {
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
   const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
+  const toggleBacklog = useUiStore((s) => s.toggleBacklog);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const messages = useChatStore((s) => s.messages);
@@ -58,6 +61,8 @@ function App() {
             ? "gateway"
             : automationsOpen
             ? "automations"
+            : backlogOpen
+            ? "backlog"
             : kbOpen
               ? "kb"
               : view;
@@ -84,6 +89,7 @@ function App() {
         else if (homelabOpen) toggleHomelab();
         else if (gatewayOpen) toggleGateway();
         else if (automationsOpen) toggleAutomations();
+        else if (backlogOpen) toggleBacklog();
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -98,6 +104,7 @@ function App() {
     homelabOpen,
     gatewayOpen,
     automationsOpen,
+    backlogOpen,
     setHistoryOpen,
     toggleKb,
     setSettingsOpen,
@@ -107,6 +114,7 @@ function App() {
     toggleHomelab,
     toggleGateway,
     toggleAutomations,
+    toggleBacklog,
   ]);
 
   return (
@@ -152,6 +160,8 @@ function App() {
           <GatewayPage />
         ) : automationsOpen ? (
           <AutomationsPage />
+        ) : backlogOpen ? (
+          <BacklogPage />
         ) : kbOpen ? (
           <KnowledgePage />
         ) : view === "empty" ? (

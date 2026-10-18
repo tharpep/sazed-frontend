@@ -19,7 +19,8 @@ export type AutomationAction =
       save_to_kb?: boolean;
       repo?: string | null;
       mode?: "review" | "change";
-    };
+    }
+  | { type: "pipeline"; name: "scout" | "triage"; max_ideas?: number };
 
 export interface AutomationOutputs {
   pushover: { title?: string | null; priority?: number } | null;
