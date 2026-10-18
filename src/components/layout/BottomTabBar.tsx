@@ -28,6 +28,7 @@ export function BottomTabBar() {
   const kbOpen = useUiStore((s) => s.kbOpen);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const auditOpen = useUiStore((s) => s.auditOpen);
+  const homelabOpen = useUiStore((s) => s.homelabOpen);
   const moreOpen = useUiStore((s) => s.moreOpen);
   const toggleHistory = useUiStore((s) => s.toggleHistory);
   const toggleJournal = useUiStore((s) => s.toggleJournal);
@@ -41,7 +42,7 @@ export function BottomTabBar() {
       ? "journal"
       : kbOpen
         ? "kb"
-        : settingsOpen || auditOpen || moreOpen
+        : settingsOpen || auditOpen || homelabOpen || moreOpen
           ? "more"
           : "chat";
 

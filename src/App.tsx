@@ -9,6 +9,7 @@ import { SettingsPage } from "./features/settings/SettingsPage";
 import { AuditPage } from "./features/audit/AuditPage";
 import { FinancePage } from "./features/finance/FinancePage";
 import { JournalPage } from "./features/journal/JournalPage";
+import { HomelabPage } from "./features/homelab/HomelabPage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
 import { apiFetch } from "./api/client";
@@ -19,12 +20,14 @@ function App() {
   const auditOpen = useUiStore((s) => s.auditOpen);
   const financeOpen = useUiStore((s) => s.financeOpen);
   const journalOpen = useUiStore((s) => s.journalOpen);
+  const homelabOpen = useUiStore((s) => s.homelabOpen);
   const historyOpen = useUiStore((s) => s.historyOpen);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
   const toggleFinance = useUiStore((s) => s.toggleFinance);
   const toggleJournal = useUiStore((s) => s.toggleJournal);
+  const toggleHomelab = useUiStore((s) => s.toggleHomelab);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const messages = useChatStore((s) => s.messages);
@@ -43,9 +46,11 @@ function App() {
         ? "finance"
         : journalOpen
           ? "journal"
-          : kbOpen
-            ? "kb"
-            : view;
+          : homelabOpen
+            ? "homelab"
+            : kbOpen
+              ? "kb"
+              : view;
 
   useEffect(() => {
     const check = () =>
@@ -66,6 +71,7 @@ function App() {
         else if (auditOpen) toggleAudit();
         else if (financeOpen) toggleFinance();
         else if (journalOpen) toggleJournal();
+        else if (homelabOpen) toggleHomelab();
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -77,12 +83,14 @@ function App() {
     auditOpen,
     financeOpen,
     journalOpen,
+    homelabOpen,
     setHistoryOpen,
     toggleKb,
     setSettingsOpen,
     toggleAudit,
     toggleFinance,
     toggleJournal,
+    toggleHomelab,
   ]);
 
   return (
@@ -122,6 +130,8 @@ function App() {
           <FinancePage />
         ) : journalOpen ? (
           <JournalPage />
+        ) : homelabOpen ? (
+          <HomelabPage />
         ) : kbOpen ? (
           <KbPage />
         ) : view === "empty" ? (

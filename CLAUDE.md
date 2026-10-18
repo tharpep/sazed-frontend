@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 - `pnpm dev` — Vite dev server at http://localhost:3000 (web only)
+- `pnpm dev:homelab` — same, against the live homelab console: mode `homelab` (`.env.homelab`) sets relative `/api` + `/gw`, and `vite.config.ts` proxies them to `https://sazed.tail77c590.ts.net` (override with `SAZED_LAB_URL`). Needs Tailscale on. No keys locally; Caddy on CT 106 adds them.
 - `pnpm tauri dev` — Tauri desktop window (requires Rust toolchain)
 - `pnpm build` — TypeScript check + Vite build
 - `pnpm tauri build` — Full desktop build after `pnpm build`
@@ -36,6 +37,7 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 - `src/features/journal/` — `JournalPage` (responsive two-pane ≥900px / single-pane below, inline `Editor` with autosave + raw/rendered markdown toggle, cursor-paginated "load more", per-category default subcategory pinned in `localStorage`). `ACTIVE_CATEGORY` constant gates personal — schema/API support it but the UI surface is off until a category switcher is built.
 - `src/features/kb/`, `src/features/settings/`, `src/features/audit/`, `src/features/finance/` — still CSS Modules, styled via `legacy-compat.css`. Never rebuilt in the Tailwind/shadcn redesign since neither `DESIGN.md` nor the design spec detailed their visual language; reachable from the Sidebar (KB, Settings, Audit) except Finance.
 - `src/features/display/` — `DisplayPage`, a separate kiosk-style `/display` route, plus its own private copies of `MarkdownContent`, `StreamingIndicator`, `ToolsRow`, `ToolCard` (relocated here from `chat/` during the redesign once chat got its own differently-shaped equivalents). Out of scope for chat/journal work.
+- `src/features/homelab/` — `HomelabPage` (summary, host line, services grouped Sazed/Apps/Infrastructure with problems sorted first, 30s refresh paused while hidden) and `ServiceSheet` (bottom sheet on phones, right panel on desktop: facts, maintenance/mute/notes, start/restart with a confirm dialog that names every service sharing the container, outage + container lifecycle history). Data from the gateway's `/homelab/*` via `src/api/homelab.ts`. Mobile-first by design (the iPhone is the main client). Status color rule: healthy is neutral, only down is `destructive`, maintenance uses the gold `accent`. Reached from the desktop rail and the phone More sheet (`uiStore.homelabOpen`).
 - `src/features/auth/` — `AuthGate`, wraps the whole app in `main.tsx`.
 - `src/widgets/` — `CalendarWidget`, `TaskWidget`, `EmailBadge`, `UpcomingWidget`, `WeatherWidget`, `ClockWidget`, `GitHubWidget`, `WidgetRenderer` (registry-based, renders chat's `UIBlock`s). Used by `DisplayPage` and by `EmptyState`'s day-brief data hooks; not rendered as a card grid in chat anymore.
 - `src-tauri/` — Tauri shell. Window 900×620, min 600×480, `decorations: false`. `TitleBar` uses `-webkit-app-region: drag`; interactive children use `no-drag`.

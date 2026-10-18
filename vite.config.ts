@@ -6,6 +6,12 @@ import tailwindcss from "@tailwindcss/vite";
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
+// `pnpm dev:homelab` (mode "homelab", .env.homelab) points the app at relative /api and /gw;
+// these proxy them to the live console on the tailnet, server-side, so the browser stays
+// same-origin (the console's Caddy rejects cross-site browser requests) and holds no keys.
+// @ts-expect-error process is a nodejs global
+const labTarget = process.env.SAZED_LAB_URL || "https://sazed.tail77c590.ts.net";
+
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   root: ".",
@@ -35,6 +41,10 @@ export default defineConfig(async () => ({
     watch: {
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
+    },
+    proxy: {
+      "/api": { target: labTarget, changeOrigin: true },
+      "/gw": { target: labTarget, changeOrigin: true },
     },
   },
 }));
