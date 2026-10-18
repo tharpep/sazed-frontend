@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ScrollText, Server, Settings as SettingsIcon, Waypoints } from "lucide-react";
+import { CalendarClock, ScrollText, Server, Settings as SettingsIcon, Waypoints } from "lucide-react";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -7,7 +7,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { useUiStore } from "@/store/uiStore";
 
 /** Phone-only overflow sheet for the destinations that don't fit in the
- * 5-slot bottom tab bar (Homelab, Gateway, Settings, Tool log) plus the appearance toggle
+ * 5-slot bottom tab bar (Homelab, Gateway, Automations, Settings, Tool log) plus the appearance toggle
  * that lives at the bottom of the desktop rail. */
 export function MoreSheet() {
   const moreOpen = useUiStore((s) => s.moreOpen);
@@ -15,6 +15,7 @@ export function MoreSheet() {
   const toggleAudit = useUiStore((s) => s.toggleAudit);
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
   const toggleGateway = useUiStore((s) => s.toggleGateway);
+  const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const isMobile = useIsMobile();
 
@@ -48,6 +49,14 @@ export function MoreSheet() {
           >
             <Waypoints className="size-4 text-muted" aria-hidden="true" />
             Gateway
+          </button>
+          <button
+            type="button"
+            onClick={toggleAutomations}
+            className="flex items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm text-ink transition-colors hover:bg-surface"
+          >
+            <CalendarClock className="size-4 text-muted" aria-hidden="true" />
+            Automations
           </button>
           <button
             type="button"

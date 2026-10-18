@@ -9,6 +9,7 @@ interface UiState {
   journalOpen: boolean;
   homelabOpen: boolean;
   gatewayOpen: boolean;
+  automationsOpen: boolean;
   moreOpen: boolean;
   online: boolean;
   toggleHistory: () => void;
@@ -22,6 +23,7 @@ interface UiState {
   toggleJournal: () => void;
   toggleHomelab: () => void;
   toggleGateway: () => void;
+  toggleAutomations: () => void;
   toggleMore: () => void;
   setMoreOpen: (v: boolean) => void;
   closeAll: () => void;
@@ -39,6 +41,7 @@ const ALL_CLOSED = {
   journalOpen: false,
   homelabOpen: false,
   gatewayOpen: false,
+  automationsOpen: false,
   moreOpen: false,
 } as const;
 
@@ -56,6 +59,7 @@ export const useUiStore = create<UiState>((set) => ({
   toggleJournal: () => set((s) => ({ ...ALL_CLOSED, journalOpen: !s.journalOpen })),
   toggleHomelab: () => set((s) => ({ ...ALL_CLOSED, homelabOpen: !s.homelabOpen })),
   toggleGateway: () => set((s) => ({ ...ALL_CLOSED, gatewayOpen: !s.gatewayOpen })),
+  toggleAutomations: () => set((s) => ({ ...ALL_CLOSED, automationsOpen: !s.automationsOpen })),
   toggleMore: () => set((s) => ({ ...ALL_CLOSED, moreOpen: !s.moreOpen })),
   setMoreOpen: (v) => set({ ...ALL_CLOSED, moreOpen: v }),
   closeAll: () => set({ ...ALL_CLOSED }),
