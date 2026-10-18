@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BookOpen, History as HistoryIcon, Lightbulb, ScrollText, Settings as SettingsIcon, Waypoints } from "lucide-react";
+import { Activity, BookOpen, History as HistoryIcon, Lightbulb, Settings as SettingsIcon, Waypoints } from "lucide-react";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -7,7 +7,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { useUiStore } from "@/store/uiStore";
 
 /** Phone-only overflow sheet for the destinations that don't fit in the
- * 5-slot bottom tab bar (Conversations, Gateway, Journal, Backlog, Settings, Tool log) plus the appearance toggle
+ * 5-slot bottom tab bar (Conversations, Gateway, Journal, Backlog, Settings, Activity) plus the appearance toggle
  * that lives at the bottom of the desktop rail. */
 export function MoreSheet() {
   const moreOpen = useUiStore((s) => s.moreOpen);
@@ -80,8 +80,8 @@ export function MoreSheet() {
             onClick={toggleAudit}
             className="flex items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm text-ink transition-colors hover:bg-surface"
           >
-            <ScrollText className="size-4 text-muted" aria-hidden="true" />
-            Tool log
+            <Activity className="size-4 text-muted" aria-hidden="true" />
+            Activity
           </button>
         </div>
         <div className="flex items-center justify-between border-t border-border px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">

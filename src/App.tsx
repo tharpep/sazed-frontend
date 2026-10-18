@@ -6,7 +6,7 @@ import { EmptyState } from "./features/chat/EmptyState";
 import { MessageList } from "./features/chat/MessageList";
 import { KnowledgePage } from "./features/kb/KnowledgePage";
 import { SettingsPage } from "./features/settings/SettingsPage";
-import { AuditPage } from "./features/audit/AuditPage";
+import { ActivityPage } from "./features/activity/ActivityPage";
 import { FinancePage } from "./features/finance/FinancePage";
 import { JournalPage } from "./features/journal/JournalPage";
 import { HomelabPage } from "./features/homelab/HomelabPage";
@@ -169,7 +169,8 @@ function App() {
         {settingsOpen ? (
           <SettingsPage onClose={() => setSettingsOpen(false)} />
         ) : auditOpen ? (
-          <AuditPage />
+          // auditOpen is the Activity page now (it replaced the Tool log)
+          <ActivityPage />
         ) : financeOpen ? (
           <FinancePage />
         ) : journalOpen ? (

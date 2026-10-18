@@ -6,7 +6,7 @@ import {
   Library,
   MessageSquarePlus,
   History as HistoryIcon,
-  ScrollText,
+  Activity,
   CalendarClock,
   Lightbulb,
   Server,
@@ -141,8 +141,8 @@ export function Sidebar() {
           <RailButton label="Backlog" active={backlogOpen} onClick={toggleBacklog}>
             <Lightbulb className="size-4" aria-hidden="true" />
           </RailButton>
-          <RailButton label="Tool log" active={auditOpen} onClick={toggleAudit}>
-            <ScrollText className="size-4" aria-hidden="true" />
+          <RailButton label="Activity" active={auditOpen} onClick={toggleAudit}>
+            <Activity className="size-4" aria-hidden="true" />
           </RailButton>
           <div className="flex-1" />
           <RailButton label="Settings" active={settingsOpen} onClick={toggleSettings}>

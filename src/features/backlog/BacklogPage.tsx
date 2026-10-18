@@ -131,7 +131,10 @@ export function BacklogPage() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      {/* Scroll on a plain block: as a flex column it would shrink the list to fit (and the
+          list clips its overflow for the rounded corners), leaving nothing to scroll. */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-4 px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by type">
           {([null, ...(Object.keys(TYPE_LABEL) as BacklogType[])] as (BacklogType | null)[]).map((t) => (
             <button
@@ -226,6 +229,7 @@ export function BacklogPage() {
             })}
           </ul>
         )}
+        </div>
       </div>
 
       <BacklogSheet
