@@ -10,6 +10,7 @@ import { AuditPage } from "./features/audit/AuditPage";
 import { FinancePage } from "./features/finance/FinancePage";
 import { JournalPage } from "./features/journal/JournalPage";
 import { HomelabPage } from "./features/homelab/HomelabPage";
+import { GatewayPage } from "./features/gateway/GatewayPage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
 import { apiFetch } from "./api/client";
@@ -21,6 +22,7 @@ function App() {
   const financeOpen = useUiStore((s) => s.financeOpen);
   const journalOpen = useUiStore((s) => s.journalOpen);
   const homelabOpen = useUiStore((s) => s.homelabOpen);
+  const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const historyOpen = useUiStore((s) => s.historyOpen);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
@@ -28,6 +30,7 @@ function App() {
   const toggleFinance = useUiStore((s) => s.toggleFinance);
   const toggleJournal = useUiStore((s) => s.toggleJournal);
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
+  const toggleGateway = useUiStore((s) => s.toggleGateway);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const messages = useChatStore((s) => s.messages);
@@ -48,6 +51,8 @@ function App() {
           ? "journal"
           : homelabOpen
             ? "homelab"
+            : gatewayOpen
+            ? "gateway"
             : kbOpen
               ? "kb"
               : view;
@@ -72,6 +77,7 @@ function App() {
         else if (financeOpen) toggleFinance();
         else if (journalOpen) toggleJournal();
         else if (homelabOpen) toggleHomelab();
+        else if (gatewayOpen) toggleGateway();
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -84,6 +90,7 @@ function App() {
     financeOpen,
     journalOpen,
     homelabOpen,
+    gatewayOpen,
     setHistoryOpen,
     toggleKb,
     setSettingsOpen,
@@ -91,6 +98,7 @@ function App() {
     toggleFinance,
     toggleJournal,
     toggleHomelab,
+    toggleGateway,
   ]);
 
   return (
@@ -132,6 +140,8 @@ function App() {
           <JournalPage />
         ) : homelabOpen ? (
           <HomelabPage />
+        ) : gatewayOpen ? (
+          <GatewayPage />
         ) : kbOpen ? (
           <KbPage />
         ) : view === "empty" ? (

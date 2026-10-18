@@ -8,6 +8,7 @@ import {
   History as HistoryIcon,
   ScrollText,
   Server,
+  Waypoints,
   Settings as SettingsIcon,
 } from "lucide-react";
 
@@ -57,12 +58,14 @@ export function Sidebar() {
   const journalOpen = useUiStore((s) => s.journalOpen);
   const kbOpen = useUiStore((s) => s.kbOpen);
   const homelabOpen = useUiStore((s) => s.homelabOpen);
+  const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const auditOpen = useUiStore((s) => s.auditOpen);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const toggleHistory = useUiStore((s) => s.toggleHistory);
   const toggleJournal = useUiStore((s) => s.toggleJournal);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
+  const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
@@ -122,6 +125,9 @@ export function Sidebar() {
           </RailButton>
           <RailButton label="Homelab" active={homelabOpen} onClick={toggleHomelab}>
             <Server className="size-4" aria-hidden="true" />
+          </RailButton>
+          <RailButton label="Gateway" active={gatewayOpen} onClick={toggleGateway}>
+            <Waypoints className="size-4" aria-hidden="true" />
           </RailButton>
           <RailButton label="Tool log" active={auditOpen} onClick={toggleAudit}>
             <ScrollText className="size-4" aria-hidden="true" />
