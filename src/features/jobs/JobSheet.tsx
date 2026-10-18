@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
-import { ACTIVE_STATUSES, cancelJob, getJob, type JobDetail } from "@/api/jobs";
+import { ACTIVE_STATUSES, approveJob, cancelJob, continueJob, getJob, type JobDetail } from "@/api/jobs";
 import { errorText } from "@/api/homelab";
 import { KIND_LABEL, STATUS_LABEL, duration, requesterLabel, statusTone, stepsFromEvents } from "./format";
 
@@ -14,14 +14,19 @@ interface Props {
   jobId: string | null;
   onClose: () => void;
   onChanged: () => void;
+  onOpenJob: (id: string) => void;
 }
 
-export function JobSheet({ jobId, onClose, onChanged }: Props) {
+const followField =
+  "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
+
+export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
   const isMobile = useIsMobile();
   const [job, setJob] = useState<JobDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [followUp, setFollowUp] = useState("");
 
   const load = useCallback(async () => {
     if (!jobId) return;
@@ -46,13 +51,27 @@ export function JobSheet({ jobId, onClose, onChanged }: Props) {
     return () => clearTimeout(id);
   }, [job, load]);
 
-  async function cancel() {
+  async function act(fn: () => Promise<unknown>) {
+    setBusy(true);
+    try {
+      await fn();
+      await load();
+      onChanged();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendFollowUp() {
     if (!jobId) return;
     setBusy(true);
     try {
-      await cancelJob(jobId);
-      await load();
+      const child = await continueJob(jobId, followUp.trim());
+      setFollowUp("");
       onChanged();
+      onOpenJob(child.id);
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -93,11 +112,22 @@ export function JobSheet({ jobId, onClose, onChanged }: Props) {
           {job && ACTIVE_STATUSES.includes(job.status) && (
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-muted">
-                {job.status === "queued" ? "Waiting for the worker…" : `Working: ${steps.length} steps so far…`}
+                {job.status === "queued"
+                  ? "Waiting for the worker…"
+                  : job.status === "needs_approval"
+                    ? "Waiting for your approval."
+                    : `Working: ${steps.length} steps so far…`}
               </p>
-              <Button size="sm" variant="outline" disabled={busy} onClick={cancel}>
-                Cancel
-              </Button>
+              <div className="flex gap-2">
+                {job.status === "needs_approval" && (
+                  <Button size="sm" disabled={busy} onClick={() => act(() => approveJob(job.id))}>
+                    Approve
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => act(() => cancelJob(job.id))}>
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
 
@@ -107,6 +137,22 @@ export function JobSheet({ jobId, onClose, onChanged }: Props) {
             </section>
           )}
           {job?.error && <p className="text-sm text-destructive">{job.error}</p>}
+
+          {job?.status === "succeeded" && (
+            <section aria-label="Follow up" className="flex flex-col gap-2">
+              <textarea
+                value={followUp}
+                onChange={(e) => setFollowUp(e.target.value)}
+                rows={2}
+                aria-label="Follow-up instruction"
+                placeholder="Follow up: the same agent continues with its context"
+                className={cn(followField, "resize-y")}
+              />
+              <Button size="sm" className="self-end" disabled={busy || followUp.trim().length < 2} onClick={sendFollowUp}>
+                Continue
+              </Button>
+            </section>
+          )}
 
           {steps.length > 0 && (
             <section aria-label="Steps" className="flex flex-col gap-1">

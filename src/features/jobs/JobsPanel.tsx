@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   ACTIVE_STATUSES,
   listJobs,
+  startCodeTask,
   startResearch,
   startSecondOpinion,
   type JobSummary,
@@ -18,7 +19,7 @@ import { KIND_LABEL, STATUS_LABEL, duration, requesterLabel, statusTone } from "
 const field =
   "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
 
-type Mode = "research" | "second_opinion";
+type Mode = "research" | "second_opinion" | "code_review";
 
 export function JobsPanel({ refreshKey }: { refreshKey: number }) {
   const [jobs, setJobs] = useState<JobSummary[] | null>(null);
@@ -26,6 +27,7 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
   const [open, setOpen] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("research");
   const [text, setText] = useState("");
+  const [repo, setRepo] = useState("");
   const [deep, setDeep] = useState(false);
   const [saveToKb, setSaveToKb] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -57,7 +59,9 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
       const job =
         mode === "research"
           ? await startResearch(text.trim(), deep ? "deep" : "quick", saveToKb)
-          : await startSecondOpinion(text.trim());
+          : mode === "code_review"
+            ? await startCodeTask(repo.trim(), text.trim())
+            : await startSecondOpinion(text.trim());
       setText("");
       setMessage({ text: "Started. It shows below; tap it to follow along.", error: false });
       await load();
@@ -73,7 +77,7 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
     <div className="flex flex-col gap-5">
       <section aria-label="Start a job" className="flex flex-col gap-3 rounded-lg border border-border p-3">
         <div role="tablist" aria-label="Job type" className="flex gap-1 rounded-md bg-surface p-0.5">
-          {([["research", "Research"], ["second_opinion", "Second opinion"]] as const).map(([m, label]) => (
+          {([["research", "Research"], ["second_opinion", "Second opinion"], ["code_review", "Code review"]] as const).map(([m, label]) => (
             <button
               key={m}
               type="button"
@@ -89,6 +93,15 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
             </button>
           ))}
         </div>
+        {mode === "code_review" && (
+          <input
+            value={repo}
+            onChange={(e) => setRepo(e.target.value)}
+            aria-label="Repository"
+            placeholder="Repo, e.g. sazed or tharpep/sazed-worker"
+            className={field}
+          />
+        )}
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -97,7 +110,9 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
           placeholder={
             mode === "research"
               ? "What do you want researched?"
-              : "Paste the plan, decision or answer you want a second opinion on"
+              : mode === "code_review"
+                ? "What should Claude Code look at? e.g. review the error handling in the job runner"
+                : "Paste the plan, decision or answer you want a second opinion on"
           }
           className={cn(field, "resize-y")}
         />
@@ -114,8 +129,16 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
           </div>
         )}
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted">Gemini 3.8 Flash (High) on the worker</p>
-          <Button size="sm" disabled={busy || text.trim().length < 3} onClick={submit}>
+          <p className="text-xs text-muted">
+            {mode === "code_review"
+              ? "Claude Code (Sonnet 5.5), read-only, public repos"
+              : "Gemini 3.8 Flash (High) on the worker"}
+          </p>
+          <Button
+            size="sm"
+            disabled={busy || text.trim().length < 3 || (mode === "code_review" && !repo.trim())}
+            onClick={submit}
+          >
             {busy ? "Starting…" : "Start"}
           </Button>
         </div>
@@ -160,7 +183,7 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
         )}
       </section>
 
-      <JobSheet jobId={open} onClose={() => setOpen(null)} onChanged={load} />
+      <JobSheet jobId={open} onClose={() => setOpen(null)} onChanged={load} onOpenJob={setOpen} />
     </div>
   );
 }

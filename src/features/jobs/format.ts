@@ -44,10 +44,44 @@ export interface Step {
   detail: string;
 }
 
-/** Readable steps from agy's stream: what it searched and which pages it read. */
+/** Paths relative to the job's checkout ("/home/worker/jobs/<id>/repo/app/x.py" -> "app/x.py"). */
+function repoPath(p: string): string {
+  const i = p.indexOf("/repo/");
+  return i >= 0 ? p.slice(i + 6) : p;
+}
+
+const CLAUDE_TOOL_LABEL: Record<string, string> = {
+  Read: "Read",
+  Grep: "Searched",
+  Glob: "Listed",
+  Bash: "Ran",
+  Edit: "Edited",
+  Write: "Wrote",
+  WebSearch: "Searched",
+  WebFetch: "Read",
+};
+
+/** Readable steps from the agent's stream: what it searched, read, ran or changed. */
 export function stepsFromEvents(events: JobEvent[] | undefined): Step[] {
   const steps: Step[] = [];
   for (const { event } of events ?? []) {
+    // Claude Code: assistant messages carry tool_use blocks.
+    if (event.type === "assistant") {
+      const content = ((event.message as { content?: unknown[] } | undefined)?.content ?? []) as {
+        type?: string;
+        name?: string;
+        input?: Record<string, unknown>;
+      }[];
+      for (const block of content) {
+        if (block.type !== "tool_use") continue;
+        const input = block.input ?? {};
+        const str = (k: string) => (typeof input[k] === "string" ? (input[k] as string) : "");
+        const detail =
+          repoPath(str("file_path")) || str("pattern") || str("command") || str("query") || str("url");
+        steps.push({ label: CLAUDE_TOOL_LABEL[block.name ?? ""] ?? block.name ?? "Tool", detail });
+      }
+      continue;
+    }
     const step = event.step_update as
       | { step_type?: string; state?: string; tool_name?: string; tool_info?: { parameters?: Record<string, unknown> } }
       | undefined;

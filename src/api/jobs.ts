@@ -80,3 +80,21 @@ export async function cancelJob(id: string): Promise<JobDetail> {
 }
 
 export const ACTIVE_STATUSES: JobStatus[] = ["queued", "running", "needs_approval"];
+
+export async function startCodeTask(repo: string, instruction: string): Promise<JobDetail> {
+  return apiFetch("/jobs/code-task", {
+    method: "POST",
+    body: JSON.stringify({ repo, instruction, mode: "review" }),
+  }) as Promise<JobDetail>;
+}
+
+export async function approveJob(id: string): Promise<JobDetail> {
+  return apiFetch(`/jobs/${encodeURIComponent(id)}/approve`, { method: "POST" }) as Promise<JobDetail>;
+}
+
+export async function continueJob(id: string, instruction: string): Promise<JobDetail> {
+  return apiFetch(`/jobs/${encodeURIComponent(id)}/continue`, {
+    method: "POST",
+    body: JSON.stringify({ instruction }),
+  }) as Promise<JobDetail>;
+}
