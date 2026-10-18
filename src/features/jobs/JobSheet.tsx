@@ -138,6 +138,20 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
           )}
           {job?.error && <p className="text-sm text-destructive">{job.error}</p>}
 
+          {job?.meta?.pr_url && (
+            <a
+              href={job.meta.pr_url}
+              target="_blank"
+              rel="noreferrer"
+              className="self-start rounded-md border border-border px-3 py-1.5 text-sm text-primary hover:bg-surface"
+            >
+              Open pull request #{job.meta.pr_number} on GitHub
+            </a>
+          )}
+          {job?.meta?.changed_files && job.meta.changed_files.length > 0 && (
+            <p className="text-xs text-muted">Changed: {job.meta.changed_files.join(", ")}</p>
+          )}
+
           {job?.status === "succeeded" && (
             <section aria-label="Follow up" className="flex flex-col gap-2">
               <textarea

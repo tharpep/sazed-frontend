@@ -44,6 +44,10 @@ export interface JobDetail extends Omit<JobSummary, "result_preview"> {
     tools_used?: string[];
     duration_seconds?: number;
     usage?: Record<string, number>;
+    changed_files?: string[];
+    pr_url?: string;
+    pr_number?: number;
+    pr_error?: string;
   };
   events?: JobEvent[];
 }
@@ -81,10 +85,14 @@ export async function cancelJob(id: string): Promise<JobDetail> {
 
 export const ACTIVE_STATUSES: JobStatus[] = ["queued", "running", "needs_approval"];
 
-export async function startCodeTask(repo: string, instruction: string): Promise<JobDetail> {
+export async function startCodeTask(
+  repo: string,
+  instruction: string,
+  mode: "review" | "change"
+): Promise<JobDetail> {
   return apiFetch("/jobs/code-task", {
     method: "POST",
-    body: JSON.stringify({ repo, instruction, mode: "review" }),
+    body: JSON.stringify({ repo, instruction, mode }),
   }) as Promise<JobDetail>;
 }
 

@@ -30,6 +30,7 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
   const [repo, setRepo] = useState("");
   const [deep, setDeep] = useState(false);
   const [saveToKb, setSaveToKb] = useState(false);
+  const [makePr, setMakePr] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
@@ -60,7 +61,7 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
         mode === "research"
           ? await startResearch(text.trim(), deep ? "deep" : "quick", saveToKb)
           : mode === "code_review"
-            ? await startCodeTask(repo.trim(), text.trim())
+            ? await startCodeTask(repo.trim(), text.trim(), makePr ? "change" : "review")
             : await startSecondOpinion(text.trim());
       setText("");
       setMessage({ text: "Started. It shows below; tap it to follow along.", error: false });
@@ -116,6 +117,12 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
           }
           className={cn(field, "resize-y")}
         />
+        {mode === "code_review" && (
+          <label className="flex items-center justify-between gap-3 text-sm text-ink">
+            Make the change as a PR (you review and merge)
+            <Switch aria-label="Make the change as a PR" checked={makePr} onCheckedChange={setMakePr} />
+          </label>
+        )}
         {mode === "research" && (
           <div className="flex flex-col gap-2 text-sm text-ink">
             <label className="flex items-center justify-between gap-3">
@@ -131,7 +138,9 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted">
             {mode === "code_review"
-              ? "Claude Code (Sonnet 5.5), read-only, public repos"
+              ? makePr
+                ? "Claude Code (Sonnet 5.5) edits a copy; the bot opens a PR"
+                : "Claude Code (Sonnet 5.5), read-only"
               : "Gemini 3.8 Flash (High) on the worker"}
           </p>
           <Button
