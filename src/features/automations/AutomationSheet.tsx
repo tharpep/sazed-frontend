@@ -98,7 +98,8 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
     return () => clearTimeout(id);
   }, [form.cron, form.timezone, target]);
 
-  const isGateway = detail?.action.type === "gateway_call";
+  // Gateway calls and worker jobs are edited through the API; the sheet keeps them as they are.
+  const isGateway = !!detail && detail.action.type !== "sazed_prompt";
   const canSave = form.name.trim() && (isGateway || form.prompt.trim()) && !preview.error && !busy;
 
   function input(): AutomationInput {
@@ -158,6 +159,20 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
             <p className="text-sm text-muted">
               Calls the gateway directly: <code className="text-ink">{detail.action.method} {detail.action.path}</code>
             </p>
+          ) : isGateway && detail?.action.type === "job" ? (
+            <div className="flex flex-col gap-1 text-sm">
+              <p className="text-muted">
+                Runs a worker job:{" "}
+                <span className="text-ink">
+                  {detail.action.kind === "code_task"
+                    ? `code task on ${detail.action.repo} (${detail.action.mode === "change" ? "PR, needs your approval" : "review"})`
+                    : detail.action.kind === "research"
+                      ? `${detail.action.depth ?? "quick"} research${detail.action.save_to_kb ? ", saved to KB" : ""}`
+                      : "second opinion"}
+                </span>
+              </p>
+              <p className="whitespace-pre-wrap text-ink">{detail.action.input}</p>
+            </div>
           ) : (
             <label className="flex flex-col gap-1 text-sm text-ink">
               What Sazed should do each time

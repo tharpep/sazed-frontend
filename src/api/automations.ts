@@ -10,7 +10,16 @@ export interface CronTrigger {
 
 export type AutomationAction =
   | { type: "sazed_prompt"; prompt: string }
-  | { type: "gateway_call"; method: "GET" | "POST"; path: string; body?: Record<string, unknown> | null };
+  | { type: "gateway_call"; method: "GET" | "POST"; path: string; body?: Record<string, unknown> | null }
+  | {
+      type: "job";
+      kind: "research" | "second_opinion" | "code_task";
+      input: string;
+      depth?: "quick" | "deep";
+      save_to_kb?: boolean;
+      repo?: string | null;
+      mode?: "review" | "change";
+    };
 
 export interface AutomationOutputs {
   pushover: { title?: string | null; priority?: number } | null;
