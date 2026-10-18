@@ -148,6 +148,27 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
               Open pull request #{job.meta.pr_number} on GitHub
             </a>
           )}
+          {job?.meta?.pr_url && (
+            <p className={cn("text-xs", job.meta.ci_state === "failure" ? "text-destructive" : "text-muted")}>
+              {job.meta.ci_state === "success"
+                ? "CI passed."
+                : job.meta.ci_state === "failure"
+                  ? "CI is still failing after the automatic fix attempts; it needs you."
+                  : job.meta.ci_state === "fixing"
+                    ? "CI failed; a fix-up job is working on the same PR."
+                    : job.meta.ci_state === "no_ci"
+                      ? "This repo has no CI on pull requests."
+                      : "Waiting for CI…"}
+              {job.meta.ci_fix_job && (
+                <>
+                  {" "}
+                  <button type="button" className="text-primary hover:underline" onClick={() => onOpenJob(job.meta.ci_fix_job!)}>
+                    Open the fix-up
+                  </button>
+                </>
+              )}
+            </p>
+          )}
           {job?.meta?.changed_files && job.meta.changed_files.length > 0 && (
             <p className="text-xs text-muted">Changed: {job.meta.changed_files.join(", ")}</p>
           )}

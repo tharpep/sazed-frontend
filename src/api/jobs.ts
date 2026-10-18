@@ -48,6 +48,10 @@ export interface JobDetail extends Omit<JobSummary, "result_preview"> {
     pr_url?: string;
     pr_number?: number;
     pr_error?: string;
+    pr_updated?: boolean;
+    ci_state?: "success" | "failure" | "fixing" | "no_ci";
+    ci_fix_job?: string;
+    lint_found?: number;
   };
   events?: JobEvent[];
 }

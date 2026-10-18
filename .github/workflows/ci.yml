@@ -1,0 +1,43 @@
+# Checks for pull requests (plans/07): runs on GitHub-hosted runners, never the homelab's
+# self-hosted ones, with a read-only token and no secrets. Sazed's CI watcher reads the result
+# and has the worker fix failing bot PRs. The bot can't edit this directory, so it can't change
+# its own checks (keep check logic inline here, not in scripts it could edit).
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check and build
+        env:
+          VITE_SAZED_URL: /api
+          VITE_GATEWAY_URL: /gw
+        run: pnpm build
