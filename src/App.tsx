@@ -4,7 +4,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { Composer } from "./features/chat/Composer";
 import { EmptyState } from "./features/chat/EmptyState";
 import { MessageList } from "./features/chat/MessageList";
-import { KbPage } from "./features/kb/KbPage";
+import { KnowledgePage } from "./features/kb/KnowledgePage";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { AuditPage } from "./features/audit/AuditPage";
 import { FinancePage } from "./features/finance/FinancePage";
@@ -153,7 +153,7 @@ function App() {
         ) : automationsOpen ? (
           <AutomationsPage />
         ) : kbOpen ? (
-          <KbPage />
+          <KnowledgePage />
         ) : view === "empty" ? (
           <EmptyState />
         ) : (

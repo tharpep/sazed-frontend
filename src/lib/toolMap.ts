@@ -26,7 +26,6 @@ const TOOL_NAME_TO_CATEGORY: Record<string, ToolCall["category"]> = {
   read_kb_source: "kb",
   list_kb_sources: "kb",
   delete_kb_source: "kb",
-  sync_kb: "kb",
   ingest_text: "kb",
   ingest_url: "kb",
   memory_update: "memory",

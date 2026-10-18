@@ -24,7 +24,8 @@ export async function gatewayFetch(path: string, options?: RequestInit): Promise
       : {}),
   };
   const method = options?.method ?? "GET";
-  if (method !== "GET" && method !== "HEAD") {
+  // FormData sets its own multipart Content-Type (with the boundary); overriding it breaks uploads.
+  if (method !== "GET" && method !== "HEAD" && !(options?.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
   if (key) {
