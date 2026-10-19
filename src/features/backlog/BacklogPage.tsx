@@ -199,9 +199,21 @@ export function BacklogPage() {
               : "Nothing here yet."}
           </p>
         )}
-        {items && items.length > 0 && (
+        {items && items.length > 0 &&
+          // Open items split into Pryce's saved priority order and everything not prioritized yet.
+          (view === "open"
+            ? [
+                { label: "Priority", rows: items.filter((i) => i.rank != null) },
+                { label: "Not prioritized yet", rows: items.filter((i) => i.rank == null) },
+              ]
+            : [{ label: "", rows: items }]
+          )
+            .filter((section) => section.rows.length > 0)
+            .map((section) => (
+          <section key={section.label || "all"} aria-label={section.label || undefined} className="flex flex-col gap-1.5">
+            {section.label && <h2 className="px-1 text-xs font-medium text-muted">{section.label}</h2>}
           <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-            {items.map((i) => {
+            {section.rows.map((i) => {
               const work = workLabel(i);
               return (
                 <li key={i.id}>
@@ -210,6 +222,11 @@ export function BacklogPage() {
                     onClick={() => setOpenItem(i)}
                     className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface"
                   >
+                    {view === "open" && i.rank != null && (
+                      <span className="w-6 shrink-0 text-right text-sm font-medium tabular-nums text-muted">
+                        {i.rank}
+                      </span>
+                    )}
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-sm text-ink">{i.title}</span>
                       <span className="truncate text-xs text-muted">
@@ -228,12 +245,14 @@ export function BacklogPage() {
               );
             })}
           </ul>
-        )}
+          </section>
+            ))}
         </div>
       </div>
 
       <BacklogSheet
         item={openItem}
+        rankedCount={(items ?? []).filter((i) => i.rank != null && (i.status === "new" || i.status === "shortlisted")).length}
         onClose={() => setOpenItem(null)}
         onChanged={(updated) => {
           setOpenItem(updated);

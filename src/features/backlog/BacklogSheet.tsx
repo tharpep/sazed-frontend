@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
-import { approveBacklogItem, updateBacklogItem, type BacklogItem } from "@/api/backlog";
+import { approveBacklogItem, moveBacklogItem, updateBacklogItem, type BacklogItem } from "@/api/backlog";
 import { errorText } from "@/api/homelab";
 import { REPOS, STATUS_LABEL, TYPE_LABEL, ageLabel, sourceLabel, workLabel } from "./format";
 
 interface Props {
   item: BacklogItem | null;
+  /** How many open items have a priority, for "#3 of 14" and the last-place check. */
+  rankedCount: number;
   onClose: () => void;
   onChanged: (item: BacklogItem) => void;
   onOpenJob: (id: string) => void;
@@ -20,7 +22,7 @@ interface Props {
 const field =
   "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
 
-export function BacklogSheet({ item, onClose, onChanged, onOpenJob }: Props) {
+export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob }: Props) {
   const isMobile = useIsMobile();
   const [repo, setRepo] = useState("");
   const [note, setNote] = useState("");
@@ -73,7 +75,6 @@ export function BacklogSheet({ item, onClose, onChanged, onOpenJob }: Props) {
             <p className="text-xs text-muted">
               <span className={cn(item.status === "shortlisted" && "text-accent")}>
                 {STATUS_LABEL[item.status]}
-                {item.rank ? ` #${item.rank}` : ""}
               </span>
               {" · "}
               {facts.join(" · ")}
@@ -178,6 +179,46 @@ export function BacklogSheet({ item, onClose, onChanged, onOpenJob }: Props) {
                     {busy ? "Starting…" : "Start the PR"}
                   </Button>
                 </div>
+              </section>
+            )}
+
+            {isOpen && !approving && (
+              <section aria-label="Priority" className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2">
+                <span className="mr-auto text-sm text-ink">
+                  {item.rank != null ? (
+                    <>
+                      Priority <span className="font-medium">#{item.rank}</span>
+                      <span className="text-muted"> of {Math.max(rankedCount, item.rank)}</span>
+                    </>
+                  ) : (
+                    <span className="text-muted">Not prioritized yet</span>
+                  )}
+                </span>
+                {item.rank != null ? (
+                  <>
+                    <Button size="sm" variant="ghost" disabled={busy || item.rank === 1} onClick={() => act(() => moveBacklogItem(item.id, 1))}>
+                      Top
+                    </Button>
+                    <Button size="sm" variant="ghost" disabled={busy || item.rank === 1} onClick={() => act(() => moveBacklogItem(item.id, item.rank! - 1))}>
+                      Up
+                    </Button>
+                    <Button size="sm" variant="ghost" disabled={busy || item.rank >= rankedCount} onClick={() => act(() => moveBacklogItem(item.id, item.rank! + 1))}>
+                      Down
+                    </Button>
+                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(() => moveBacklogItem(item.id, null))}>
+                      Remove
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(() => moveBacklogItem(item.id, 1))}>
+                      Make next
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={busy} onClick={() => act(() => moveBacklogItem(item.id, 999))}>
+                      Prioritize
+                    </Button>
+                  </>
+                )}
               </section>
             )}
 

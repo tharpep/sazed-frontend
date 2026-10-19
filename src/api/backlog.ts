@@ -66,3 +66,11 @@ export async function approveBacklogItem(id: string, repo: string, note: string)
     body: JSON.stringify({ repo, note }),
   }) as Promise<BacklogItem>;
 }
+
+/** Set an open item's priority: 1 = top (others shift down), null takes it off the list. */
+export async function moveBacklogItem(id: string, position: number | null): Promise<BacklogItem> {
+  return apiFetch(`/backlog/${encodeURIComponent(id)}/move`, {
+    method: "POST",
+    body: JSON.stringify({ position }),
+  }) as Promise<BacklogItem>;
+}
