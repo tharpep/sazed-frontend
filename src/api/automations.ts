@@ -20,7 +20,7 @@ export type AutomationAction =
       repo?: string | null;
       mode?: "review" | "change";
     }
-  | { type: "pipeline"; name: "scout" | "triage"; max_ideas?: number };
+  | { type: "pipeline"; name: "scout" | "triage" | "map"; max_ideas?: number };
 
 export interface AutomationOutputs {
   pushover: { title?: string | null; priority?: number } | null;

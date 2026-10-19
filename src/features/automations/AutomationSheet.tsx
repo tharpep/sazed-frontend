@@ -163,7 +163,9 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
             <p className="text-sm text-muted">
               {detail.action.name === "scout"
                 ? `Built-in scout: researches ideas for your stack, gets a second opinion, and files at most ${detail.action.max_ideas ?? 3} new ones in the Backlog.`
-                : "Built-in triage: ranks open Backlog ideas, shortlists the top two, and marks month-old untouched ideas stale."}
+                : detail.action.name === "map"
+                  ? "Built-in map check: snapshots the Homelab architecture map, compares traffic and structure with last week, and reports drift."
+                  : "Built-in triage: ranks open Backlog ideas, shortlists the top two, and marks month-old untouched ideas stale."}
             </p>
           ) : isGateway && detail?.action.type === "job" ? (
             <div className="flex flex-col gap-1 text-sm">
