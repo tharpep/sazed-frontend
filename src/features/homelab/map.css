@@ -1,0 +1,30 @@
+/* Architecture map (MapView). The node colors are the mockup's purple and gray ramps, picked
+   as fixed light/dark stops so the map reads the same as the approved design. */
+.map-node rect { stroke-width: 0.5px; transition: stroke-width 0.15s; }
+.map-node { cursor: pointer; }
+.map-node:hover rect, .map-node.is-selected rect { stroke-width: 1.4px; }
+.map-node .map-title { font-size: 14px; font-weight: 500; }
+.map-node .map-sub { font-size: 12px; }
+
+.map-homelab rect { fill: #EEEDFE; stroke: #534AB7; }
+.map-homelab .map-title { fill: #3C3489; }
+.map-homelab .map-sub { fill: #534AB7; }
+.map-plain rect { fill: #F1EFE8; stroke: #5F5E5A; }
+.map-plain .map-title { fill: #444441; }
+.map-plain .map-sub { fill: #5F5E5A; }
+.dark .map-homelab rect { fill: #3C3489; stroke: #AFA9EC; }
+.dark .map-homelab .map-title { fill: #CECBF6; }
+.dark .map-homelab .map-sub { fill: #AFA9EC; }
+.dark .map-plain rect { fill: #444441; stroke: #B4B2A9; }
+.dark .map-plain .map-title { fill: #D3D1C7; }
+.dark .map-plain .map-sub { fill: #B4B2A9; }
+.map-unplaced rect { stroke-dasharray: 4 3; }
+
+.map-flow { fill: none; stroke-dasharray: 4 6; stroke-linecap: round; transition: stroke-width 0.3s, opacity 0.3s; }
+.map-flow.is-hot { stroke-width: 2.5px; }
+@media (prefers-reduced-motion: no-preference) {
+  .map-flow { animation: map-dash var(--map-dur, 2s) linear infinite; }
+  .map-pulse { animation: map-pulse 2s ease-in-out infinite; }
+}
+@keyframes map-dash { to { stroke-dashoffset: -20; } }
+@keyframes map-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }

@@ -5,16 +5,30 @@ import { cn } from "@/lib/utils";
 import {
   errorText,
   fetchHost,
+  fetchMap,
   fetchServices,
+  type ArchMap,
   type HostStatus,
   type Service,
   type ServiceGroup,
   type ServicesResponse,
 } from "@/api/homelab";
+import { MapView } from "./MapView";
 import { ServiceSheet } from "./ServiceSheet";
 import { StatusDot, age, gib, pct, statusLine, statusOf, uptime } from "./format";
 
 const REFRESH_MS = 30_000; // the gateway polls every 60s; 30s keeps the page within one cycle
+const VIEW_KEY = "sazed-homelab-view";
+
+type View = "map" | "list";
+
+function savedView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "map";
+  } catch {
+    return "map";
+  }
+}
 
 const GROUPS: { key: ServiceGroup; label: string }[] = [
   { key: "sazed", label: "Sazed" },
@@ -32,10 +46,25 @@ export function HomelabPage() {
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [view, setView] = useState<View>(savedView);
+  const [map, setMap] = useState<ArchMap | null>(null);
+
+  function chooseView(v: View) {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // private mode: the choice just isn't remembered
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [services, hostResult] = await Promise.allSettled([fetchServices(), fetchHost()]);
+    const [services, hostResult, mapResult] = await Promise.allSettled([
+      fetchServices(),
+      fetchHost(),
+      fetchMap(),
+    ]);
     if (services.status === "fulfilled") {
       setData(services.value);
       setError(null);
@@ -44,6 +73,7 @@ export function HomelabPage() {
     }
     // Host stats are a nice-to-have; a Proxmox hiccup shouldn't blank the page.
     if (hostResult.status === "fulfilled") setHost(hostResult.value);
+    if (mapResult.status === "fulfilled") setMap(mapResult.value);
     setNow(Date.now());
     setLoading(false);
   }, []);
@@ -82,7 +112,26 @@ export function HomelabPage() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg">
       <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <h1 className="text-base font-semibold text-ink">Homelab</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-base font-semibold text-ink">Homelab</h1>
+          <div role="tablist" aria-label="View" className="flex gap-1 rounded-md bg-surface p-0.5">
+            {(["map", "list"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={view === v}
+                onClick={() => chooseView(v)}
+                className={cn(
+                  "rounded px-2.5 py-0.5 text-sm transition-colors",
+                  view === v ? "bg-bg font-medium text-ink shadow-sm" : "text-muted hover:text-ink"
+                )}
+              >
+                {v === "map" ? "Map" : "List"}
+              </button>
+            ))}
+          </div>
+        </div>
         <button
           type="button"
           onClick={load}
@@ -96,11 +145,13 @@ export function HomelabPage() {
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-4 pb-8">
+        <div className={cn("mx-auto flex w-full flex-col gap-5 px-4 py-4 pb-8", view === "map" ? "max-w-3xl" : "max-w-2xl")}>
+          {view === "map" && map && <MapView map={map} onOpenService={setSelectedId} />}
+          {view === "map" && !map && !error && <p className="text-sm text-muted">Loading the map…</p>}
           {error && !data && <p className="text-sm text-destructive">Couldn't load services: {error}</p>}
           {!data && !error && <p className="text-sm text-muted">Loading…</p>}
 
-          {data && (
+          {view === "list" && data && (
             <section aria-label="Summary" className="flex flex-col gap-1">
               {down.length > 0 ? (
                 <p className="text-[15px] font-medium text-destructive">
@@ -132,7 +183,7 @@ export function HomelabPage() {
             </section>
           )}
 
-          {grouped.map((group) => (
+          {view === "list" && grouped.map((group) => (
             <section key={group.key} aria-labelledby={`homelab-${group.key}`}>
               <h2 id={`homelab-${group.key}`} className="px-1 pb-1.5 text-sm font-medium text-muted">
                 {group.label}

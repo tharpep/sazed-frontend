@@ -138,3 +138,67 @@ export function errorText(err: unknown): string {
   }
   return raw || "Something went wrong";
 }
+
+// --- Architecture map (gateway registry/map.yaml, served with live health) ---
+
+export type MapNodeKind = "client" | "homelab" | "external";
+export type MapStatus = "up" | "down" | "maintenance" | "unknown";
+
+export interface MapSignal {
+  kind: string;
+  title: string | null;
+  agent: string | null;
+}
+
+export interface MapNodeService {
+  id: string;
+  name: string;
+  up: boolean | null;
+  detail: string | null;
+  since: string | null;
+  in_maintenance: boolean;
+  muted: boolean;
+  container: number | null;
+}
+
+export interface MapContainer {
+  vmid: number;
+  name: string;
+  status: string;
+  cpu_percent: number;
+  mem_used_bytes: number;
+  mem_total_bytes: number;
+  uptime_seconds: number;
+}
+
+export interface MapNode {
+  id: string;
+  label: string;
+  sub: string | null;
+  kind: MapNodeKind;
+  col: number;
+  row: number;
+  status: MapStatus | null;
+  services: MapNodeService[];
+  containers: MapContainer[];
+  placed: boolean;
+}
+
+export interface MapEdge {
+  from: string;
+  to: string;
+  signals: MapSignal[];
+  quiet: boolean;
+  route: "over" | null;
+}
+
+export interface ArchMap {
+  layout: { columns: { x: number; w: number }[]; row_height: number; top: number };
+  nodes: MapNode[];
+  edges: MapEdge[];
+  generated_at: string;
+}
+
+export function fetchMap(): Promise<ArchMap> {
+  return gatewayFetch("/homelab/map") as Promise<ArchMap>;
+}
