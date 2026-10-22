@@ -29,6 +29,7 @@ export interface Service {
   lifecycle: Lifecycle;
   description: string;
   open_url: string | null;
+  icon: string | null; // dashboard-icons slug, for the Apps page
   depends_on: string[];
   repo: string | null;
   live: ServiceLive | null;

@@ -8,6 +8,7 @@ interface UiState {
   financeOpen: boolean;
   journalOpen: boolean;
   homelabOpen: boolean;
+  appsOpen: boolean;
   gatewayOpen: boolean;
   automationsOpen: boolean;
   backlogOpen: boolean;
@@ -26,6 +27,7 @@ interface UiState {
   toggleFinance: () => void;
   toggleJournal: () => void;
   toggleHomelab: () => void;
+  toggleApps: () => void;
   toggleGateway: () => void;
   toggleAutomations: () => void;
   toggleBacklog: () => void;
@@ -45,6 +47,7 @@ const ALL_CLOSED = {
   financeOpen: false,
   journalOpen: false,
   homelabOpen: false,
+  appsOpen: false,
   gatewayOpen: false,
   automationsOpen: false,
   backlogOpen: false,
@@ -66,6 +69,7 @@ export const useUiStore = create<UiState>((set) => ({
   toggleFinance: () => set((s) => ({ ...ALL_CLOSED, financeOpen: !s.financeOpen })),
   toggleJournal: () => set((s) => ({ ...ALL_CLOSED, journalOpen: !s.journalOpen })),
   toggleHomelab: () => set((s) => ({ ...ALL_CLOSED, homelabOpen: !s.homelabOpen })),
+  toggleApps: () => set((s) => ({ ...ALL_CLOSED, appsOpen: !s.appsOpen })),
   toggleGateway: () => set((s) => ({ ...ALL_CLOSED, gatewayOpen: !s.gatewayOpen })),
   toggleAutomations: () => set((s) => ({ ...ALL_CLOSED, automationsOpen: !s.automationsOpen })),
   toggleBacklog: () => set((s) => ({ ...ALL_CLOSED, backlogOpen: !s.backlogOpen })),

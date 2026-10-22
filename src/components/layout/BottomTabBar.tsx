@@ -1,10 +1,17 @@
 import type { ComponentType } from "react";
-import { CalendarClock, Library, MessageCircle, MoreHorizontal, Server } from "lucide-react";
+import {
+  CalendarClock,
+  LayoutGrid,
+  Library,
+  MessageCircle,
+  MoreHorizontal,
+  Server,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/uiStore";
 
-type TabKey = "chat" | "homelab" | "automations" | "kb" | "more";
+type TabKey = "chat" | "homelab" | "apps" | "automations" | "kb" | "more";
 
 interface TabDef {
   key: TabKey;
@@ -15,7 +22,9 @@ interface TabDef {
 const TABS: TabDef[] = [
   { key: "chat", label: "Chat", icon: MessageCircle },
   { key: "homelab", label: "Homelab", icon: Server },
-  { key: "automations", label: "Automations", icon: CalendarClock },
+  { key: "apps", label: "Apps", icon: LayoutGrid },
+  // Six tabs leave ~62px each on a 375px phone; "Automations" doesn't fit next to "Knowledge".
+  { key: "automations", label: "Automate", icon: CalendarClock },
   { key: "kb", label: "Knowledge", icon: Library },
   { key: "more", label: "More", icon: MoreHorizontal },
 ];
@@ -29,11 +38,13 @@ export function BottomTabBar() {
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const auditOpen = useUiStore((s) => s.auditOpen);
   const homelabOpen = useUiStore((s) => s.homelabOpen);
+  const appsOpen = useUiStore((s) => s.appsOpen);
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
   const moreOpen = useUiStore((s) => s.moreOpen);
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
+  const toggleApps = useUiStore((s) => s.toggleApps);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const toggleMore = useUiStore((s) => s.toggleMore);
@@ -41,7 +52,9 @@ export function BottomTabBar() {
 
   const active: TabKey = homelabOpen
     ? "homelab"
-    : automationsOpen
+    : appsOpen
+      ? "apps"
+      : automationsOpen
       ? "automations"
       : kbOpen
         ? "kb"
@@ -52,6 +65,7 @@ export function BottomTabBar() {
   function handleTap(key: TabKey) {
     if (key === "chat") closeAll();
     else if (key === "homelab") toggleHomelab();
+    else if (key === "apps") toggleApps();
     else if (key === "automations") toggleAutomations();
     else if (key === "kb") toggleKb();
     else toggleMore();

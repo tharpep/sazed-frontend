@@ -8,6 +8,7 @@ import {
   History as HistoryIcon,
   Activity,
   CalendarClock,
+  LayoutGrid,
   Lightbulb,
   Server,
   Waypoints,
@@ -60,6 +61,7 @@ export function Sidebar() {
   const journalOpen = useUiStore((s) => s.journalOpen);
   const kbOpen = useUiStore((s) => s.kbOpen);
   const homelabOpen = useUiStore((s) => s.homelabOpen);
+  const appsOpen = useUiStore((s) => s.appsOpen);
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
@@ -69,6 +71,7 @@ export function Sidebar() {
   const toggleJournal = useUiStore((s) => s.toggleJournal);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
+  const toggleApps = useUiStore((s) => s.toggleApps);
   const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
@@ -131,6 +134,9 @@ export function Sidebar() {
           </RailButton>
           <RailButton label="Homelab" active={homelabOpen} onClick={toggleHomelab}>
             <Server className="size-4" aria-hidden="true" />
+          </RailButton>
+          <RailButton label="Apps" active={appsOpen} onClick={toggleApps}>
+            <LayoutGrid className="size-4" aria-hidden="true" />
           </RailButton>
           <RailButton label="Gateway" active={gatewayOpen} onClick={toggleGateway}>
             <Waypoints className="size-4" aria-hidden="true" />

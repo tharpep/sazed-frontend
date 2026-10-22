@@ -10,6 +10,7 @@ import { ActivityPage } from "./features/activity/ActivityPage";
 import { FinancePage } from "./features/finance/FinancePage";
 import { JournalPage } from "./features/journal/JournalPage";
 import { HomelabPage } from "./features/homelab/HomelabPage";
+import { AppsPage } from "./features/apps/AppsPage";
 import { GatewayPage } from "./features/gateway/GatewayPage";
 import { AutomationsPage } from "./features/automations/AutomationsPage";
 import { BacklogPage } from "./features/backlog/BacklogPage";
@@ -24,6 +25,7 @@ function App() {
   const financeOpen = useUiStore((s) => s.financeOpen);
   const journalOpen = useUiStore((s) => s.journalOpen);
   const homelabOpen = useUiStore((s) => s.homelabOpen);
+  const appsOpen = useUiStore((s) => s.appsOpen);
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
@@ -34,6 +36,7 @@ function App() {
   const toggleFinance = useUiStore((s) => s.toggleFinance);
   const toggleJournal = useUiStore((s) => s.toggleJournal);
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
+  const toggleApps = useUiStore((s) => s.toggleApps);
   const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
@@ -58,6 +61,8 @@ function App() {
           ? "journal"
           : homelabOpen
             ? "homelab"
+            : appsOpen
+            ? "apps"
             : gatewayOpen
             ? "gateway"
             : automationsOpen
@@ -79,6 +84,7 @@ function App() {
       backlog: ui.toggleBacklog,
       automations: ui.toggleAutomations,
       homelab: ui.toggleHomelab,
+      apps: ui.toggleApps,
       kb: ui.toggleKb,
       journal: ui.toggleJournal,
     };
@@ -107,6 +113,7 @@ function App() {
         else if (financeOpen) toggleFinance();
         else if (journalOpen) toggleJournal();
         else if (homelabOpen) toggleHomelab();
+        else if (appsOpen) toggleApps();
         else if (gatewayOpen) toggleGateway();
         else if (automationsOpen) toggleAutomations();
         else if (backlogOpen) toggleBacklog();
@@ -122,6 +129,7 @@ function App() {
     financeOpen,
     journalOpen,
     homelabOpen,
+    appsOpen,
     gatewayOpen,
     automationsOpen,
     backlogOpen,
@@ -132,6 +140,7 @@ function App() {
     toggleFinance,
     toggleJournal,
     toggleHomelab,
+    toggleApps,
     toggleGateway,
     toggleAutomations,
     toggleBacklog,
@@ -177,6 +186,8 @@ function App() {
           <JournalPage />
         ) : homelabOpen ? (
           <HomelabPage />
+        ) : appsOpen ? (
+          <AppsPage />
         ) : gatewayOpen ? (
           <GatewayPage />
         ) : automationsOpen ? (
