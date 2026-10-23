@@ -65,6 +65,15 @@ export async function getKbSourceContent(fileId: string): Promise<KbSourceConten
   return gatewayFetch(`/kb/sources/${encodeURIComponent(fileId)}/content`) as Promise<KbSourceContent>;
 }
 
+export type KbExportFormat = "md" | "txt";
+
+/** A source's full stored text, as the gateway's export route serves it for download. */
+export async function exportKbSource(fileId: string, format: KbExportFormat): Promise<string> {
+  return gatewayFetch(
+    `/kb/sources/${encodeURIComponent(fileId)}/export?format=${format}`
+  ) as Promise<string>;
+}
+
 export async function deleteKbSource(fileId: string): Promise<void> {
   await gatewayFetch(`/kb/files/${encodeURIComponent(fileId)}`, { method: "DELETE" });
 }

@@ -12,7 +12,13 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
-import { deleteKbSource, getKbSourceContent, type KbSource } from "@/api/kb";
+import {
+  deleteKbSource,
+  exportKbSource,
+  getKbSourceContent,
+  type KbExportFormat,
+  type KbSource,
+} from "@/api/kb";
 import { errorText } from "@/api/homelab";
 import { ORIGIN_LABEL, addedAgo } from "./format";
 
@@ -58,6 +64,25 @@ export function SourceSheet({ fileId, source, onClose, onDeleted }: Props) {
     }
   }
 
+  async function download(format: KbExportFormat) {
+    if (!fileId) return;
+    setBusy(true);
+    try {
+      const text = await exportKbSource(fileId, format);
+      const type = format === "md" ? "text/markdown" : "text/plain";
+      const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${fileStem(name)}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const name = source?.filename ?? "Source";
   const facts = source
     ? [
@@ -95,7 +120,13 @@ export function SourceSheet({ fileId, source, onClose, onDeleted }: Props) {
             )}
           </section>
 
-          <div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => download("md")}>
+              Download .md
+            </Button>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => download("txt")}>
+              Download .txt
+            </Button>
             <Button size="sm" variant="destructive" disabled={busy} onClick={() => setConfirmDelete(true)}>
               Delete
             </Button>
@@ -123,4 +154,10 @@ export function SourceSheet({ fileId, source, onClose, onDeleted }: Props) {
       </SheetContent>
     </Sheet>
   );
+}
+
+/** Same reduction the knowledge-base export uses: titles and URLs become a safe file name. */
+function fileStem(name: string): string {
+  const stem = name.replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^[._]+|[._]+$/g, "");
+  return stem.slice(0, 100) || "source";
 }
