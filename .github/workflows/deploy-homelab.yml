@@ -1,6 +1,7 @@
 # Build on GitHub-hosted runners (CT 106 has too little RAM for a Vite build), then deploy
 # from the self-hosted runner on CT 106. Caddy serves /srv/sazed-console/current; each deploy
-# is a new release dir and an atomic symlink swap, so a bad build is a one-line rollback.
+# is a new release dir and an atomic symlink swap. If the console doesn't answer after the swap,
+# the symlink goes back to the previous release and the job fails (which sends a Pushover).
 name: Deploy to Homelab
 
 on:
@@ -54,9 +55,11 @@ jobs:
           path: dist
 
       - name: Release and switch
+        id: release
         run: |
           set -euo pipefail
           ROOT=/srv/sazed-console
+          echo "prev=$(readlink -f "$ROOT/current" || true)" >> "$GITHUB_OUTPUT"
           REL="$ROOT/releases/$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA:0:7}"
           mkdir -p "$REL"
           # Not cp -a: it would copy the reused dist/ folder's old timestamp onto the release.
@@ -70,6 +73,14 @@ jobs:
         run: |
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)
           [ "$code" = "200" ] || { echo "UI returned $code"; exit 1; }
+
+      - name: Roll back to the previous release
+        if: failure() && steps.release.outputs.prev != ''
+        run: |
+          ROOT=/srv/sazed-console
+          ln -sfn "${{ steps.release.outputs.prev }}" "$ROOT/current.tmp"
+          mv -T "$ROOT/current.tmp" "$ROOT/current"
+          echo "Rolled back to ${{ steps.release.outputs.prev }}; UI now returns $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)"
 
       # Keep the 5 newest by name (names start with a UTC timestamp) and never the live one.
       # Sorting by mtime once deleted the release that had just gone live (all mtimes were
