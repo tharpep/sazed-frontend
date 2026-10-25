@@ -21,11 +21,13 @@ import { StatusDot, age, gib, pct, statusLine, statusOf, uptime } from "./format
 const REFRESH_MS = 30_000; // the gateway polls every 60s; 30s keeps the page within one cycle
 const VIEW_KEY = "sazed-homelab-view";
 
-type View = "map" | "list";
+const VIEWS = { map: "Map", list: "List", storage: "Storage" } as const;
+type View = keyof typeof VIEWS;
 
 function savedView(): View {
   try {
-    return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "map";
+    const v = localStorage.getItem(VIEW_KEY);
+    return v && v in VIEWS ? (v as View) : "map";
   } catch {
     return "map";
   }
@@ -116,7 +118,7 @@ export function HomelabPage() {
         <div className="flex items-center gap-3">
           <h1 className="text-base font-semibold text-ink">Homelab</h1>
           <div role="tablist" aria-label="View" className="flex gap-1 rounded-md bg-surface p-0.5">
-            {(["map", "list"] as const).map((v) => (
+            {(Object.keys(VIEWS) as View[]).map((v) => (
               <button
                 key={v}
                 type="button"
@@ -128,7 +130,7 @@ export function HomelabPage() {
                   view === v ? "bg-bg font-medium text-ink shadow-sm" : "text-muted hover:text-ink"
                 )}
               >
-                {v === "map" ? "Map" : "List"}
+                {VIEWS[v]}
               </button>
             ))}
           </div>
@@ -149,8 +151,11 @@ export function HomelabPage() {
         <div className={cn("mx-auto flex w-full flex-col gap-5 px-4 py-4 pb-8", view === "map" ? "max-w-3xl" : "max-w-2xl")}>
           {view === "map" && map && <MapView map={map} onOpenService={setSelectedId} />}
           {view === "map" && !map && !error && <p className="text-sm text-muted">Loading the map…</p>}
-          {error && !data && <p className="text-sm text-destructive">Couldn't load services: {error}</p>}
-          {!data && !error && <p className="text-sm text-muted">Loading…</p>}
+          {view === "storage" && <StorageCard full />}
+          {view !== "storage" && error && !data && (
+            <p className="text-sm text-destructive">Couldn't load services: {error}</p>
+          )}
+          {view !== "storage" && !data && !error && <p className="text-sm text-muted">Loading…</p>}
 
           {view === "list" && data && (
             <section aria-label="Summary" className="flex flex-col gap-1">
@@ -198,8 +203,6 @@ export function HomelabPage() {
                   <ServiceRow key={s.id} service={s} now={now} onOpen={() => setSelectedId(s.id)} />
                 ))}
               </ul>
-              {/* The media apps' storage sits under their group, as on the Map's media panel. */}
-              {group.key === "apps" && <StorageCard className="mt-3 rounded-lg border border-border px-3 py-3" />}
             </section>
           ))}
         </div>

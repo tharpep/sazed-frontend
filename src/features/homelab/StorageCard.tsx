@@ -11,8 +11,9 @@ function library(t: LibraryTotal | null): string {
 }
 
 /** Real free space for media (the pool behind the media disk, not df inside CT 100), the
- * library by size, finished downloads that never reached Jellyfin, and disk per container. */
-export function StorageCard({ className }: { className?: string }) {
+ * library by size, finished downloads that never reached Jellyfin, and disk per container.
+ * `full` is the Homelab page's Storage tab: every pool, more items, containers expanded. */
+export function StorageCard({ className, full = false }: { className?: string; full?: boolean }) {
   const [data, setData] = useState<StorageResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +55,24 @@ export function StorageCard({ className }: { className?: string }) {
 
   return (
     <section aria-label="Storage" className={cn("flex flex-col gap-2.5", className)}>
-      <h3 className="text-sm font-medium text-ink">Storage</h3>
+      {full && (
+        <>
+          <h2 className="text-sm font-medium text-muted">Pools</h2>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-2">
+            {data.pools.map((p) => (
+              <Fact
+                key={p.name}
+                label={p.name}
+                value={`${gib(p.free_bytes)} GB free`}
+                note={`${pct(p.used_bytes, p.total_bytes)} of ${gib(p.total_bytes)} GB used${p.name === media.pool ? " · holds media" : ""}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+      <h3 className={cn("text-sm font-medium", full ? "mt-2 text-muted" : "text-ink")}>
+        {full ? "Media" : "Storage"}
+      </h3>
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-2">
         <Fact
@@ -93,7 +111,7 @@ export function StorageCard({ className }: { className?: string }) {
         <div className="text-[13px]">
           <p className="font-medium text-ink">Largest</p>
           <ul className="mt-1 flex flex-col gap-0.5 text-muted">
-            {media.largest.slice(0, 5).map((i) => (
+            {media.largest.slice(0, full ? 10 : 5).map((i) => (
               <li key={`${i.kind}:${i.title}`} className="flex justify-between gap-3">
                 <span className="min-w-0 truncate">
                   {i.title} <span className="text-xs">({i.kind})</span>
@@ -105,7 +123,7 @@ export function StorageCard({ className }: { className?: string }) {
         </div>
       )}
 
-      <details className="text-[13px]">
+      <details className="text-[13px]" open={full}>
         <summary className="cursor-pointer font-medium text-ink">Disk by container</summary>
         <ul className="mt-1 flex flex-col gap-0.5 text-muted">
           {data.containers.map((c) => (
