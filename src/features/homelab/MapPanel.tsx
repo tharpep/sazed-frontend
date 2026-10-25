@@ -3,24 +3,19 @@ import type { ArchMap, MapNode } from "@/api/homelab";
 import { clock } from "@/features/activity/format";
 import type { MapTraffic } from "./mapTraffic";
 import { STATUS_COLOR, edgeKey, edgesFor } from "./mapGeometry";
-import { gib, uptime } from "./format";
+import { Fact, gib, uptime } from "./format";
+import { StorageCard } from "./StorageCard";
 
 const STATUS_TEXT = { up: "Healthy", down: "Down", maintenance: "Maintenance", unknown: "Not checked yet" };
+
+// registry/map.yaml node that holds Jellyfin and the *arr apps; its panel shows storage.
+const MEDIA_NODE = "media";
 
 interface Props {
   node: MapNode;
   map: ArchMap;
   traffic: MapTraffic;
   onOpenService: (serviceId: string) => void;
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md bg-surface px-2.5 py-2">
-      <div className="text-xs text-muted">{label}</div>
-      <div className="text-sm font-medium text-ink">{value}</div>
-    </div>
-  );
 }
 
 /** What the mockup shows under the map for the selected node: health, stats, traffic and the
@@ -39,6 +34,7 @@ export function MapPanel({ node, map, traffic, onOpenService }: Props) {
       ["Container", `CT ${c.vmid}`],
       ["CPU", `${c.cpu_percent}%`],
       ["Memory", `${gib(c.mem_used_bytes)} / ${gib(c.mem_total_bytes)} GB`],
+      ["Disk", `${gib(c.disk_used_bytes)} / ${gib(c.disk_total_bytes)} GB`],
       ["Uptime", uptime(c.uptime_seconds)]
     );
   } else if (node.containers.length > 1) {
@@ -102,6 +98,7 @@ export function MapPanel({ node, map, traffic, onOpenService }: Props) {
           ))}
         </div>
       )}
+      {node.id === MEDIA_NODE && <StorageCard className="mt-3.5 border-t border-border pt-3" />}
       {!node.placed && (
         <p className="mt-2.5 text-xs text-muted">
           This service is in the registry but not on the map yet. Add it to registry/map.yaml.

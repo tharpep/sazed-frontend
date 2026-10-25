@@ -39,6 +39,17 @@ export function StatusDot({ kind, className }: { kind: StatusKind; className?: s
   );
 }
 
+/** A labeled stat tile, as used in the map panel and the storage card. */
+export function Fact({ label, value, note }: { label: string; value: string; note?: string }) {
+  return (
+    <div className="rounded-md bg-surface px-2.5 py-2">
+      <div className="text-xs text-muted">{label}</div>
+      <div className="text-sm font-medium text-ink">{value}</div>
+      {note && <div className="text-xs text-muted">{note}</div>}
+    </div>
+  );
+}
+
 /** "45s", "5m", "3h", "2d" — compact age for status lines. */
 export function age(iso: string | null | undefined, now = Date.now()): string {
   if (!iso) return "";

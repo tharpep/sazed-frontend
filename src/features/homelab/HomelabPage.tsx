@@ -15,6 +15,7 @@ import {
 } from "@/api/homelab";
 import { MapView } from "./MapView";
 import { ServiceSheet } from "./ServiceSheet";
+import { StorageCard } from "./StorageCard";
 import { StatusDot, age, gib, pct, statusLine, statusOf, uptime } from "./format";
 
 const REFRESH_MS = 30_000; // the gateway polls every 60s; 30s keeps the page within one cycle
@@ -175,7 +176,11 @@ export function HomelabPage() {
                   {gib(host.mem_total_bytes)} GB · Storage{" "}
                   {host.storage
                     .filter((s) => s.active)
-                    .map((s) => `${s.name} ${pct(s.used_bytes, s.total_bytes)}`)
+                    .map((s) =>
+                      s.used_bytes != null && s.total_bytes
+                        ? `${s.name} ${gib(s.total_bytes - s.used_bytes)} GB free of ${gib(s.total_bytes)}`
+                        : `${s.name} ${pct(s.used_bytes, s.total_bytes)}`
+                    )
                     .join(", ")}{" "}
                   · Up {uptime(host.uptime_seconds)}
                 </p>
@@ -193,6 +198,8 @@ export function HomelabPage() {
                   <ServiceRow key={s.id} service={s} now={now} onOpen={() => setSelectedId(s.id)} />
                 ))}
               </ul>
+              {/* The media apps' storage sits under their group, as on the Map's media panel. */}
+              {group.key === "apps" && <StorageCard className="mt-3 rounded-lg border border-border px-3 py-3" />}
             </section>
           ))}
         </div>

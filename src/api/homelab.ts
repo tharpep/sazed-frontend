@@ -71,6 +71,53 @@ export interface HostStatus {
   }[];
 }
 
+export interface StoragePool {
+  name: string;
+  type: string;
+  used_bytes: number;
+  total_bytes: number;
+  free_bytes: number;
+}
+
+export interface MediaItem {
+  title: string;
+  kind: "series" | "movie";
+  bytes: number;
+}
+
+export interface LibraryTotal {
+  count: number;
+  bytes: number;
+}
+
+/** null sections: that source (Sonarr, Radarr, qBittorrent) isn't configured or failed. */
+export interface StorageResponse {
+  pools: StoragePool[];
+  media: {
+    vmid: number;
+    mount: string;
+    volume: string | null;
+    pool: string | null; // null for a bind mount Proxmox can't size
+    free_bytes: number | null;
+    series: LibraryTotal | null;
+    movies: LibraryTotal | null;
+    largest: MediaItem[];
+    downloads: {
+      torrents: number;
+      bytes: number;
+      not_imported: { name: string; bytes: number; category: string | null; completed_at: number | null }[];
+    } | null;
+  };
+  containers: {
+    vmid: number;
+    name: string;
+    status: string;
+    used_bytes: number | null;
+    total_bytes: number | null;
+  }[];
+  errors: string[];
+}
+
 export interface LifecycleTask {
   type: string; // vzstart | vzstop | vzreboot | ...
   user: string;
@@ -104,6 +151,10 @@ export function fetchService(id: string): Promise<ServiceDetail> {
 
 export function fetchHost(): Promise<HostStatus> {
   return gatewayFetch("/homelab/host") as Promise<HostStatus>;
+}
+
+export function fetchStorage(): Promise<StorageResponse> {
+  return gatewayFetch("/homelab/storage") as Promise<StorageResponse>;
 }
 
 export function fetchContainer(vmid: number): Promise<ContainerDetail> {
@@ -169,6 +220,8 @@ export interface MapContainer {
   cpu_percent: number;
   mem_used_bytes: number;
   mem_total_bytes: number;
+  disk_used_bytes: number | null; // root disk only; extra mount points aren't reported
+  disk_total_bytes: number | null;
   uptime_seconds: number;
 }
 
