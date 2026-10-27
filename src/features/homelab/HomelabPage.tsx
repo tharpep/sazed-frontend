@@ -13,6 +13,7 @@ import {
   type ServiceGroup,
   type ServicesResponse,
 } from "@/api/homelab";
+import { useUiStore } from "@/store/uiStore";
 import { MapView } from "./MapView";
 import { ServiceSheet } from "./ServiceSheet";
 import { StorageCard } from "./StorageCard";
@@ -23,6 +24,15 @@ const VIEW_KEY = "sazed-homelab-view";
 
 const VIEWS = { map: "Map", list: "List", storage: "Storage" } as const;
 type View = keyof typeof VIEWS;
+
+/** Open the Homelab page on a given tab (Home's glance tiles): it starts on the remembered one. */
+export function rememberHomelabView(v: View) {
+  try {
+    localStorage.setItem(VIEW_KEY, v);
+  } catch {
+    // private mode: the page just opens on its default
+  }
+}
 
 function savedView(): View {
   try {
@@ -51,6 +61,7 @@ export function HomelabPage() {
   const [now, setNow] = useState(() => Date.now());
   const [view, setView] = useState<View>(savedView);
   const [map, setMap] = useState<ArchMap | null>(null);
+  const privateRevealed = useUiStore((s) => s.privateRevealed);
 
   function chooseView(v: View) {
     setView(v);
@@ -96,8 +107,22 @@ export function HomelabPage() {
     };
   }, [load]);
 
+  // Private services (the gateway's homelab-only registry file) stay out of sight until revealed
+  // on Home, here as everywhere.
+  const shown = useMemo(
+    () => (data?.services ?? []).filter((s) => privateRevealed || !s.private),
+    [data, privateRevealed]
+  );
+  const shownMap = useMemo(
+    () =>
+      map && !privateRevealed
+        ? { ...map, nodes: map.nodes.map((n) => ({ ...n, services: n.services.filter((s) => !s.private) })) }
+        : map,
+    [map, privateRevealed]
+  );
+
   const grouped = useMemo(() => {
-    const services = data?.services ?? [];
+    const services = shown;
     return GROUPS.map((g) => ({
       ...g,
       services: services
@@ -106,10 +131,10 @@ export function HomelabPage() {
         .sort((a, b) => RANK[statusOf(a.s)] - RANK[statusOf(b.s)] || a.i - b.i)
         .map(({ s }) => s),
     })).filter((g) => g.services.length > 0);
-  }, [data]);
+  }, [shown]);
 
-  const down = (data?.services ?? []).filter((s) => statusOf(s) === "down");
-  const checked = (data?.services ?? []).filter((s) => s.lifecycle !== "planned").length;
+  const down = shown.filter((s) => statusOf(s) === "down");
+  const checked = shown.filter((s) => s.lifecycle !== "planned").length;
   const selected = data?.services.find((s) => s.id === selectedId) ?? null;
 
   return (
@@ -149,7 +174,7 @@ export function HomelabPage() {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className={cn("mx-auto flex w-full flex-col gap-5 px-4 py-4 pb-8", view === "map" ? "max-w-3xl" : "max-w-2xl")}>
-          {view === "map" && map && <MapView map={map} onOpenService={setSelectedId} />}
+          {view === "map" && shownMap && <MapView map={shownMap} onOpenService={setSelectedId} />}
           {view === "map" && !map && !error && <p className="text-sm text-muted">Loading the map…</p>}
           {view === "storage" && <StorageCard full />}
           {view !== "storage" && error && !data && (

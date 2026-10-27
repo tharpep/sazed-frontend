@@ -6,9 +6,9 @@ import {
   Library,
   MessageSquarePlus,
   History as HistoryIcon,
+  House,
   Activity,
   CalendarClock,
-  LayoutGrid,
   Lightbulb,
   Server,
   Waypoints,
@@ -61,7 +61,6 @@ export function Sidebar() {
   const journalOpen = useUiStore((s) => s.journalOpen);
   const kbOpen = useUiStore((s) => s.kbOpen);
   const homelabOpen = useUiStore((s) => s.homelabOpen);
-  const appsOpen = useUiStore((s) => s.appsOpen);
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
@@ -71,7 +70,6 @@ export function Sidebar() {
   const toggleJournal = useUiStore((s) => s.toggleJournal);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
-  const toggleApps = useUiStore((s) => s.toggleApps);
   const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
@@ -120,8 +118,9 @@ export function Sidebar() {
       {/* Desktop / tablet: icon rail + inline sliding panel. */}
       <div className="hidden h-full sm:flex">
         <nav className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-surface/40 py-3">
-          <RailButton label="New chat" active={false} onClick={handleNewChat}>
-            <MessageSquarePlus className="size-4" aria-hidden="true" />
+          {/* Home is the launcher plus a fresh chat (the old Apps page merged in). */}
+          <RailButton label="Home" active={false} onClick={handleNewChat}>
+            <House className="size-4" aria-hidden="true" />
           </RailButton>
           <RailButton label="Conversations" active={historyOpen} onClick={toggleHistory}>
             <HistoryIcon className="size-4" aria-hidden="true" />
@@ -134,9 +133,6 @@ export function Sidebar() {
           </RailButton>
           <RailButton label="Homelab" active={homelabOpen} onClick={toggleHomelab}>
             <Server className="size-4" aria-hidden="true" />
-          </RailButton>
-          <RailButton label="Apps" active={appsOpen} onClick={toggleApps}>
-            <LayoutGrid className="size-4" aria-hidden="true" />
           </RailButton>
           <RailButton label="Gateway" active={gatewayOpen} onClick={toggleGateway}>
             <Waypoints className="size-4" aria-hidden="true" />

@@ -8,12 +8,16 @@ interface UiState {
   financeOpen: boolean;
   journalOpen: boolean;
   homelabOpen: boolean;
-  appsOpen: boolean;
   gatewayOpen: boolean;
   automationsOpen: boolean;
   backlogOpen: boolean;
   moreOpen: boolean;
   online: boolean;
+  // Private apps (registry `private`) stay hidden until Pryce taps his name on Home. In memory
+  // only, and App hides them again whenever the console goes to the background.
+  privateRevealed: boolean;
+  togglePrivate: () => void;
+  hidePrivate: () => void;
   // Backlog item to open, from a ?page=backlog&item=<id> link (Pushover buttons)
   linkedBacklogItem: string | null;
   setLinkedBacklogItem: (id: string | null) => void;
@@ -27,7 +31,6 @@ interface UiState {
   toggleFinance: () => void;
   toggleJournal: () => void;
   toggleHomelab: () => void;
-  toggleApps: () => void;
   toggleGateway: () => void;
   toggleAutomations: () => void;
   toggleBacklog: () => void;
@@ -47,7 +50,6 @@ const ALL_CLOSED = {
   financeOpen: false,
   journalOpen: false,
   homelabOpen: false,
-  appsOpen: false,
   gatewayOpen: false,
   automationsOpen: false,
   backlogOpen: false,
@@ -57,6 +59,9 @@ const ALL_CLOSED = {
 export const useUiStore = create<UiState>((set) => ({
   ...ALL_CLOSED,
   online: false,
+  privateRevealed: false,
+  togglePrivate: () => set((s) => ({ privateRevealed: !s.privateRevealed })),
+  hidePrivate: () => set({ privateRevealed: false }),
   linkedBacklogItem: null,
   setLinkedBacklogItem: (id) => set({ linkedBacklogItem: id }),
   toggleHistory: () => set((s) => ({ ...ALL_CLOSED, historyOpen: !s.historyOpen })),
@@ -69,7 +74,6 @@ export const useUiStore = create<UiState>((set) => ({
   toggleFinance: () => set((s) => ({ ...ALL_CLOSED, financeOpen: !s.financeOpen })),
   toggleJournal: () => set((s) => ({ ...ALL_CLOSED, journalOpen: !s.journalOpen })),
   toggleHomelab: () => set((s) => ({ ...ALL_CLOSED, homelabOpen: !s.homelabOpen })),
-  toggleApps: () => set((s) => ({ ...ALL_CLOSED, appsOpen: !s.appsOpen })),
   toggleGateway: () => set((s) => ({ ...ALL_CLOSED, gatewayOpen: !s.gatewayOpen })),
   toggleAutomations: () => set((s) => ({ ...ALL_CLOSED, automationsOpen: !s.automationsOpen })),
   toggleBacklog: () => set((s) => ({ ...ALL_CLOSED, backlogOpen: !s.backlogOpen })),

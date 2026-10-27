@@ -1,17 +1,11 @@
 import type { ComponentType } from "react";
-import {
-  CalendarClock,
-  LayoutGrid,
-  Library,
-  MessageCircle,
-  MoreHorizontal,
-  Server,
-} from "lucide-react";
+import { CalendarClock, House, Library, MoreHorizontal, Server } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/uiStore";
+import { useChatStore } from "@/store/chatStore";
 
-type TabKey = "chat" | "homelab" | "apps" | "automations" | "kb" | "more";
+type TabKey = "home" | "homelab" | "automations" | "kb" | "more";
 
 interface TabDef {
   key: TabKey;
@@ -20,10 +14,10 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { key: "chat", label: "Chat", icon: MessageCircle },
+  // Home is the app launcher and the chat: the old Chat and Apps tabs merged.
+  { key: "home", label: "Home", icon: House },
   { key: "homelab", label: "Homelab", icon: Server },
-  { key: "apps", label: "Apps", icon: LayoutGrid },
-  // Six tabs leave ~62px each on a 375px phone; "Automations" doesn't fit next to "Knowledge".
+  // "Automations" doesn't fit next to "Knowledge" on a 375px phone.
   { key: "automations", label: "Automate", icon: CalendarClock },
   { key: "kb", label: "Knowledge", icon: Library },
   { key: "more", label: "More", icon: MoreHorizontal },
@@ -38,34 +32,33 @@ export function BottomTabBar() {
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const auditOpen = useUiStore((s) => s.auditOpen);
   const homelabOpen = useUiStore((s) => s.homelabOpen);
-  const appsOpen = useUiStore((s) => s.appsOpen);
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
   const moreOpen = useUiStore((s) => s.moreOpen);
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
-  const toggleApps = useUiStore((s) => s.toggleApps);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const toggleMore = useUiStore((s) => s.toggleMore);
   const closeAll = useUiStore((s) => s.closeAll);
+  const hasChat = useChatStore((s) => s.messages.length > 0);
+  const newSession = useChatStore((s) => s.newSession);
 
   const active: TabKey = homelabOpen
     ? "homelab"
-    : appsOpen
-      ? "apps"
-      : automationsOpen
+    : automationsOpen
       ? "automations"
       : kbOpen
         ? "kb"
         : settingsOpen || auditOpen || historyOpen || gatewayOpen || journalOpen || backlogOpen || moreOpen
           ? "more"
-          : "chat";
+          : "home";
 
   function handleTap(key: TabKey) {
-    if (key === "chat") closeAll();
+    // Tapping Home while already on a conversation goes back to the launcher (a new chat; the
+    // old one stays in Conversations).
+    if (key === "home") active === "home" && hasChat ? newSession() : closeAll();
     else if (key === "homelab") toggleHomelab();
-    else if (key === "apps") toggleApps();
     else if (key === "automations") toggleAutomations();
     else if (key === "kb") toggleKb();
     else toggleMore();

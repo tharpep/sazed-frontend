@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { MessageSquarePlus, X } from "lucide-react";
 import { AppShell } from "./components/layout/AppShell";
 import { Composer } from "./features/chat/Composer";
-import { EmptyState } from "./features/chat/EmptyState";
+import { HomePage } from "./features/home/HomePage";
 import { MessageList } from "./features/chat/MessageList";
 import { KnowledgePage } from "./features/kb/KnowledgePage";
 import { SettingsPage } from "./features/settings/SettingsPage";
@@ -10,7 +10,6 @@ import { ActivityPage } from "./features/activity/ActivityPage";
 import { FinancePage } from "./features/finance/FinancePage";
 import { JournalPage } from "./features/journal/JournalPage";
 import { HomelabPage } from "./features/homelab/HomelabPage";
-import { AppsPage } from "./features/apps/AppsPage";
 import { GatewayPage } from "./features/gateway/GatewayPage";
 import { AutomationsPage } from "./features/automations/AutomationsPage";
 import { BacklogPage } from "./features/backlog/BacklogPage";
@@ -25,7 +24,6 @@ function App() {
   const financeOpen = useUiStore((s) => s.financeOpen);
   const journalOpen = useUiStore((s) => s.journalOpen);
   const homelabOpen = useUiStore((s) => s.homelabOpen);
-  const appsOpen = useUiStore((s) => s.appsOpen);
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
@@ -36,13 +34,13 @@ function App() {
   const toggleFinance = useUiStore((s) => s.toggleFinance);
   const toggleJournal = useUiStore((s) => s.toggleJournal);
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
-  const toggleApps = useUiStore((s) => s.toggleApps);
   const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const setLinkedBacklogItem = useUiStore((s) => s.setLinkedBacklogItem);
+  const hidePrivate = useUiStore((s) => s.hidePrivate);
   const messages = useChatStore((s) => s.messages);
   const send = useChatStore((s) => s.send);
   const stop = useChatStore((s) => s.stop);
@@ -61,8 +59,6 @@ function App() {
           ? "journal"
           : homelabOpen
             ? "homelab"
-            : appsOpen
-            ? "apps"
             : gatewayOpen
             ? "gateway"
             : automationsOpen
@@ -84,7 +80,7 @@ function App() {
       backlog: ui.toggleBacklog,
       automations: ui.toggleAutomations,
       homelab: ui.toggleHomelab,
-      apps: ui.toggleApps,
+      apps: ui.closeAll, // the Apps page is now part of Home
       kb: ui.toggleKb,
       journal: ui.toggleJournal,
     };
@@ -92,6 +88,15 @@ function App() {
     if (page === "backlog") setLinkedBacklogItem(params.get("item"));
     window.history.replaceState(null, "", window.location.pathname);
   }, [setLinkedBacklogItem]);
+
+  // Private apps never stay revealed once the console leaves the screen.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden) hidePrivate();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [hidePrivate]);
 
   useEffect(() => {
     const check = () =>
@@ -113,7 +118,6 @@ function App() {
         else if (financeOpen) toggleFinance();
         else if (journalOpen) toggleJournal();
         else if (homelabOpen) toggleHomelab();
-        else if (appsOpen) toggleApps();
         else if (gatewayOpen) toggleGateway();
         else if (automationsOpen) toggleAutomations();
         else if (backlogOpen) toggleBacklog();
@@ -129,7 +133,6 @@ function App() {
     financeOpen,
     journalOpen,
     homelabOpen,
-    appsOpen,
     gatewayOpen,
     automationsOpen,
     backlogOpen,
@@ -140,7 +143,6 @@ function App() {
     toggleFinance,
     toggleJournal,
     toggleHomelab,
-    toggleApps,
     toggleGateway,
     toggleAutomations,
     toggleBacklog,
@@ -186,8 +188,6 @@ function App() {
           <JournalPage />
         ) : homelabOpen ? (
           <HomelabPage />
-        ) : appsOpen ? (
-          <AppsPage />
         ) : gatewayOpen ? (
           <GatewayPage />
         ) : automationsOpen ? (
@@ -197,12 +197,12 @@ function App() {
         ) : kbOpen ? (
           <KnowledgePage />
         ) : view === "empty" ? (
-          <EmptyState />
+          <HomePage />
         ) : (
           <MessageList />
         )}
       </div>
-      {viewKey === "chat" && (
+      {(viewKey === "chat" || viewKey === "empty") && (
         <Composer
           variant="docked"
           onSend={send}

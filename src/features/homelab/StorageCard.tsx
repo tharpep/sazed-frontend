@@ -11,8 +11,9 @@ function library(t: LibraryTotal | null): string {
 }
 
 /** Real free space for media (the pool behind the media disk, not df inside CT 100), the
- * library by size, finished downloads that never reached Jellyfin, and disk per container.
- * `full` is the Homelab page's Storage tab: every pool, more items, containers expanded. */
+ * library size, how many finished downloads never reached Jellyfin, and disk per container.
+ * Counts and sizes only: no titles, so the console never shows what's being watched.
+ * `full` is the Homelab page's Storage tab: every pool, containers expanded. */
 export function StorageCard({ className, full = false }: { className?: string; full?: boolean }) {
   const [data, setData] = useState<StorageResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export function StorageCard({ className, full = false }: { className?: string; f
 
   const { media } = data;
   const pool = data.pools.find((p) => p.name === media.pool);
-  const notImported = media.downloads?.not_imported ?? [];
+  const notImported = media.downloads?.not_imported;
 
   return (
     <section aria-label="Storage" className={cn("flex flex-col gap-2.5", className)}>
@@ -93,34 +94,11 @@ export function StorageCard({ className, full = false }: { className?: string; f
         />
       </div>
 
-      {notImported.length > 0 && (
-        <div className="text-[13px]">
-          <p className="font-medium text-ink">Downloaded but not in the library</p>
-          <ul className="mt-1 flex flex-col gap-0.5 text-muted">
-            {notImported.map((t) => (
-              <li key={t.name} className="flex justify-between gap-3">
-                <span className="min-w-0 truncate">{t.name}</span>
-                <span className="shrink-0 tabular-nums">{gib(t.bytes)} GB</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {media.largest.length > 0 && (
-        <div className="text-[13px]">
-          <p className="font-medium text-ink">Largest</p>
-          <ul className="mt-1 flex flex-col gap-0.5 text-muted">
-            {media.largest.slice(0, full ? 10 : 5).map((i) => (
-              <li key={`${i.kind}:${i.title}`} className="flex justify-between gap-3">
-                <span className="min-w-0 truncate">
-                  {i.title} <span className="text-xs">({i.kind})</span>
-                </span>
-                <span className="shrink-0 tabular-nums">{gib(i.bytes)} GB</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {notImported && notImported.count > 0 && (
+        <p className="text-[13px] text-ink">
+          {notImported.count} finished download{notImported.count === 1 ? "" : "s"} never reached the library (
+          {gib(notImported.bytes)} GB). qBittorrent has the details.
+        </p>
       )}
 
       <details className="text-[13px]" open={full}>

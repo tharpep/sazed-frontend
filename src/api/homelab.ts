@@ -32,6 +32,7 @@ export interface Service {
   icon: string | null; // dashboard-icons slug, for the Apps page
   depends_on: string[];
   repo: string | null;
+  private: boolean; // from the gateway's homelab-only registry file; hidden until revealed
   live: ServiceLive | null;
   state: ServiceState | null; // null when the gateway can't reach Postgres
 }
@@ -79,18 +80,13 @@ export interface StoragePool {
   free_bytes: number;
 }
 
-export interface MediaItem {
-  title: string;
-  kind: "series" | "movie";
-  bytes: number;
-}
-
 export interface LibraryTotal {
   count: number;
   bytes: number;
 }
 
-/** null sections: that source (Sonarr, Radarr, qBittorrent) isn't configured or failed. */
+/** null sections: that source (Sonarr, Radarr, qBittorrent) isn't configured or failed.
+ * Sizes and counts only; the gateway never sends titles or torrent names. */
 export interface StorageResponse {
   pools: StoragePool[];
   media: {
@@ -101,11 +97,10 @@ export interface StorageResponse {
     free_bytes: number | null;
     series: LibraryTotal | null;
     movies: LibraryTotal | null;
-    largest: MediaItem[];
     downloads: {
       torrents: number;
       bytes: number;
-      not_imported: { name: string; bytes: number; category: string | null; completed_at: number | null }[];
+      not_imported: LibraryTotal; // finished torrents Sonarr/Radarr never imported
     } | null;
   };
   containers: {
@@ -211,6 +206,7 @@ export interface MapNodeService {
   in_maintenance: boolean;
   muted: boolean;
   container: number | null;
+  private: boolean;
 }
 
 export interface MapContainer {
