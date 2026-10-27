@@ -6,7 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
-import { ACTIVE_STATUSES, approveJob, cancelJob, continueJob, getJob, type JobDetail } from "@/api/jobs";
+import {
+  ACTIVE_STATUSES,
+  CONTINUABLE_STATUSES,
+  approveJob,
+  cancelJob,
+  continueJob,
+  getJob,
+  type JobDetail,
+} from "@/api/jobs";
 import { errorText } from "@/api/homelab";
 import { KIND_LABEL, STATUS_LABEL, duration, requesterLabel, statusTone, stepsFromEvents } from "./format";
 
@@ -116,7 +124,9 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
                   ? "Waiting for the worker…"
                   : job.status === "needs_approval"
                     ? "Waiting for your approval."
-                    : `Working: ${steps.length} steps so far…`}
+                    : job.status === "needs_input"
+                      ? "Waiting for your answer."
+                      : `Working: ${steps.length} steps so far…`}
               </p>
               <div className="flex gap-2">
                 {job.status === "needs_approval" && (
@@ -129,6 +139,13 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
                 </Button>
               </div>
             </div>
+          )}
+
+          {job?.status === "needs_input" && job.question && (
+            <section aria-label="Question" className="rounded-md border border-border px-3 py-2">
+              <h3 className="text-sm font-medium text-ink">It asks</h3>
+              <p className="text-sm">{job.question}</p>
+            </section>
           )}
 
           {job?.result && (
@@ -173,18 +190,24 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
             <p className="text-xs text-muted">Changed: {job.meta.changed_files.join(", ")}</p>
           )}
 
-          {job?.status === "succeeded" && (
+          {job && CONTINUABLE_STATUSES.includes(job.status) && (
             <section aria-label="Follow up" className="flex flex-col gap-2">
               <textarea
                 value={followUp}
                 onChange={(e) => setFollowUp(e.target.value)}
                 rows={2}
                 aria-label="Follow-up instruction"
-                placeholder="Follow up: the same agent continues with its context"
+                placeholder={
+                  job.status === "needs_input"
+                    ? "Your answer: the same agent continues where it stopped"
+                    : job.status === "succeeded"
+                      ? "Follow up: the same agent continues with its context"
+                      : "Redirect: new directions; the same agent resumes where it was stopped"
+                }
                 className={cn(followField, "resize-y")}
               />
               <Button size="sm" className="self-end" disabled={busy || followUp.trim().length < 2} onClick={sendFollowUp}>
-                Continue
+                {job.status === "needs_input" ? "Answer" : job.status === "succeeded" ? "Continue" : "Redirect"}
               </Button>
             </section>
           )}

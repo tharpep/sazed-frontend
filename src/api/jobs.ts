@@ -5,6 +5,7 @@ import { apiFetch } from "./client";
 export type JobStatus =
   | "queued"
   | "needs_approval"
+  | "needs_input"
   | "running"
   | "succeeded"
   | "failed"
@@ -52,8 +53,11 @@ export interface JobDetail extends Omit<JobSummary, "result_preview"> {
     ci_state?: "success" | "failure" | "fixing" | "no_ci";
     ci_fix_job?: string;
     lint_found?: number;
+    question?: string;
   };
   events?: JobEvent[];
+  /** Set while the job is waiting on Pryce (status needs_input). */
+  question?: string | null;
 }
 
 export async function listJobs(): Promise<JobSummary[]> {
@@ -87,7 +91,10 @@ export async function cancelJob(id: string): Promise<JobDetail> {
   return apiFetch(`/jobs/${encodeURIComponent(id)}/cancel`, { method: "POST" }) as Promise<JobDetail>;
 }
 
-export const ACTIVE_STATUSES: JobStatus[] = ["queued", "running", "needs_approval"];
+export const ACTIVE_STATUSES: JobStatus[] = ["queued", "running", "needs_approval", "needs_input"];
+
+/** Jobs that can take a follow-up: finished, waiting on an answer, or stopped (to redirect). */
+export const CONTINUABLE_STATUSES: JobStatus[] = ["succeeded", "needs_input", "cancelled", "timed_out"];
 
 export async function startCodeTask(
   repo: string,

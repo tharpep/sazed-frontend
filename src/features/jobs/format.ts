@@ -9,6 +9,7 @@ export const KIND_LABEL: Record<JobKind, string> = {
 export const STATUS_LABEL: Record<JobStatus, string> = {
   queued: "Queued",
   needs_approval: "Needs approval",
+  needs_input: "Needs your answer",
   running: "Running",
   succeeded: "Done",
   failed: "Failed",
@@ -19,7 +20,7 @@ export const STATUS_LABEL: Record<JobStatus, string> = {
 /** Same color rule as the rest of the console: only problems (and approvals) get color. */
 export function statusTone(status: JobStatus): string {
   if (status === "failed" || status === "timed_out") return "text-destructive";
-  if (status === "needs_approval") return "text-accent";
+  if (status === "needs_approval" || status === "needs_input") return "text-accent";
   return "text-muted";
 }
 
