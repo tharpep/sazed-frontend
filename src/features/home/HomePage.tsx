@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { fetchServices, fetchStorage, type Service } from "@/api/homelab";
 import { listAutomations, type Automation } from "@/api/automations";
 import { listJobs } from "@/api/jobs";
-import { listBacklog } from "@/api/backlog";
 import { AppGrid } from "@/features/apps/AppGrid";
 import { gib, statusOf } from "@/features/homelab/format";
 import { rememberHomelabView } from "@/features/homelab/HomelabPage";
@@ -59,16 +58,14 @@ export function HomePage() {
   const togglePrivate = useUiStore((s) => s.togglePrivate);
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
-  const toggleBacklog = useUiStore((s) => s.toggleBacklog);
   const [data, setData] = useState<HomeData>({ services: null, mediaFree: null, nextRun: undefined, waiting: [] });
 
   const load = useCallback(async () => {
-    const [services, storage, automations, jobs, backlog] = await Promise.allSettled([
+    const [services, storage, automations, jobs] = await Promise.allSettled([
       fetchServices(),
       fetchStorage(),
       listAutomations(),
       listJobs(),
-      listBacklog("open"),
     ]);
     const waiting: Waiting[] = [];
     if (jobs.status === "fulfilled") {
@@ -83,12 +80,7 @@ export function HomePage() {
       const n = automations.value.filter((a) => a.last_status === "needs_approval").length;
       if (n) waiting.push({ key: "runs", text: `${plural(n, "automation run")} needing approval`, open: toggleAutomations });
     }
-    if (backlog.status === "fulfilled") {
-      // Shortlisted only: the scout files untriaged ideas daily, so counting those would never
-      // let this strip go empty.
-      const n = backlog.value.filter((i) => i.status === "shortlisted").length;
-      if (n) waiting.push({ key: "backlog", text: `${plural(n, "shortlisted backlog item")} to decide on`, open: toggleBacklog });
-    }
+    // Backlog isn't counted: Pryce decides on ideas from the Backlog page in his own time.
     const upcoming =
       automations.status === "fulfilled"
         ? automations.value
@@ -101,7 +93,7 @@ export function HomePage() {
       nextRun: upcoming,
       waiting,
     });
-  }, [toggleAutomations, toggleBacklog]);
+  }, [toggleAutomations]);
 
   useEffect(() => {
     load();

@@ -25,6 +25,8 @@
 @media (prefers-reduced-motion: no-preference) {
   .map-flow { animation: map-dash var(--map-dur, 2s) linear infinite; }
   .map-pulse { animation: map-pulse 2s ease-in-out infinite; }
+  .map-fade { animation: map-fade 0.25s ease-out; }
 }
+@keyframes map-fade { from { opacity: 0; transform: translateY(6px); } }
 @keyframes map-dash { to { stroke-dashoffset: -20; } }
 @keyframes map-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
