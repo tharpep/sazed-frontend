@@ -74,6 +74,10 @@ export function HomePage() {
     if (jobs.status === "fulfilled") {
       const n = jobs.value.filter((j) => j.status === "needs_approval").length;
       if (n) waiting.push({ key: "jobs", text: `${plural(n, "job")} waiting for approval`, open: toggleAutomations });
+      // needs_input: a worker job stopped to ask Pryce a question (plans/11 job controls).
+      const asking = jobs.value.filter((j) => j.status === "needs_input").length;
+      if (asking)
+        waiting.push({ key: "asking", text: `${plural(asking, "job")} waiting for your answer`, open: toggleAutomations });
     }
     if (automations.status === "fulfilled") {
       const n = automations.value.filter((a) => a.last_status === "needs_approval").length;
