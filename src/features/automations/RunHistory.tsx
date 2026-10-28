@@ -32,6 +32,21 @@ export function RunHistory({ runs, timezone, onOpenSession }: Props) {
               </span>
               <span className="shrink-0 text-xs text-muted">{shortWhen(r.started_at, timezone)}</span>
             </div>
+            {r.steps && r.steps.length > 0 && (
+              <p className="text-xs text-muted">
+                {r.steps.map((s, i) => (
+                  <span
+                    key={i}
+                    title={s.detail}
+                    className={cn(s.status === "error" && "text-destructive", s.status === "paused" && "text-accent")}
+                  >
+                    {i > 0 && " → "}
+                    {s.name}
+                    {s.status !== "ok" && ` (${s.status})`}
+                  </span>
+                ))}
+              </p>
+            )}
             {text && (
               <button
                 type="button"

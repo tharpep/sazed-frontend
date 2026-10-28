@@ -159,10 +159,10 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
             <p className="text-sm text-muted">
               Calls the gateway directly: <code className="text-ink">{detail.action.method} {detail.action.path}</code>
             </p>
-          ) : isGateway && detail?.action.type === "pipeline" ? (
+          ) : isGateway && detail?.action.type === "agent" ? (
             <p className="text-sm text-muted">
               {detail.action.name === "scout"
-                ? `Built-in scout: researches ideas for your stack, gets a second opinion, and files at most ${detail.action.max_ideas ?? 3} new ones in the Backlog.`
+                ? `Built-in scout: researches ideas for your stack, checks your repos for ones that already exist, gets a second opinion, and files at most ${detail.action.params?.max_ideas ?? 3} new ones in the Backlog.`
                 : detail.action.name === "map"
                   ? "Built-in map check: snapshots the Homelab architecture map, compares traffic and structure with last week, and reports drift."
                   : "Built-in triage: ranks open Backlog ideas, shortlists the top two, and marks month-old untouched ideas stale."}
