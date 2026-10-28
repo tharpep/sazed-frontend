@@ -20,7 +20,7 @@ export type AutomationAction =
       repo?: string | null;
       mode?: "review" | "change";
     }
-  | { type: "pipeline"; name: "scout" | "triage" | "map"; max_ideas?: number };
+  | { type: "agent"; name: "scout" | "triage" | "map"; params?: { max_ideas?: number } };
 
 export interface AutomationOutputs {
   pushover: { title?: string | null; priority?: number } | null;
@@ -55,6 +55,19 @@ export interface AutomationRun {
   error: string | null;
   session_id: string | null;
   delivered: string[];
+  steps?: AgentStep[]; // agent runs only (sazed plans/12)
+}
+
+/** One step of an agent run, as sazed's step runner records it. */
+export interface AgentStep {
+  name: string;
+  kind: "code" | "gate" | "model" | "pause" | "output";
+  status: "running" | "ok" | "stopped" | "paused" | "approved" | "denied" | "error";
+  detail?: string;
+  duration_ms?: number;
+  job?: string;
+  tokens?: number | null;
+  tool_calls?: number | null;
 }
 
 export interface AutomationDetail extends Automation {
