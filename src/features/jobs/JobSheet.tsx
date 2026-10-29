@@ -207,7 +207,11 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
                     ? "CI failed; a fix-up job is working on the same PR."
                     : job.meta.ci_state === "no_ci"
                       ? "This repo has no CI on pull requests."
-                      : "Waiting for CI…"}
+                      : job.meta.ci_state === "merged"
+                        ? "The PR was merged."
+                        : job.meta.ci_state === "closed"
+                          ? "The PR was closed; no more CI checks or fix-ups."
+                          : "Waiting for CI…"}
               {job.meta.ci_fix_job && (
                 <>
                   {" "}

@@ -54,7 +54,7 @@ export interface JobDetail extends Omit<JobSummary, "result_preview"> {
     pr_updated?: boolean;
     pr_draft?: boolean;
     pause_reason?: "timed_out" | "tool_cap" | "shutdown";
-    ci_state?: "success" | "failure" | "fixing" | "no_ci";
+    ci_state?: "success" | "failure" | "fixing" | "no_ci" | "closed" | "merged";
     ci_fix_job?: string;
     lint_found?: number;
     question?: string;
