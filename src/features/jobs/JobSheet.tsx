@@ -13,10 +13,11 @@ import {
   cancelJob,
   continueJob,
   getJob,
+  resumeJob,
   type JobDetail,
 } from "@/api/jobs";
 import { errorText } from "@/api/homelab";
-import { KIND_LABEL, STATUS_LABEL, duration, requesterLabel, statusTone, stepsFromEvents } from "./format";
+import { KIND_LABEL, PAUSE_REASON, STATUS_LABEL, duration, requesterLabel, statusTone, stepsFromEvents } from "./format";
 
 interface Props {
   jobId: string | null;
@@ -65,6 +66,20 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
       await fn();
       await load();
       onChanged();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resume() {
+    if (!jobId) return;
+    setBusy(true);
+    try {
+      const child = await resumeJob(jobId);
+      onChanged();
+      onOpenJob(child.id);
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -141,6 +156,23 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
             </div>
           )}
 
+          {job?.status === "paused" && (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-muted">
+                Paused: {PAUSE_REASON[job.meta.pause_reason ?? ""] ?? "it was stopped"}.{" "}
+                {job.meta.pr_url ? "Its work so far is on the draft PR." : "It hadn't changed any files yet."}
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" disabled={busy} onClick={resume}>
+                  Resume
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => act(() => cancelJob(job.id))}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
           {job?.status === "needs_input" && job.question && (
             <section aria-label="Question" className="rounded-md border border-border px-3 py-2">
               <h3 className="text-sm font-medium text-ink">It asks</h3>
@@ -162,10 +194,10 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
               rel="noreferrer"
               className="self-start rounded-md border border-border px-3 py-1.5 text-sm text-primary hover:bg-surface"
             >
-              Open pull request #{job.meta.pr_number} on GitHub
+              Open {job.meta.pr_draft ? "draft " : ""}pull request #{job.meta.pr_number} on GitHub
             </a>
           )}
-          {job?.meta?.pr_url && (
+          {job?.meta?.pr_url && !job.meta.pr_draft && (
             <p className={cn("text-xs", job.meta.ci_state === "failure" ? "text-destructive" : "text-muted")}>
               {job.meta.ci_state === "success"
                 ? "CI passed."
