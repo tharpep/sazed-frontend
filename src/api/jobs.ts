@@ -10,7 +10,9 @@ export type JobStatus =
   | "succeeded"
   | "failed"
   | "cancelled"
-  | "timed_out";
+  | "timed_out"
+  /** A change job stopped by its timeout, tool cap or a worker restart; its work is on a draft PR. */
+  | "paused";
 
 export type JobKind = "research" | "second_opinion" | "code_task";
 
@@ -50,6 +52,8 @@ export interface JobDetail extends Omit<JobSummary, "result_preview"> {
     pr_number?: number;
     pr_error?: string;
     pr_updated?: boolean;
+    pr_draft?: boolean;
+    pause_reason?: "timed_out" | "tool_cap" | "shutdown";
     ci_state?: "success" | "failure" | "fixing" | "no_ci";
     ci_fix_job?: string;
     lint_found?: number;
@@ -94,7 +98,7 @@ export async function cancelJob(id: string): Promise<JobDetail> {
 export const ACTIVE_STATUSES: JobStatus[] = ["queued", "running", "needs_approval", "needs_input"];
 
 /** Jobs that can take a follow-up: finished, waiting on an answer, or stopped (to redirect). */
-export const CONTINUABLE_STATUSES: JobStatus[] = ["succeeded", "needs_input", "cancelled", "timed_out"];
+export const CONTINUABLE_STATUSES: JobStatus[] = ["succeeded", "needs_input", "cancelled", "timed_out", "paused"];
 
 export async function startCodeTask(
   repo: string,
@@ -109,6 +113,11 @@ export async function startCodeTask(
 
 export async function approveJob(id: string): Promise<JobDetail> {
   return apiFetch(`/jobs/${encodeURIComponent(id)}/approve`, { method: "POST" }) as Promise<JobDetail>;
+}
+
+/** Carry on with a paused job where it stopped; it queues without approval. */
+export async function resumeJob(id: string): Promise<JobDetail> {
+  return apiFetch(`/jobs/${encodeURIComponent(id)}/resume`, { method: "POST" }) as Promise<JobDetail>;
 }
 
 export async function continueJob(id: string, instruction: string): Promise<JobDetail> {
