@@ -14,6 +14,7 @@ import { ClockWidget } from "./ClockWidget";
 import { EmailBadge } from "./EmailBadge";
 import { FinanceWidget } from "./FinanceWidget";
 import { GitHubWidget, type GitHubIssue } from "./GitHubWidget";
+import { HomelabWidget } from "./HomelabWidget";
 import { TaskWidget } from "./TaskWidget";
 import { UpcomingWidget } from "./UpcomingWidget";
 import { WeatherWidget } from "./WeatherWidget";
@@ -49,7 +50,7 @@ const upcomingPayment = z.object({
   name: z.string(),
   amount: z.number(),
   frequency: z.string(),
-  next_billing_date: z.string().describe("YYYY-MM-DD"),
+  due_date: z.string().describe("YYYY-MM-DD"),
   category: z.string(),
 });
 
@@ -59,6 +60,13 @@ const weatherData = z.object({
   high: z.number(),
   low: z.number(),
   precip_chance: z.number().describe("Percent, 0 to 100"),
+});
+
+const homelabService = z.object({
+  id: z.string(),
+  name: z.string(),
+  up: z.boolean().nullish(),
+  in_maintenance: z.boolean().nullish(),
 });
 
 const gitHubIssue = z.object({
@@ -145,6 +153,16 @@ export const WIDGET_CATALOG = {
     props: z.object({ data: weatherData.nullable() }),
     ownership: "ambient",
     description: "Current weather and today's high, low and rain chance.",
+    live: false,
+  }),
+  HomelabWidget: widget({
+    component: HomelabWidget,
+    props: z.object({
+      summary: z.object({ up: z.int(), down: z.int(), unknown: z.int() }),
+      services: z.array(homelabService),
+    }),
+    ownership: "agent",
+    description: "How many homelab services are up, and which are down.",
     live: false,
   }),
   GitHubWidget: widget({

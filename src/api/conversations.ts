@@ -21,6 +21,8 @@ export interface RawContentBlock {
   input?: Record<string, unknown>;
   tool_use_id?: string;
   content?: string;
+  component?: string;
+  props?: Record<string, unknown>;
 }
 
 export interface ListConversationsResponse {
