@@ -25,15 +25,15 @@ const calendarEvent = z.object({
   start: z.string().describe("ISO 8601 start time"),
   end: z.string().describe("ISO 8601 end time"),
   all_day: z.boolean(),
-  location: z.string().optional(),
+  location: z.string().nullish(),
 });
 
 const task = z.object({
   id: z.string(),
   title: z.string(),
   status: z.string(),
-  due: z.string().optional().describe("ISO date"),
-  notes: z.string().optional(),
+  due: z.string().nullish().describe("ISO date"),
+  notes: z.string().nullish(),
   list_name: z.string(),
 });
 
