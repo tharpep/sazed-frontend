@@ -66,6 +66,9 @@ function rawMessagesToMessages(raw: RawMessage[]): Message[] {
         if (block.type === "text" && block.text) {
           blocks.push({ type: "text", content: block.text });
         }
+        if (block.type === "ui_block" && block.component) {
+          blocks.push({ type: "ui", component: block.component, props: block.props ?? {} });
+        }
       }
       result.push({ role: "assistant", content: "", blocks });
     }

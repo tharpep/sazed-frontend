@@ -68,7 +68,7 @@ export function FinanceWidget({ upcoming: propUpcoming }: FinanceWidgetProps) {
               <span className={styles.name}>{p.name}</span>
               <div className={styles.meta}>
                 <span className={styles.amount}>{formatAmount(p.amount)}</span>
-                <span className={styles.date}>{formatDate(p.next_billing_date)}</span>
+                <span className={styles.date}>{formatDate(p.due_date)}</span>
               </div>
             </div>
           ))}

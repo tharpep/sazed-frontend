@@ -47,7 +47,7 @@ export interface UpcomingPayment {
   name: string;
   amount: number;
   frequency: string;
-  next_billing_date: string;
+  due_date: string;
   category: string;
 }
 
