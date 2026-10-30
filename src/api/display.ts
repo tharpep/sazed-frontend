@@ -8,7 +8,7 @@ export interface CalendarEvent {
   start: string;
   end: string;
   all_day: boolean;
-  location?: string;
+  location?: string | null;
 }
 
 export interface CalendarData {
@@ -20,8 +20,8 @@ export interface Task {
   id: string;
   title: string;
   status: string;
-  due?: string;
-  notes?: string;
+  due?: string | null;
+  notes?: string | null;
   list_name: string;
 }
 
