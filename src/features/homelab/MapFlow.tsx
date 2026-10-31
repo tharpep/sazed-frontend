@@ -1,104 +1,12 @@
-import { cn } from "@/lib/utils";
 import type { ArchMap, MapEdge, MapNode } from "@/api/homelab";
+import { GraphArrow, GraphBox, GraphLine, edgeKey, spread, type Box, type GraphNode } from "@/components/graph";
+import { toGraphEdge, toGraphNode } from "./mapGraph";
 import type { MapTraffic } from "./mapTraffic";
-import { STATUS_COLOR, edgeKey, flowSeconds, type Box } from "./mapGeometry";
 
-// Phone layouts for the architecture map. Same data, nodes and live traffic as MapView; only
-// the geometry differs. Both use a 360-wide viewBox so text stays readable on a 375px phone.
+// The homelab's hand-tuned phone layout. Same data, nodes and live traffic as Wide; only the
+// geometry differs. A 360-wide viewBox keeps text readable on a 375px phone.
 const W = 360;
 const BOX_H = 44;
-
-// --------------------------------------------------------------------------- shared drawing
-
-function NodeBox({
-  node,
-  box,
-  selected,
-  big = false,
-  onClick,
-}: {
-  node: MapNode;
-  box: Box;
-  selected: boolean;
-  big?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <g
-      className={cn("map-node", node.kind === "homelab" ? "map-homelab" : "map-plain", selected && "is-selected")}
-      onClick={onClick}
-      role="button"
-      aria-label={`${node.label}${node.status ? `, ${node.status}` : ""}`}
-    >
-      <rect x={box.x} y={box.y} width={box.w} height={box.h} rx={8} />
-      <text
-        className="map-title"
-        x={box.x + 9}
-        y={box.y + (big ? 20 : 16)}
-        dominantBaseline="central"
-        style={big ? { fontSize: 16 } : { fontSize: 13 }}
-      >
-        {node.label}
-      </text>
-      {node.sub && (
-        <text className="map-sub" x={box.x + 9} y={box.y + (big ? 38 : 31)} dominantBaseline="central" style={{ fontSize: 11 }}>
-          {node.sub}
-        </text>
-      )}
-      {node.status && (
-        <circle
-          cx={box.x + box.w - 9}
-          cy={box.y + 11}
-          r={3.5}
-          className={node.status === "down" ? "map-pulse" : undefined}
-          fill={node.status === "unknown" ? "none" : STATUS_COLOR[node.status]}
-          stroke={node.status === "unknown" ? STATUS_COLOR.unknown : "none"}
-        />
-      )}
-    </g>
-  );
-}
-
-function Edge({ edge, d, byId, traffic }: { edge: MapEdge; d: string; byId: Record<string, MapNode>; traffic: MapTraffic }) {
-  const a = byId[edge.from];
-  const b = byId[edge.to];
-  const key = edgeKey(edge);
-  const count = traffic.counts[key] ?? 0;
-  const hot = traffic.hot.has(key);
-  const down = a?.status === "down" || b?.status === "down";
-  const external = a?.kind === "external" || b?.kind === "external";
-  const color = down ? STATUS_COLOR.down : external ? "#888780" : "#7F77DD";
-  return (
-    <g>
-      <path d={d} fill="none" stroke="var(--color-border)" strokeWidth={0.75} markerEnd="url(#map-arrow-m)" />
-      <path
-        d={d}
-        className={cn("map-flow", hot && "is-hot")}
-        stroke={color}
-        strokeWidth={1.5}
-        opacity={hot || count > 0 || down ? 1 : 0.45}
-        style={{ ["--map-dur" as string]: `${hot ? 0.5 : flowSeconds(count, edge.quiet)}s` }}
-      />
-    </g>
-  );
-}
-
-function Arrow() {
-  return (
-    <defs>
-      <marker id="map-arrow-m" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-        <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </marker>
-    </defs>
-  );
-}
-
-/** Spread several line ends along one side of a box so they don't all meet at one point. */
-function spread(box: Box, i: number, n: number): number {
-  return box.x + (box.w * (i + 1)) / (n + 1);
-}
-
-// --------------------------------------------------------------------------- A. vertical flow
 
 const M = 12; // side margin
 const GAP = 16; // between slots; lines that skip a row run down these gaps
@@ -260,13 +168,14 @@ export function FlowMap({
   const { placed, height, tierTop, tierBottom } = layoutFlow(map);
   const paths = flowPaths(map, placed);
   const byId = Object.fromEntries(map.nodes.map((n) => [n.id, n])) as Record<string, MapNode>;
+  const graphById: Record<string, GraphNode> = Object.fromEntries(map.nodes.map((n) => [n.id, toGraphNode(n)]));
   const homelabCols = [...new Set(map.nodes.filter((n) => n.kind === "homelab").map((n) => n.col))];
   const frameTop = Math.min(...homelabCols.map((c) => tierTop[c])) - 26;
   const frameBottom = Math.max(...homelabCols.map((c) => tierBottom[c])) + 10;
 
   return (
     <svg viewBox={`0 0 ${W} ${height}`} className="w-full" role="img" aria-label="Architecture map, top to bottom">
-      <Arrow />
+      <GraphArrow id="map-arrow-m" />
       {homelabCols.length > 0 && (
         <>
           <rect x={2} y={frameTop} width={W - 4} height={frameBottom - frameTop} rx={14} fill="none" stroke="var(--color-border)" strokeWidth={0.75} strokeDasharray="4 4" />
@@ -284,119 +193,11 @@ export function FlowMap({
       )}
       {map.edges.map((e) => {
         const d = paths.get(edgeKey(e));
-        return d ? <Edge key={edgeKey(e)} edge={e} d={d} byId={byId} traffic={traffic} /> : null;
+        return d ? <GraphLine key={edgeKey(e)} edge={toGraphEdge(e, byId)} d={d} byId={graphById} traffic={traffic} arrow="map-arrow-m" /> : null;
       })}
       {[...placed.values()].map(({ node, box }) => (
-        <NodeBox key={node.id} node={node} box={box} selected={selected === node.id} onClick={() => onSelect(node.id)} />
+        <GraphBox key={node.id} node={toGraphNode(node)} box={box} selected={selected === node.id} onClick={() => onSelect(node.id)} />
       ))}
     </svg>
-  );
-}
-
-// --------------------------------------------------------------------------- C. focus view
-
-const COL_W = (W - 2 * M - 44) / 2; // two columns either side of a 44-wide trunk
-const TRUNK_X = W / 2;
-const ROW_H = BOX_H + 10;
-const CENTER = { w: 200, h: 56 };
-
-/** One node in the middle; what talks to it sits above, what it talks to sits below. Each
- * group is two columns around a central trunk, so every line has a clear path in. Tapping any
- * box moves the middle there; the trail lets you step back. */
-export function FocusMap({
-  map,
-  traffic,
-  center,
-  trail,
-  onFocus,
-}: {
-  map: ArchMap;
-  traffic: MapTraffic;
-  center: string;
-  trail: string[];
-  onFocus: (id: string, fromTrail?: number) => void;
-}) {
-  const byId = Object.fromEntries(map.nodes.map((n) => [n.id, n])) as Record<string, MapNode>;
-  const node = byId[center] ?? map.nodes[0];
-  const incoming = map.edges.filter((e) => e.to === node.id && byId[e.from]);
-  const outgoing = map.edges.filter((e) => e.from === node.id && byId[e.to]);
-
-  const groupBoxes = (edges: MapEdge[], top: number) =>
-    edges.map((e, i) => {
-      const row = Math.floor(i / 2);
-      const left = i % 2 === 0;
-      return { e, box: { x: left ? M : W - M - COL_W, y: top + row * ROW_H, w: COL_W, h: BOX_H }, left };
-    });
-
-  const inTop = 22;
-  const inRows = Math.ceil(incoming.length / 2);
-  const centerY = inTop + (inRows ? inRows * ROW_H + 26 : 0);
-  const centerBox = { x: (W - CENTER.w) / 2, y: centerY, w: CENTER.w, h: CENTER.h };
-  const outTop = centerY + CENTER.h + 34;
-  const ins = groupBoxes(incoming, inTop);
-  const outs = groupBoxes(outgoing, outTop);
-  const height = outTop + Math.ceil(outgoing.length / 2) * ROW_H + 8;
-
-  // Branch from a box's inner side to the trunk, then along the trunk to the middle box.
-  const inPath = ({ box, left }: { box: Box; left: boolean }, i: number) => {
-    const sx = left ? box.x + box.w : box.x;
-    const sy = box.y + box.h / 2;
-    const tx = TRUNK_X + (left ? -4 : 4);
-    const ex = spread(centerBox, i, ins.length);
-    return `M${sx} ${sy} H${tx + (left ? -6 : 6)} Q${tx} ${sy} ${tx} ${sy + 6} V${centerBox.y - 14} Q${tx} ${centerBox.y - 8} ${ex} ${centerBox.y - 6} V${centerBox.y}`;
-  };
-  const outPath = ({ box, left }: { box: Box; left: boolean }, i: number) => {
-    const ex = left ? box.x + box.w : box.x;
-    const ey = box.y + box.h / 2;
-    const tx = TRUNK_X + (left ? -4 : 4);
-    const sx = spread(centerBox, i, outs.length);
-    const top = centerBox.y + centerBox.h;
-    return `M${sx} ${top} V${top + 6} Q${sx} ${top + 12} ${tx} ${top + 14} V${ey - 6} Q${tx} ${ey} ${tx + (left ? -6 : 6)} ${ey} H${ex}`;
-  };
-
-  return (
-    <div className="flex flex-col gap-2">
-      <nav aria-label="Path" className="flex flex-wrap items-center gap-1 text-[13px] text-muted">
-        {trail.map((id, i) => (
-          <span key={`${id}-${i}`} className="flex items-center gap-1">
-            {i > 0 && <span aria-hidden="true">›</span>}
-            <button
-              type="button"
-              onClick={() => onFocus(id, i)}
-              className={cn("rounded px-1 py-0.5 hover:bg-surface", i === trail.length - 1 && "font-medium text-ink")}
-            >
-              {byId[id]?.label ?? id}
-            </button>
-          </span>
-        ))}
-      </nav>
-      <svg key={node.id} viewBox={`0 0 ${W} ${height}`} className="map-fade w-full" role="img" aria-label={`${node.label} and what it connects to`}>
-        <Arrow />
-        {ins.length > 0 && (
-          <text x={M} y={inTop - 8} fontSize={11} fill="var(--color-muted)">
-            Talks to {node.label}
-          </text>
-        )}
-        {outs.length > 0 && (
-          <text x={M} y={outTop - 8} fontSize={11} fill="var(--color-muted)">
-            {node.label} talks to
-          </text>
-        )}
-        {ins.map((x, i) => <Edge key={edgeKey(x.e)} edge={x.e} d={inPath(x, i)} byId={byId} traffic={traffic} />)}
-        {outs.map((x, i) => <Edge key={edgeKey(x.e)} edge={x.e} d={outPath(x, i)} byId={byId} traffic={traffic} />)}
-        {ins.map(({ e, box }) => (
-          <NodeBox key={e.from} node={byId[e.from]} box={box} selected={false} onClick={() => onFocus(e.from)} />
-        ))}
-        <NodeBox node={node} box={centerBox} selected big onClick={() => undefined} />
-        {outs.map(({ e, box }) => (
-          <NodeBox key={e.to} node={byId[e.to]} box={box} selected={false} onClick={() => onFocus(e.to)} />
-        ))}
-        {!ins.length && !outs.length && (
-          <text x={W / 2} y={centerBox.y + CENTER.h + 30} fontSize={12} textAnchor="middle" fill="var(--color-muted)">
-            Nothing on the map connects to this yet
-          </text>
-        )}
-      </svg>
-    </div>
   );
 }

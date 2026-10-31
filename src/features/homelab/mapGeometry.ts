@@ -1,30 +1,16 @@
 import type { ActivityEvent } from "@/api/activity";
-import type { ArchMap, MapEdge, MapNode, MapSignal, MapStatus } from "@/api/homelab";
+import type { ArchMap, MapEdge, MapNode, MapSignal } from "@/api/homelab";
+import { edgeKey, flowSeconds, STATUS_COLOR, type Box } from "@/components/graph";
+
+export { edgeKey, flowSeconds, STATUS_COLOR, type Box };
 
 export const NODE_H = 48;
 
-export const STATUS_COLOR: Record<MapStatus, string> = {
-  up: "#1D9E75",
-  down: "#E24B4A",
-  maintenance: "#EF9F27",
-  unknown: "#888780",
-};
 export const MAP_W = 680;
-
-export interface Box {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
 
 export function boxOf(map: ArchMap, n: MapNode): Box {
   const col = map.layout.columns[n.col];
   return { x: col.x, y: map.layout.top + n.row * map.layout.row_height, w: col.w, h: NODE_H };
-}
-
-export function edgeKey(e: MapEdge): string {
-  return `${e.from}>${e.to}`;
 }
 
 /** Lines between nodes, routed the way the mockup draws them: curves into the next column,
@@ -93,10 +79,4 @@ export function signalMatches(s: MapSignal, e: Pick<ActivityEvent, "kind" | "tit
 
 export function edgesFor(map: ArchMap, e: Pick<ActivityEvent, "kind" | "title" | "refs">): MapEdge[] {
   return map.edges.filter((edge) => edge.signals.some((s) => signalMatches(s, e)));
-}
-
-/** Seconds per dash cycle: faster with more traffic in the window, slow for idle lines. */
-export function flowSeconds(count: number, quiet: boolean): number {
-  if (count === 0) return quiet ? 4 : 6;
-  return Math.max(0.6, 2.8 / Math.sqrt(count));
 }
