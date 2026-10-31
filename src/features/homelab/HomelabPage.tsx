@@ -14,6 +14,7 @@ import {
   type ServicesResponse,
 } from "@/api/homelab";
 import { useUiStore } from "@/store/uiStore";
+import { DependenciesView } from "./DependenciesView";
 import { MapView } from "./MapView";
 import { ServiceSheet } from "./ServiceSheet";
 import { StorageCard } from "./StorageCard";
@@ -22,7 +23,7 @@ import { StatusDot, age, gib, pct, statusLine, statusOf, uptime } from "./format
 const REFRESH_MS = 30_000; // the gateway polls every 60s; 30s keeps the page within one cycle
 const VIEW_KEY = "sazed-homelab-view";
 
-const VIEWS = { map: "Map", list: "List", storage: "Storage" } as const;
+const VIEWS = { map: "Map", links: "Links", list: "List", storage: "Storage" } as const;
 type View = keyof typeof VIEWS;
 
 /** Open the Homelab page on a given tab (Home's glance tiles): it starts on the remembered one. */
@@ -173,9 +174,10 @@ export function HomelabPage() {
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className={cn("mx-auto flex w-full flex-col gap-5 px-4 py-4 pb-8", view === "map" ? "max-w-3xl" : "max-w-2xl")}>
+        <div className={cn("mx-auto flex w-full flex-col gap-5 px-4 py-4 pb-8", view === "map" || view === "links" ? "max-w-3xl" : "max-w-2xl")}>
           {view === "map" && shownMap && <MapView map={shownMap} onOpenService={setSelectedId} />}
           {view === "map" && !map && !error && <p className="text-sm text-muted">Loading the map…</p>}
+          {view === "links" && data && <DependenciesView services={shown} onOpenService={setSelectedId} />}
           {view === "storage" && <StorageCard full />}
           {view !== "storage" && error && !data && (
             <p className="text-sm text-destructive">Couldn't load services: {error}</p>
