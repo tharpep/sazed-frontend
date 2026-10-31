@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm dev` — Vite dev server at http://localhost:3000 (web only)
 - `pnpm dev:homelab` — same, against the live homelab console: mode `homelab` (`.env.homelab`) sets relative `/api` + `/gw`, and `vite.config.ts` proxies them to `https://sazed.tail77c590.ts.net` (override with `SAZED_LAB_URL`). Needs Tailscale on. No keys locally; Caddy on CT 106 adds them.
 - `pnpm tauri dev` — Tauri desktop window (requires Rust toolchain)
-- `pnpm build` — TypeScript check + Vite build
+- `pnpm build` — TypeScript check + Vite build, then `vite.cards.config.ts` builds `dist/cards/widget.html`
 - `pnpm tauri build` — Full desktop build after `pnpm build`
 
 ## Architecture
@@ -74,6 +74,7 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
   - `FlowRow`: one row plus its detail (tool input/output, tokens and cost, results, PR and conversation links).
   - Data via `src/api/activity.ts`.
 - `src/features/auth/` — `AuthGate`, wraps the whole app in `main.tsx`.
+- `src/cards/` — MCP Apps build of the catalog: one self-contained HTML file holding every widget. The gateway fills in the `__WIDGET__` meta tag per `ui://` resource, and the tool's structured result becomes the widget's props. `card.css` maps the host's theme variables onto the widgets' tokens.
 - `src/widgets/` — `CalendarWidget`, `TaskWidget`, `EmailBadge`, `UpcomingWidget`, `WeatherWidget`, `ClockWidget`, `GitHubWidget`, `HomelabWidget`, `catalog.ts` (one definition per widget: component, Zod props schema, ownership, `live` for widgets that fetch their own data when given no props; compile-time checks tie each schema to its API type and component, and it generates the catalog prompt), `strictSchema.ts` (JSON Schema Claude strict tool use accepts), `WidgetRenderer` (validates props and renders chat's `UIBlock`s, with `FallbackCard` for unknown or invalid ones). Import Zod as `import * as z from "zod"`; the named import bundles every locale. Used by `DisplayPage`; not rendered as a card grid in chat anymore.
 - `src-tauri/` — Tauri shell. Window 900×620, min 600×480, `decorations: false`. `TitleBar` uses `-webkit-app-region: drag`; interactive children use `no-drag`.
 
