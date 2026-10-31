@@ -36,5 +36,13 @@ app.ontoolresult = ({ structuredContent, content, isError }) => {
 };
 app.onhostcontextchanged = applyHost;
 
+// A sandboxed page can't open links itself, so the host does it.
+document.addEventListener("click", (event) => {
+  const link = (event.target as Element).closest<HTMLAnchorElement>("a[href]");
+  if (!link) return;
+  event.preventDefault();
+  void app.openLink({ url: link.href });
+});
+
 await app.connect();
 applyHost(app.getHostContext());

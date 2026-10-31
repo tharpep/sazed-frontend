@@ -11,10 +11,14 @@ import type {
 } from "../api/display";
 import { CalendarWidget } from "./CalendarWidget";
 import { ClockWidget } from "./ClockWidget";
+import { ContainerWidget } from "./ContainerWidget";
 import { EmailBadge } from "./EmailBadge";
 import { FinanceWidget } from "./FinanceWidget";
 import { GitHubWidget, type GitHubIssue } from "./GitHubWidget";
 import { HomelabWidget } from "./HomelabWidget";
+import { JobWidget } from "./JobWidget";
+import { JobsWidget } from "./JobsWidget";
+import { StorageWidget } from "./StorageWidget";
 import { TaskWidget } from "./TaskWidget";
 import { UpcomingWidget } from "./UpcomingWidget";
 import { WeatherWidget } from "./WeatherWidget";
@@ -163,6 +167,63 @@ export const WIDGET_CATALOG = {
     }),
     ownership: "agent",
     description: "How many homelab services are up, and which are down.",
+    live: false,
+  }),
+  JobWidget: widget({
+    component: JobWidget,
+    props: z.object({
+      status: z.string(),
+      kind: z.string(),
+      title: z.string().nullish(),
+      pr_url: z.string().nullish(),
+      ci_state: z.string().nullish(),
+      question: z.string().nullish(),
+      error: z.string().nullish(),
+    }),
+    ownership: "agent",
+    description: "One worker job: its status, and any question, error or pull request.",
+    live: false,
+  }),
+  JobsWidget: widget({
+    component: JobsWidget,
+    props: z.object({
+      jobs: z.array(
+        z.object({ job_id: z.string(), status: z.string(), title: z.string().nullish() })
+      ),
+    }),
+    ownership: "agent",
+    description: "Recent worker jobs and their status.",
+    live: false,
+  }),
+  StorageWidget: widget({
+    component: StorageWidget,
+    props: z.object({
+      pools: z.array(
+        z.object({ name: z.string(), total_bytes: z.number(), free_bytes: z.number() })
+      ),
+      media: z.object({
+        free_bytes: z.number().nullish(),
+        downloads: z.object({ not_imported: z.object({ count: z.int() }) }).nullish(),
+      }),
+    }),
+    ownership: "agent",
+    description: "Free space for media and per storage pool, and stuck downloads.",
+    live: false,
+  }),
+  ContainerWidget: widget({
+    component: ContainerWidget,
+    props: z.object({
+      vmid: z.int(),
+      name: z.string(),
+      status: z.string(),
+      cpu_percent: z.number().nullish(),
+      mem_used_bytes: z.number().nullish(),
+      mem_total_bytes: z.number().nullish(),
+      disk_used_bytes: z.number().nullish(),
+      disk_total_bytes: z.number().nullish(),
+    }),
+    ownership: "agent",
+    description: "One homelab container: status, CPU, memory and disk.",
     live: false,
   }),
   GitHubWidget: widget({
