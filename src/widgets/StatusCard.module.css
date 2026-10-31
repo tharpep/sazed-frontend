@@ -77,8 +77,28 @@
   text-decoration: underline;
 }
 
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-2-5);
+}
+
+.statBlock {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.statValue {
+  font-size: 1.25rem;
+  font-weight: var(--weight-medium);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
 .attention {
-  color: var(--accent);
+  color: var(--gold);
 }
 
 .problem {

@@ -16,6 +16,7 @@ import { EmailBadge } from "./EmailBadge";
 import { FinanceWidget } from "./FinanceWidget";
 import { GitHubWidget, type GitHubIssue } from "./GitHubWidget";
 import { HomelabWidget } from "./HomelabWidget";
+import { InfoCard } from "./InfoCard";
 import { JobWidget } from "./JobWidget";
 import { JobsWidget } from "./JobsWidget";
 import { StorageWidget } from "./StorageWidget";
@@ -72,6 +73,8 @@ const homelabService = z.object({
   up: z.boolean().nullish(),
   in_maintenance: z.boolean().nullish(),
 });
+
+const tone = z.enum(["normal", "attention", "problem"]);
 
 const gitHubIssue = z.object({
   number: z.int(),
@@ -224,6 +227,25 @@ export const WIDGET_CATALOG = {
     }),
     ownership: "agent",
     description: "One homelab container: status, CPU, memory and disk.",
+    live: false,
+  }),
+  InfoCard: widget({
+    component: InfoCard,
+    props: z.object({
+      title: z.string(),
+      subtitle: z.string().nullish(),
+      stats: z
+        .array(z.object({ label: z.string(), value: z.string(), tone: tone.nullish() }))
+        .nullish()
+        .describe("Up to 4 headline numbers"),
+      rows: z
+        .array(z.object({ label: z.string(), value: z.string().nullish(), tone: tone.nullish() }))
+        .nullish()
+        .describe("Up to 6 rows"),
+      note: z.string().nullish(),
+    }),
+    ownership: "agent",
+    description: "A short general summary: a title, a few numbers and a few rows.",
     live: false,
   }),
   GitHubWidget: widget({
