@@ -1,0 +1,162 @@
+import type { UsageOverview, UsageQuery, UsageSession, UsageSessions } from "@/api/claudeUsage";
+
+const LIMITS = { context_soft: 200_000, context_hard: 400_000 };
+const HOME = "/home/tharpep/code";
+
+interface Spec {
+  id: string;
+  machine?: string;
+  project: string;
+  title: string | null;
+  start: string;
+  hours: number;
+  prompts: number;
+  peak: number;
+  model: string;
+  subagents: number;
+  compactions: number;
+  interrupts: number;
+  confused: number;
+}
+
+const OPUS = "claude-opus-5-5";
+const FABLE = "claude-fable-5";
+const SONNET = "claude-sonnet-5-5";
+
+const SPECS: Spec[] = [
+  { id: "s01", project: "chat-service", title: "engine-tab-model-bake-off", start: "2026-11-04T13:10:00Z", hours: 9, prompts: 54, peak: 965_000, model: OPUS, subagents: 6, compactions: 0, interrupts: 4, confused: 3 },
+  { id: "s02", project: "chat-service", title: "PR 30 phase 1", start: "2026-11-02T15:00:00Z", hours: 7, prompts: 36, peak: 944_000, model: OPUS, subagents: 4, compactions: 0, interrupts: 2, confused: 2 },
+  { id: "s03", project: "kelsier", title: "Kelsier TUI visual design", start: "2026-10-30T01:00:00Z", hours: 8, prompts: 42, peak: 825_000, model: OPUS, subagents: 3, compactions: 1, interrupts: 5, confused: 2 },
+  { id: "s04", project: "kelsier", title: "sidebar-m3-frames", start: "2026-10-28T14:30:00Z", hours: 6, prompts: 40, peak: 811_000, model: OPUS, subagents: 2, compactions: 0, interrupts: 3, confused: 1 },
+  { id: "s05", project: "kelsier", title: "add-sidebar-plumbing", start: "2026-10-26T18:00:00Z", hours: 4, prompts: 19, peak: 696_000, model: FABLE, subagents: 1, compactions: 0, interrupts: 1, confused: 0 },
+  { id: "s06", project: "kelsier", title: "Kelsier UI and UX audit", start: "2026-10-23T12:00:00Z", hours: 5, prompts: 22, peak: 669_000, model: OPUS, subagents: 5, compactions: 0, interrupts: 2, confused: 1 },
+  { id: "s07", project: "ai-context", title: "Claude setup review", start: "2026-10-20T16:00:00Z", hours: 3, prompts: 23, peak: 333_000, model: SONNET, subagents: 2, compactions: 0, interrupts: 0, confused: 1 },
+  { id: "s08", project: "sazed", title: "backlog scout triage", start: "2026-11-05T02:00:00Z", hours: 1, prompts: 3, peak: 395_000, model: OPUS, subagents: 1, compactions: 0, interrupts: 0, confused: 0 },
+  { id: "s09", project: "sazed-frontend", title: "activity page spacing", start: "2026-11-03T22:00:00Z", hours: 1, prompts: 3, peak: 388_000, model: OPUS, subagents: 0, compactions: 0, interrupts: 1, confused: 0 },
+  { id: "s10", project: "sazed", title: null, start: "2026-11-01T19:00:00Z", hours: 1, prompts: 4, peak: 351_000, model: OPUS, subagents: 0, compactions: 0, interrupts: 0, confused: 0 },
+  { id: "s11", project: "ai-context", title: "hook gate tweaks", start: "2026-10-31T13:00:00Z", hours: 1, prompts: 2, peak: 280_000, model: SONNET, subagents: 0, compactions: 0, interrupts: 0, confused: 0 },
+  { id: "s12", project: "kelsier", title: null, start: "2026-10-29T03:00:00Z", hours: 1, prompts: 2, peak: 240_000, model: OPUS, subagents: 0, compactions: 0, interrupts: 0, confused: 0 },
+  { id: "s13", project: "chat-service", title: "stream cancel bug", start: "2026-10-27T21:00:00Z", hours: 1, prompts: 3, peak: 171_000, model: OPUS, subagents: 0, compactions: 0, interrupts: 1, confused: 0 },
+  { id: "s14", project: "sazed-frontend", title: "tab bar label", start: "2026-10-25T17:00:00Z", hours: 1, prompts: 2, peak: 120_000, model: SONNET, subagents: 0, compactions: 0, interrupts: 0, confused: 0 },
+  { id: "s15", project: "sazed", title: "cron preview endpoint", start: "2026-10-22T14:00:00Z", hours: 1, prompts: 3, peak: 88_000, model: OPUS, subagents: 0, compactions: 0, interrupts: 0, confused: 0 },
+  { id: "s16", project: "ai-context", title: null, start: "2026-10-18T20:00:00Z", hours: 1, prompts: 2, peak: 64_000, model: SONNET, subagents: 0, compactions: 0, interrupts: 0, confused: 0 },
+  { id: "s17", project: "chat-service", title: "rename env var", start: "2026-10-15T15:00:00Z", hours: 1, prompts: 1, peak: 41_000, model: OPUS, subagents: 0, compactions: 0, interrupts: 0, confused: 0 },
+  { id: "s18", project: "kelsier", title: null, start: "2026-10-12T13:00:00Z", hours: 1, prompts: 2, peak: 22_000, model: SONNET, subagents: 0, compactions: 0, interrupts: 0, confused: 0 },
+  { id: "s19", project: "sazed-frontend", title: "typo in README", start: "2026-10-09T12:00:00Z", hours: 1, prompts: 1, peak: 9_000, model: SONNET, subagents: 0, compactions: 0, interrupts: 0, confused: 0 },
+];
+
+function noise(seed: number): number {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function contextAt(spec: Spec, f: number, i: number): number {
+  const wobble = 1 + (noise(i + spec.peak) - 0.5) * 0.06;
+  if (spec.compactions === 0) return Math.round(spec.peak * (0.08 + 0.92 * f ** 0.85) * wobble);
+  if (f < 0.55) return Math.round(spec.peak * (0.1 + 0.9 * (f / 0.55) ** 0.85) * wobble);
+  return Math.round(spec.peak * (0.28 + 0.5 * ((f - 0.55) / 0.45)) * wobble);
+}
+
+function build(spec: Spec): UsageSession {
+  const t0 = Date.parse(spec.start);
+  const span = spec.hours * 3_600_000;
+  const points = Math.min(60, Math.max(3, spec.prompts * 2));
+  const at = (f: number) => new Date(t0 + f * span).toISOString();
+  const series = Array.from({ length: points }, (_, i) => {
+    const f = i / (points - 1);
+    return { ts: at(f), context: Math.min(spec.peak, contextAt(spec, f, i)) };
+  });
+  const peakIndex = spec.compactions === 0 ? points - 1 : Math.round(0.55 * (points - 1));
+  series[peakIndex] = { ts: series[peakIndex].ts, context: spec.peak };
+  const confused = Array.from({ length: spec.confused }, (_, k) => {
+    const f = 0.35 + (0.6 * (k + 1)) / (spec.confused + 1);
+    const nearest = series[Math.round(f * (points - 1))];
+    return { ts: at(f), context: nearest.context };
+  });
+  return {
+    session_id: spec.id,
+    machine: spec.machine ?? "desktop-wsl",
+    project: `${HOME}/${spec.project}`,
+    title: spec.title,
+    first_ts: at(0),
+    last_ts: at(1),
+    prompts: spec.prompts,
+    peak_context: spec.peak,
+    main_model: spec.model,
+    subagents: spec.subagents,
+    compactions: spec.compactions,
+    interrupts: spec.interrupts,
+    confused_prompts: confused,
+    context_series: series,
+  };
+}
+
+const SESSIONS = SPECS.map(build).sort((a, b) => b.first_ts.localeCompare(a.first_ts));
+
+export function mockSessions({ machine }: UsageQuery): UsageSessions {
+  return {
+    limits: LIMITS,
+    sessions: machine ? SESSIONS.filter((s) => s.machine === machine) : SESSIONS,
+  };
+}
+
+export function mockOverview({ days }: UsageQuery): UsageOverview {
+  return {
+    range: { from: new Date(Date.parse("2026-11-06T00:00:00Z") - days * 86_400_000).toISOString(), to: "2026-11-06T00:00:00Z" },
+    limits: LIMITS,
+    machines: ["desktop-wsl", "macbook"],
+    tiles: {
+      sessions: 19,
+      prompts: 264,
+      peak_context_max: 965_000,
+      peak_context_median: 333_000,
+      sessions_over_soft: 12,
+      sessions_over_hard: 6,
+      confusion_rate: 0.038,
+      bash_writes: 1215,
+      edit_writes: 161,
+      bash_write_share: 0.883,
+      tool_calls_per_prompt: 13.0,
+      skills_used: 7,
+    },
+    weekly: [
+      { week: "2026-W41", prompts: 9, sessions: 3, confusion_rate: 0, bash_writes: 18, edit_writes: 9, output_tokens: 310_000, cache_read_tokens: 48_000_000 },
+      { week: "2026-W42", prompts: 14, sessions: 3, confusion_rate: 0.071, bash_writes: 36, edit_writes: 14, output_tokens: 520_000, cache_read_tokens: 91_000_000 },
+      { week: "2026-W43", prompts: 21, sessions: 3, confusion_rate: 0.048, bash_writes: 112, edit_writes: 17, output_tokens: 1_400_000, cache_read_tokens: 410_000_000 },
+      { week: "2026-W44", prompts: 82, sessions: 5, confusion_rate: 0.037, bash_writes: 441, edit_writes: 61, output_tokens: 3_600_000, cache_read_tokens: 1_020_000_000 },
+      { week: "2026-W45", prompts: 138, sessions: 5, confusion_rate: 0.036, bash_writes: 608, edit_writes: 60, output_tokens: 5_100_000, cache_read_tokens: 1_790_000_000 },
+    ],
+    models: [
+      { model: OPUS, responses: 6180, share: 0.848 },
+      { model: FABLE, responses: 766, share: 0.105 },
+      { model: SONNET, responses: 343, share: 0.047 },
+    ],
+    skills: [
+      { name: "pryce:log", count: 4 },
+      { name: "pryce:scope", count: 3 },
+      { name: "browser", count: 3 },
+      { name: "pryce:learn", count: 2 },
+      { name: "code-review", count: 2 },
+      { name: "pryce:where", count: 1 },
+      { name: "simplify", count: 1 },
+    ],
+    subagents: [
+      { type: "general-purpose", count: 29 },
+      { type: "Explore", count: 14 },
+      { type: "code-review", count: 6 },
+      { type: "Plan", count: 3 },
+    ],
+    slash_commands: [
+      { command: "/model", count: 12 },
+      { command: "/clear", count: 9 },
+      { command: "/compact", count: 4 },
+      { command: "/resume", count: 3 },
+      { command: "/context", count: 2 },
+    ],
+    styles: [
+      { style: "Concise", prompts: 200, confusion_rate: 0.03 },
+      { style: "Default", prompts: 52, confusion_rate: 0.058 },
+      { style: "custom", prompts: 12, confusion_rate: 0.083 },
+    ],
+  };
+}
