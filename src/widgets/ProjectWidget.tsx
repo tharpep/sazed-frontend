@@ -76,9 +76,6 @@ export function ProjectWidget({ onBack, ...project }: ProjectWidgetProps) {
           <span className="font-mono text-caption whitespace-nowrap text-muted tabular-nums">
             {progress.done}/{progress.total} done
           </span>
-          {progress.ideas > 0 && (
-            <span className="text-caption text-muted">{progress.ideas} {progress.ideas === 1 ? "idea" : "ideas"}</span>
-          )}
         </div>
       </div>
 

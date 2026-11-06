@@ -90,7 +90,6 @@ const boardProgress = z.object({
   in_flight: z.number(),
   needs_me: z.number(),
   next: z.number(),
-  ideas: z.number(),
   total: z.number(),
 });
 

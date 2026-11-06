@@ -8,7 +8,6 @@ export interface BoardProgress {
   in_flight: number;
   needs_me: number;
   next: number;
-  ideas: number;
   total: number;
 }
 

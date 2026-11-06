@@ -48,7 +48,7 @@ function progressOf(cards: ProjectCard[]): BoardProgress {
   const in_flight = n("doing");
   const needs_me = n("needs_me");
   const next = n("next");
-  return { done, in_flight, needs_me, next, ideas: n("inbox"), total: done + in_flight + needs_me + next };
+  return { done, in_flight, needs_me, next, total: done + in_flight + needs_me + next };
 }
 
 function sum(parts: BoardProgress[]): BoardProgress {
@@ -58,7 +58,6 @@ function sum(parts: BoardProgress[]): BoardProgress {
     in_flight: add("in_flight"),
     needs_me: add("needs_me"),
     next: add("next"),
-    ideas: add("ideas"),
     total: add("total"),
   };
 }

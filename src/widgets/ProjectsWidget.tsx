@@ -11,7 +11,6 @@ interface ProjectsWidgetProps {
   onOpen?: (slug: string) => void;
 }
 
-const ideas = (n: number) => `${n} ${n === 1 ? "idea" : "ideas"}`;
 
 export function ProjectsWidget({ projects, onOpen }: ProjectsWidgetProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -66,11 +65,9 @@ export function ProjectsWidget({ projects, onOpen }: ProjectsWidgetProps) {
                   <span className="font-mono">
                     {p.progress.done}/{p.progress.total} done
                   </span>
-                  {p.progress.ideas > 0 && <span>{ideas(p.progress.ideas)}</span>}
                 </div>
                 <p className="col-start-2 text-meta text-ink-2 md:col-span-3 md:col-start-2">
                   {p.latest_update ?? p.headline}
-                  {p.progress.ideas > 0 && <span className="text-muted md:hidden"> · {ideas(p.progress.ideas)}</span>}
                 </p>
               </div>
               {open &&
