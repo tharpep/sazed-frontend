@@ -69,6 +69,16 @@ export async function listJobs(): Promise<JobSummary[]> {
   return data.jobs;
 }
 
+/** Jobs waiting on Pryce: an approval to start, or an answer to a question. */
+export async function listWaitingJobs(): Promise<JobSummary[]> {
+  const [approval, input] = await Promise.all(
+    (["needs_approval", "needs_input"] as const).map(
+      (status) => apiFetch(`/jobs?status=${status}`) as Promise<{ jobs: JobSummary[] }>
+    )
+  );
+  return [...approval.jobs, ...input.jobs].sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
 export async function getJob(id: string): Promise<JobDetail> {
   return apiFetch(`/jobs/${encodeURIComponent(id)}`) as Promise<JobDetail>;
 }

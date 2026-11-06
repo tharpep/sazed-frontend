@@ -67,7 +67,7 @@ export function BottomTabBar() {
   return (
     <nav
       aria-label="Primary"
-      className="flex shrink-0 items-stretch border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] sm:hidden"
+      className="flex shrink-0 items-stretch border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden"
     >
       {TABS.map(({ key, label, icon: Icon }) => {
         const isActive = active === key;
@@ -83,7 +83,7 @@ export function BottomTabBar() {
             <Icon className={cn("size-5", isActive ? "text-primary" : "text-muted")} aria-hidden="true" />
             <span
               className={cn(
-                "text-[11px] font-medium leading-none",
+                "text-[11px] leading-none",
                 isActive ? "text-primary" : "text-muted"
               )}
             >
