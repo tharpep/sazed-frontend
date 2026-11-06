@@ -10,6 +10,7 @@ import {
   Activity,
   CalendarClock,
   Lightbulb,
+  FolderKanban,
   Server,
   Waypoints,
   Settings as SettingsIcon,
@@ -86,6 +87,7 @@ export function Sidebar() {
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
+  const projectsOpen = useUiStore((s) => s.projectsOpen);
   const auditOpen = useUiStore((s) => s.auditOpen);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const toggleHistory = useUiStore((s) => s.toggleHistory);
@@ -95,6 +97,7 @@ export function Sidebar() {
   const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
+  const toggleProjects = useUiStore((s) => s.toggleProjects);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
@@ -110,7 +113,7 @@ export function Sidebar() {
   const online = useUiStore((s) => s.online);
   const waiting = useWaitingCount();
   const onHome =
-    !historyOpen && !journalOpen && !kbOpen && !homelabOpen && !gatewayOpen && !automationsOpen && !backlogOpen && !auditOpen && !settingsOpen;
+    !historyOpen && !journalOpen && !kbOpen && !homelabOpen && !gatewayOpen && !automationsOpen && !backlogOpen && !projectsOpen && !auditOpen && !settingsOpen;
 
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -169,6 +172,7 @@ export function Sidebar() {
           </NavGroup>
           <NavGroup label="Work">
             <NavItem label="Automations" icon={CalendarClock} active={automationsOpen} onClick={toggleAutomations} />
+            <NavItem label="Projects" icon={FolderKanban} active={projectsOpen} onClick={toggleProjects} />
             <NavItem label="Backlog" icon={Lightbulb} active={backlogOpen} onClick={toggleBacklog} />
             <NavItem label="Knowledge" icon={Library} active={kbOpen} onClick={toggleKb} />
             <NavItem label="Journal" icon={BookOpen} active={journalOpen} onClick={toggleJournal} />

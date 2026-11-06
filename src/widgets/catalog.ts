@@ -9,6 +9,7 @@ import type {
   UpcomingPayment,
   WeatherData,
 } from "../api/display";
+import type { Project } from "../api/projects";
 import { CalendarWidget } from "./CalendarWidget";
 import { ClockWidget } from "./ClockWidget";
 import { ContainerWidget } from "./ContainerWidget";
@@ -19,6 +20,8 @@ import { HomelabWidget } from "./HomelabWidget";
 import { InfoCard } from "./InfoCard";
 import { JobWidget } from "./JobWidget";
 import { JobsWidget } from "./JobsWidget";
+import { ProjectsWidget } from "./ProjectsWidget";
+import { ProjectWidget } from "./ProjectWidget";
 import { StorageWidget } from "./StorageWidget";
 import { TaskWidget } from "./TaskWidget";
 import { UpcomingWidget } from "./UpcomingWidget";
@@ -82,6 +85,73 @@ const gitHubIssue = z.object({
   reason: z.string().optional(),
 });
 
+const boardProgress = z.object({
+  done: z.number(),
+  in_flight: z.number(),
+  needs_me: z.number(),
+  next: z.number(),
+  ideas: z.number(),
+  total: z.number(),
+});
+
+const workstreamStatus = z.enum(["done", "dropped", "needs_me", "in_flight", "blocked", "next", "planned"]);
+
+const projectCard = z.object({
+  id: z.string(),
+  kind: z.enum(["item", "job"]),
+  source: z.string(),
+  title: z.string(),
+  stage: z.enum(["inbox", "next", "doing", "needs_me", "done"]),
+  next: z.string(),
+  updated_at: z.string(),
+  repo: z.string().nullable(),
+  item_type: z.string().nullable(),
+  effort: z.string().nullable(),
+  impact: z.string().nullable(),
+  rank: z.number().nullable(),
+  workstream_id: z.string().nullable(),
+  actions: z.array(z.unknown()),
+  job_id: z.string().nullable(),
+  job_status: z.string().nullable(),
+  ci_state: z.string().nullable(),
+  fix_count: z.number().nullable(),
+  pr_number: z.number().nullable(),
+  pr_url: z.string().nullable(),
+  pr_draft: z.boolean().nullable(),
+});
+
+const workstream = z.object({
+  id: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  position: z.number(),
+  state: z.enum(["open", "done", "dropped"]),
+  status: workstreamStatus,
+  depends_on: z.array(z.string()),
+  progress: boardProgress,
+  cards: z.array(projectCard).optional().describe("Present when one project is fetched, absent in the list"),
+});
+
+const project = z.object({
+  id: z.string(),
+  slug: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  state: z.enum(["active", "paused", "done", "dropped"]),
+  rank: z.number().nullable(),
+  repos: z.array(z.string()),
+  plan: z.string().nullable(),
+  latest_update: z.string().nullable(),
+  latest_update_at: z.string().nullable(),
+  updated_at: z.string(),
+  headline: z.string().describe("Plain line for when latest_update is null"),
+  progress: boardProgress,
+  steps_done: z.number(),
+  steps_total: z.number(),
+  current: z.object({ id: z.string(), title: z.string(), status: workstreamStatus }).nullable(),
+  workstreams: z.array(workstream),
+});
+
 // Compile-time drift check: each schema must match its API type exactly, both ways.
 type Same<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 true satisfies Same<z.infer<typeof calendarEvent>, CalendarEvent>;
@@ -90,6 +160,7 @@ true satisfies Same<z.infer<typeof emailMessage>, EmailMessage>;
 true satisfies Same<z.infer<typeof upcomingPayment>, UpcomingPayment>;
 true satisfies Same<z.infer<typeof weatherData>, WeatherData>;
 true satisfies Same<z.infer<typeof gitHubIssue>, GitHubIssue>;
+true satisfies Same<z.infer<typeof project>, Project>;
 
 export interface WidgetDef {
   // Erased here because the catalog is heterogeneous; widget() has already checked the pair.
@@ -253,6 +324,20 @@ export const WIDGET_CATALOG = {
     props: z.object({ issues: z.array(gitHubIssue) }),
     ownership: "agent",
     description: "Top GitHub issues to work on.",
+    live: false,
+  }),
+  ProjectsWidget: widget({
+    component: ProjectsWidget,
+    props: z.object({ projects: z.array(project) }),
+    ownership: "agent",
+    description: "Every project as a row: a plain sentence, a progress bar, and its workstreams when opened.",
+    live: false,
+  }),
+  ProjectWidget: widget({
+    component: ProjectWidget,
+    props: project,
+    ownership: "agent",
+    description: "One project as an ordered ladder of workstreams with their cards, then what is in flight, needs the user, and is next.",
     live: false,
   }),
 } satisfies Record<string, WidgetDef>;
