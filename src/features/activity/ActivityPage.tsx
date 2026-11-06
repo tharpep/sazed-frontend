@@ -1,7 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Pause, Play } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, CircleMinus, CirclePlus, CircleX, Pause, Play } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  EmptyState,
+  ListRow,
+  ListSection,
+  Page,
+  PageBody,
+  PageHeader,
+  Segmented,
+  StatusPill,
+  type Tone,
+} from "@/components/system";
 import {
   getActivitySummary,
   listActivity,
@@ -12,35 +30,34 @@ import {
   type StepEvent,
 } from "@/api/activity";
 import { errorText } from "@/api/homelab";
-import { stepsFromEvents } from "@/features/jobs/format";
+import { listWaitingJobs, type JobSummary } from "@/api/jobs";
+import { JobSheet } from "@/features/jobs/JobSheet";
+import { KIND_LABEL, STATUS_LABEL, stepsFromEvents } from "@/features/jobs/format";
 import { useChatStore } from "@/store/chatStore";
 import { useSessionStore } from "@/store/sessionStore";
 import { useUiStore } from "@/store/uiStore";
+import { DayChart } from "./DayChart";
 import { FlowSheet, type FlowTarget } from "./FlowSheet";
-import {
-  CATEGORY_LABEL,
-  categoryOf,
-  clock,
-  dayLabel,
-  iconFor,
-  ms,
-  originLabel,
-  statusDot,
-  statusTone,
-  usd,
-} from "./format";
+import { CATEGORY_LABEL, categoryOf, dayLabel, iconFor, shortClock, statusTone, usd } from "./format";
+import { duration, groupRuns, runSteps, runText, type Run } from "./runs";
 
 type Live = "connecting" | "live" | "reconnecting" | "paused";
+type View = "all" | "needs" | "errors";
 
 const LIVE_KEEP = 2000; // live events kept in memory for open flows
 const SUMMARY_MS = 30_000;
+// The chart needs a full day of events; the API caps a page at 500, far above a normal day.
+const CHART_LIMIT = 500;
 
 export function ActivityPage() {
   const [events, setEvents] = useState<ActivityEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<ActivityCategory[]>([]);
-  const [errorsOnly, setErrorsOnly] = useState(false);
+  const [view, setView] = useState<View>("all");
   const [summary, setSummary] = useState<ActivitySummary | null>(null);
+  const [dayEvents, setDayEvents] = useState<ActivityEvent[]>([]);
+  const [waitingJobs, setWaitingJobs] = useState<JobSummary[] | null>(null);
+  const [openJob, setOpenJob] = useState<string | null>(null);
   const [live, setLive] = useState<Live>("connecting");
   const [paused, setPaused] = useState(false);
   const [held, setHeld] = useState<ActivityEvent[]>([]);
@@ -49,9 +66,12 @@ export function ActivityPage() {
   const [latestStep, setLatestStep] = useState<Record<string, string>>({});
   const [target, setTarget] = useState<FlowTarget | null>(null);
   const [more, setMore] = useState(true);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const autoExpanded = useRef(false);
   const lastId = useRef<number | undefined>(undefined);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
+  const errorsOnly = view === "errors";
   const filterRef = useRef({ categories, errorsOnly });
   filterRef.current = { categories, errorsOnly };
 
@@ -78,8 +98,22 @@ export function ActivityPage() {
     load();
   }, [load]);
 
+  const loadWaiting = useCallback(() => {
+    listWaitingJobs()
+      .then(setWaitingJobs)
+      .catch((err) => setError(errorText(err)));
+  }, []);
+
   useEffect(() => {
-    const tick = () => getActivitySummary().then(setSummary).catch(() => undefined);
+    if (view === "needs") loadWaiting();
+  }, [view, loadWaiting]);
+
+  // Summary figures and the chart's day of events refresh together.
+  useEffect(() => {
+    const tick = () => {
+      getActivitySummary().then(setSummary).catch(() => undefined);
+      listActivity([], false, undefined, CHART_LIMIT).then(setDayEvents).catch(() => undefined);
+    };
     tick();
     const id = setInterval(() => !document.hidden && tick(), SUMMARY_MS);
     return () => clearInterval(id);
@@ -163,6 +197,20 @@ export function ActivityPage() {
     setCategories((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
   }
 
+  function clearFilters() {
+    setCategories([]);
+    setView("all");
+  }
+
+  function toggleExpanded(key: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   function openSession(id: string) {
     useSessionStore.getState().selectSession(id);
     useChatStore.getState().loadSession(id);
@@ -171,158 +219,144 @@ export function ActivityPage() {
 
   const s = summary?.last_24h;
   const now = summary?.now;
-  let lastDay = "";
+  const waitingCount = now ? now.jobs_waiting + now.approvals_pending : 0;
+  const filtered = categories.length > 0 || errorsOnly;
+
+  // The chart counts what the stream has added since its last fetch, too.
+  const chartEvents = useMemo(() => {
+    const ids = new Set(dayEvents.map((e) => e.id));
+    return [...liveEvents.filter((e) => !ids.has(e.id)), ...dayEvents];
+  }, [dayEvents, liveEvents]);
+
+  const days = useMemo(() => {
+    const out: { day: string; runs: Run[] }[] = [];
+    for (const run of groupRuns(events ?? [])) {
+      const day = dayLabel(run.newestAt);
+      const last = out[out.length - 1];
+      if (last && last.day === day) last.runs.push(run);
+      else out.push({ day, runs: [run] });
+    }
+    return out;
+  }, [events]);
+
+  // Open the newest run with steps once, so the page shows what Sazed just did.
+  useEffect(() => {
+    if (autoExpanded.current || !days.length) return;
+    autoExpanded.current = true;
+    const first = days[0].runs.find((r) => runSteps(r).length > 0);
+    if (first) setExpanded(new Set([first.key]));
+  }, [days]);
+
+  const liveTone: Tone = live === "live" ? "ok" : live === "paused" ? "warn" : "neutral";
+  const liveLabel =
+    live === "live" ? "Live" : live === "paused" ? "Paused" : live === "reconnecting" ? "Reconnecting" : "Connecting";
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-bg">
-      <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-sm font-semibold text-ink">Activity</h1>
-          <span className="flex items-center gap-1.5 text-xs text-muted" role="status">
-            <span
-              className={cn(
-                "size-1.5 rounded-full",
-                live === "live" ? "animate-pulse bg-primary" : live === "paused" ? "bg-accent" : "bg-border"
-              )}
-              aria-hidden="true"
-            />
-            {live === "live" ? "Live" : live === "paused" ? "Paused" : live === "reconnecting" ? "Reconnecting…" : "Connecting…"}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={togglePause}
-          aria-label={paused ? "Resume live updates" : "Pause live updates"}
-          title={paused ? "Resume" : "Pause"}
-          className="flex h-9 items-center gap-1.5 rounded-md px-2 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
-        >
-          {paused ? <Play className="size-4" aria-hidden="true" /> : <Pause className="size-4" aria-hidden="true" />}
-          {paused && held.length > 0 && <span className="text-xs text-accent">{held.length} new</span>}
-        </button>
-      </header>
+    <Page>
+      <PageHeader
+        title="Activity"
+        status={
+          <StatusPill tone={liveTone} pulse={live === "live"}>
+            {liveLabel}
+          </StatusPill>
+        }
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={togglePause}
+            aria-label={paused ? "Resume live updates" : "Pause live updates"}
+          >
+            {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
+            {paused ? "Resume" : "Pause"}
+            {paused && held.length > 0 && <span className="text-warn">{held.length} new</span>}
+          </Button>
+        }
+      />
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="flex flex-col gap-4 px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          {s && now && (
-            <section aria-label="Summary" className="flex flex-col gap-1.5 text-xs text-muted">
-              <p>
-                <span className="text-ink">Last 24 hours:</span>{" "}
-                {[
-                  `${s.chat_messages} messages`,
-                  `${s.llm_calls} model calls (${usd(s.cost_usd)})`,
-                  `${s.tool_calls} tool calls`,
-                  `${s.jobs} jobs`,
-                  `${s.notifications} Pushovers`,
-                ].join(" · ")}
-                {s.errors > 0 && <span className="text-destructive"> · {s.errors} errors</span>}
-              </p>
-              <p>
-                <span className="text-ink">Now:</span>{" "}
-                {[
-                  now.jobs_running ? `${now.jobs_running} job running` : "",
-                  now.jobs_queued ? `${now.jobs_queued} queued` : "",
-                  now.runs_running ? `${now.runs_running} automation running` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || "idle"}
-                {(now.jobs_waiting > 0 || now.approvals_pending > 0) && (
-                  <span className="text-accent">
-                    {" "}
-                    · {now.jobs_waiting + now.approvals_pending} waiting for you
-                  </span>
-                )}
-              </p>
-            </section>
+      <PageBody>
+        {s && <DayChart events={chartEvents} summary={s} />}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Segmented
+            label="Show"
+            options={[
+              { value: "all", label: "Everything" },
+              { value: "needs", label: "Needs you", count: waitingCount },
+              { value: "errors", label: "Errors", count: s?.errors },
+            ]}
+            value={view}
+            onChange={setView}
+          />
+          {view !== "needs" && (
+            <DropdownMenu>
+              <DropdownMenuTrigger className={buttonVariants({ variant: "outline", size: "sm" })}>
+                {categories.length ? `Type · ${categories.length}` : "Type"}
+                <ChevronDown aria-hidden="true" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-44">
+                {(Object.keys(CATEGORY_LABEL) as ActivityCategory[]).map((c) => (
+                  <DropdownMenuCheckboxItem
+                    key={c}
+                    checked={categories.includes(c)}
+                    onCheckedChange={() => toggleCategory(c)}
+                    className="focus:bg-raised focus:text-ink data-highlighted:bg-raised"
+                  >
+                    {CATEGORY_LABEL[c]}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
+          {view !== "needs" && categories.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setCategories([])}>
+              Clear
+            </Button>
+          )}
+        </div>
 
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter">
-            <button
-              type="button"
-              aria-pressed={categories.length === 0 && !errorsOnly}
-              onClick={() => {
-                setCategories([]);
-                setErrorsOnly(false);
-              }}
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-xs transition-colors",
-                categories.length === 0 && !errorsOnly ? "border-primary bg-primary/10 text-ink" : "border-border text-muted hover:text-ink"
-              )}
-            >
-              All
-            </button>
-            {(Object.keys(CATEGORY_LABEL) as ActivityCategory[]).map((c) => (
-              <button
-                key={c}
-                type="button"
-                aria-pressed={categories.includes(c)}
-                onClick={() => toggleCategory(c)}
-                className={cn(
-                  "rounded-full border px-2.5 py-1 text-xs transition-colors",
-                  categories.includes(c) ? "border-primary bg-primary/10 text-ink" : "border-border text-muted hover:text-ink"
-                )}
-              >
-                {CATEGORY_LABEL[c]}
-              </button>
+        {error && <p className="text-meta text-err">Couldn't load activity: {error}</p>}
+
+        {view === "needs" ? (
+          <WaitingList jobs={waitingJobs} onOpen={setOpenJob} />
+        ) : (
+          <>
+            {!events && !error && <p className="text-meta text-muted">Loading activity…</p>}
+            {events &&
+              events.length === 0 &&
+              (filtered ? (
+                <EmptyState title="Nothing matches these filters" action={{ label: "Show everything", onClick: clearFilters }}>
+                  Nothing in the loaded history has this type or status.
+                </EmptyState>
+              ) : (
+                <EmptyState title="No activity yet">
+                  Chats, automations, jobs and tool calls show up here as they happen.
+                </EmptyState>
+              ))}
+
+            {days.map(({ day, runs }) => (
+              <ListSection key={day} title={day}>
+                {runs.map((run) => (
+                  <RunRow
+                    key={run.key}
+                    run={run}
+                    expanded={expanded.has(run.key)}
+                    step={run.status === "running" && run.head.refs.job ? latestStep[run.head.refs.job] : undefined}
+                    onToggle={() => toggleExpanded(run.key)}
+                    onOpenFlow={() => setTarget({ trace: run.trace ?? run.head.trace, focusId: run.head.id })}
+                  />
+                ))}
+              </ListSection>
             ))}
-            <button
-              type="button"
-              aria-pressed={errorsOnly}
-              onClick={() => setErrorsOnly((v) => !v)}
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-xs transition-colors",
-                errorsOnly ? "border-destructive bg-destructive/10 text-destructive" : "border-border text-muted hover:text-ink"
-              )}
-            >
-              Errors
-            </button>
-          </div>
 
-          {error && <p className="text-sm text-destructive">Couldn't load activity: {error}</p>}
-          {!events && !error && <p className="text-sm text-muted">Loading…</p>}
-          {events && events.length === 0 && <p className="px-1 text-sm text-muted">Nothing yet.</p>}
-          {events && events.length > 0 && (
-            <ul className="flex flex-col">
-              {events.map((e) => {
-                const day = dayLabel(e.at);
-                const showDay = day !== lastDay;
-                lastDay = day;
-                const Icon = iconFor(e.kind);
-                const job = e.refs.job;
-                const step = e.status === "running" && job ? latestStep[job] : undefined;
-                const facts = [
-                  clock(e.at),
-                  originLabel(e),
-                  ms(e.duration_ms),
-                  e.kind === "llm" ? usd(e.cost_usd) : "",
-                ].filter(Boolean);
-                return (
-                  <li key={e.id}>
-                    {showDay && <h2 className="px-1 pt-3 pb-1 text-xs font-medium text-muted">{day}</h2>}
-                    <button
-                      type="button"
-                      onClick={() => setTarget({ trace: e.trace, focusId: e.id })}
-                      className="flex w-full items-start gap-2.5 rounded-md px-1.5 py-2 text-left transition-colors hover:bg-surface"
-                    >
-                      <span className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", statusDot(e.status))} aria-hidden="true" />
-                      <Icon className={cn("mt-0.5 size-4 shrink-0", statusTone(e.status))} aria-hidden="true" />
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-sm text-ink">{e.title}</span>
-                        <span className="truncate text-xs text-muted">{facts.join(" · ")}</span>
-                        {step && <span className="truncate text-xs text-primary">{step}</span>}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {events && events.length > 0 && more && (
-            <button type="button" onClick={loadMore} className="self-center text-sm text-primary hover:underline">
-              Load older
-            </button>
-          )}
-        </div>
-      </div>
+            {events && events.length > 0 && more && (
+              <Button variant="ghost" size="sm" className="self-start" onClick={loadMore}>
+                Load older
+              </Button>
+            )}
+          </>
+        )}
+      </PageBody>
 
       <FlowSheet
         target={target}
@@ -331,6 +365,111 @@ export function ActivityPage() {
         onClose={() => setTarget(null)}
         onOpenSession={openSession}
       />
-    </div>
+      <JobSheet jobId={openJob} onClose={() => setOpenJob(null)} onChanged={loadWaiting} onOpenJob={setOpenJob} />
+    </Page>
+  );
+}
+
+/** Status icon for automations (what happened), kind icon for everything else. */
+function RunIcon({ run, outcome }: { run: Run; outcome: string | null }) {
+  if (run.head.kind === "automation" && outcome) {
+    if (outcome.startsWith("Failed")) return <CircleX className="text-err" aria-hidden="true" />;
+    if (outcome.startsWith("Skipped")) return <CircleMinus className="text-muted" aria-hidden="true" />;
+    if (outcome.startsWith("Sent") || outcome.startsWith("Done")) return <Check className="text-ok" aria-hidden="true" />;
+  }
+  if (run.head.kind === "backlog") return <CirclePlus className="text-muted" aria-hidden="true" />;
+  const Icon = iconFor(run.head.kind);
+  return <Icon className={statusTone(run.status)} aria-hidden="true" />;
+}
+
+interface RunRowProps {
+  run: Run;
+  expanded: boolean;
+  step?: string;
+  onToggle: () => void;
+  onOpenFlow: () => void;
+}
+
+function RunRow({ run, expanded, step, onToggle, onOpenFlow }: RunRowProps) {
+  const { title, outcome, detail } = runText(run);
+  const steps = runSteps(run);
+  const expandable = steps.length > 0;
+  const time = shortClock(run.oldestAt);
+  const text = step ?? detail;
+  return (
+    <>
+      <ListRow
+        onClick={expandable ? onToggle : run.trace ? onOpenFlow : undefined}
+        expanded={expandable ? expanded : undefined}
+        time={time}
+        leading={<RunIcon run={run} outcome={outcome} />}
+        title={title}
+        description={
+          (outcome || text) && (
+            <>
+              {outcome && <span className={cn(outcome.startsWith("Failed") && "text-err")}>{outcome}</span>}
+              {outcome && text && " "}
+              {text}
+            </>
+          )
+        }
+        meta={
+          <>
+            <span className="md:hidden">{time}</span>
+            {run.durationMs != null && <span>{duration(run.durationMs)}</span>}
+            {run.costUsd > 0 && <span>{usd(run.costUsd)}</span>}
+            {run.jobs > 0 && !run.head.kind.startsWith("job") && <span>{run.jobs} jobs</span>}
+          </>
+        }
+      />
+      {expandable && expanded && (
+        <div className="flex flex-col bg-bg pt-1 pr-3 pb-2.5 pl-11 md:pr-4 md:pl-[132px]">
+          {steps.map((st) => (
+            <div key={st.label} className="flex items-baseline justify-between gap-3 py-1 text-meta text-ink-2">
+              <span className="min-w-0 truncate">{st.label}</span>
+              <span className={cn("shrink-0 font-mono text-caption", st.tone === "err" ? "text-err" : "text-muted")}>
+                {st.value}
+              </span>
+            </div>
+          ))}
+          {run.trace && (
+            <button type="button" onClick={onOpenFlow} className="mt-1 self-start text-meta text-primary hover:underline">
+              Open timeline
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function WaitingList({ jobs, onOpen }: { jobs: JobSummary[] | null; onOpen: (id: string) => void }) {
+  if (!jobs) return <p className="text-meta text-muted">Loading…</p>;
+  if (jobs.length === 0) {
+    return (
+      <EmptyState title="Nothing is waiting on you">
+        Jobs that need your approval or an answer show up here.
+      </EmptyState>
+    );
+  }
+  const Icon = iconFor("job");
+  return (
+    <ListSection title="Waiting for you">
+      {jobs.map((j) => {
+        const day = dayLabel(j.created_at);
+        const when = `${day === "Today" ? "" : `${day}, `}${shortClock(j.created_at)}`;
+        return (
+          <ListRow
+            key={j.id}
+            onClick={() => onOpen(j.id)}
+            time={day === "Today" ? shortClock(j.created_at) : day}
+            leading={<Icon className="text-warn" aria-hidden="true" />}
+            title={j.title}
+            description={`${STATUS_LABEL[j.status]} · ${KIND_LABEL[j.kind]}`}
+            meta={<span className="md:hidden">{when}</span>}
+          />
+        );
+      })}
+    </ListSection>
   );
 }

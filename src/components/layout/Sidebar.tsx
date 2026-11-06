@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
   BookOpen,
   Library,
   MessageSquarePlus,
-  History as HistoryIcon,
+  MessagesSquare,
   House,
   Activity,
   CalendarClock,
@@ -16,43 +16,65 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { useWaitingCount } from "@/hooks/useWaitingCount";
 import { useUiStore } from "@/store/uiStore";
 import { useSessionStore } from "@/store/sessionStore";
 import { useChatStore } from "@/store/chatStore";
 
-interface RailButtonProps {
+interface NavItemProps {
   label: string;
+  icon: ComponentType<{ className?: string }>;
   active: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  /** Small count on the right, e.g. jobs waiting on you. */
+  count?: number;
 }
 
-function RailButton({ label, active, onClick, children }: RailButtonProps) {
+/**
+ * One nav entry: icon and label from md up, icon-only rail (with a tooltip) between sm and md,
+ * where 220px of labels would squeeze the page.
+ */
+function NavItem({ label, icon: Icon, active, onClick, count }: NavItemProps) {
   return (
     <Tooltip>
       <TooltipTrigger
         render={
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
+            type="button"
             aria-label={label}
-            aria-pressed={active}
+            aria-current={active ? "page" : undefined}
             onClick={onClick}
             className={cn(
-              "text-muted hover:text-ink hover:bg-surface",
-              active && "bg-surface text-primary"
+              "relative flex h-8 w-full items-center justify-center gap-2.5 rounded-md text-meta text-muted transition-colors md:justify-start md:px-2",
+              "hover:bg-raised/60 hover:text-ink",
+              active && "bg-surface text-ink dark:bg-raised"
             )}
           />
         }
       >
-        {children}
+        <Icon className="size-4 shrink-0" aria-hidden="true" />
+        <span className="hidden truncate md:inline">{label}</span>
+        {count ? (
+          <span className="absolute top-1 right-1.5 text-caption text-warn tabular-nums md:static md:ml-auto">
+            {count}
+          </span>
+        ) : null}
       </TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
+      <TooltipContent side="right" className="md:hidden">
+        {label}
+      </TooltipContent>
     </Tooltip>
+  );
+}
+
+function NavGroup({ label, children }: { label?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex w-full flex-col gap-px">
+      {label && <span className="hidden px-2 pb-1 text-caption text-muted md:block">{label}</span>}
+      {children}
+    </div>
   );
 }
 
@@ -84,6 +106,11 @@ export function Sidebar() {
   const selectSession = useSessionStore((s) => s.selectSession);
   const loadSession = useChatStore((s) => s.loadSession);
   const newSession = useChatStore((s) => s.newSession);
+
+  const online = useUiStore((s) => s.online);
+  const waiting = useWaitingCount();
+  const onHome =
+    !historyOpen && !journalOpen && !kbOpen && !homelabOpen && !gatewayOpen && !automationsOpen && !backlogOpen && !auditOpen && !settingsOpen;
 
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -117,40 +144,38 @@ export function Sidebar() {
     <>
       {/* Desktop / tablet: icon rail + inline sliding panel. */}
       <div className="hidden h-full sm:flex">
-        <nav className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-surface/40 py-3">
+        <nav
+          aria-label="Primary"
+          className="flex w-14 shrink-0 flex-col items-center gap-[18px] bg-sidebar px-2 py-4 md:w-[220px] md:items-stretch md:px-2.5"
+        >
+          <div className="flex items-center gap-2 md:px-2">
+            <span className="grid size-[22px] place-items-center rounded-md bg-ink text-caption font-semibold text-bg">S</span>
+            <span className="hidden text-title font-semibold text-ink md:inline">Sazed</span>
+            {!online && (
+              <span className="hidden text-caption text-err md:ml-auto md:inline" role="status">
+                Offline
+              </span>
+            )}
+          </div>
           {/* Home is the launcher plus a fresh chat (the old Apps page merged in). */}
-          <RailButton label="Home" active={false} onClick={handleNewChat}>
-            <House className="size-4" aria-hidden="true" />
-          </RailButton>
-          <RailButton label="Conversations" active={historyOpen} onClick={toggleHistory}>
-            <HistoryIcon className="size-4" aria-hidden="true" />
-          </RailButton>
-          <RailButton label="Journal" active={journalOpen} onClick={toggleJournal}>
-            <BookOpen className="size-4" aria-hidden="true" />
-          </RailButton>
-          <RailButton label="Knowledge base" active={kbOpen} onClick={toggleKb}>
-            <Library className="size-4" aria-hidden="true" />
-          </RailButton>
-          <RailButton label="Homelab" active={homelabOpen} onClick={toggleHomelab}>
-            <Server className="size-4" aria-hidden="true" />
-          </RailButton>
-          <RailButton label="Gateway" active={gatewayOpen} onClick={toggleGateway}>
-            <Waypoints className="size-4" aria-hidden="true" />
-          </RailButton>
-          <RailButton label="Automations" active={automationsOpen} onClick={toggleAutomations}>
-            <CalendarClock className="size-4" aria-hidden="true" />
-          </RailButton>
-          <RailButton label="Backlog" active={backlogOpen} onClick={toggleBacklog}>
-            <Lightbulb className="size-4" aria-hidden="true" />
-          </RailButton>
-          <RailButton label="Activity" active={auditOpen} onClick={toggleAudit}>
-            <Activity className="size-4" aria-hidden="true" />
-          </RailButton>
-          <div className="flex-1" />
-          <RailButton label="Settings" active={settingsOpen} onClick={toggleSettings}>
-            <SettingsIcon className="size-4" aria-hidden="true" />
-          </RailButton>
-          <ThemeToggle />
+          <NavGroup>
+            <NavItem label="Home" icon={House} active={onHome} onClick={handleNewChat} />
+            <NavItem label="Chats" icon={MessagesSquare} active={historyOpen} onClick={toggleHistory} />
+          </NavGroup>
+          <NavGroup label="Watch">
+            <NavItem label="Homelab" icon={Server} active={homelabOpen} onClick={toggleHomelab} />
+            <NavItem label="Activity" icon={Activity} active={auditOpen} onClick={toggleAudit} count={waiting} />
+            <NavItem label="Gateway" icon={Waypoints} active={gatewayOpen} onClick={toggleGateway} />
+          </NavGroup>
+          <NavGroup label="Work">
+            <NavItem label="Automations" icon={CalendarClock} active={automationsOpen} onClick={toggleAutomations} />
+            <NavItem label="Backlog" icon={Lightbulb} active={backlogOpen} onClick={toggleBacklog} />
+            <NavItem label="Knowledge" icon={Library} active={kbOpen} onClick={toggleKb} />
+            <NavItem label="Journal" icon={BookOpen} active={journalOpen} onClick={toggleJournal} />
+          </NavGroup>
+          <div className="mt-auto w-full">
+            <NavItem label="Settings" icon={SettingsIcon} active={settingsOpen} onClick={toggleSettings} />
+          </div>
         </nav>
 
         <AnimatePresence initial={false}>
@@ -161,7 +186,7 @@ export function Sidebar() {
               animate={{ width: 260, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="overflow-hidden border-r border-border bg-surface/40"
+              className="overflow-hidden bg-sidebar"
             >
               <div className="flex h-full w-[260px] flex-col">
                 <div className="flex items-center justify-between px-3 pt-3 pb-2">

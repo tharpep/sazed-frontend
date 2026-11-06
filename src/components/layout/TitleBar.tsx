@@ -56,7 +56,7 @@ export function TitleBar() {
 
   return (
     <header
-      className="flex h-9 shrink-0 items-center gap-3 border-b border-border px-3"
+      className="flex h-9 shrink-0 items-center gap-3 bg-sidebar px-3"
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       {isTauri && <WindowControls />}

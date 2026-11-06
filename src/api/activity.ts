@@ -66,9 +66,10 @@ export interface ActivitySummary {
 export async function listActivity(
   categories: ActivityCategory[],
   errorsOnly: boolean,
-  beforeId?: number
+  beforeId?: number,
+  limit = 100
 ): Promise<ActivityEvent[]> {
-  const q = new URLSearchParams({ limit: "100" });
+  const q = new URLSearchParams({ limit: String(limit) });
   if (categories.length) q.set("categories", categories.join(","));
   if (errorsOnly) q.set("errors", "true");
   if (beforeId) q.set("before_id", String(beforeId));

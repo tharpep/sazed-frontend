@@ -1,118 +1,112 @@
-<!-- SEED, colors/typography resolved via palette.mjs + design conversation. Re-run /impeccable document once components exist, to capture real spacing/radii/component tokens and generate the sidecar. -->
 ---
 name: Sazed
-description: A calm, considered desktop companion for a personal AI agent.
+description: The Sazed console, a calm work tool for a personal agent and homelab.
+direction: D, hybrid (picked 2026-11-05). Graphite's surfaces, type and rows, with Paper's plain sentences and Instrument's numbers. Replaces the rose "Quiet Study" seed.
 colors:
-  primary-light: "oklch(0.560 0.150 340)"
-  primary-dark: "oklch(0.680 0.160 340)"
-  accent-light: "oklch(0.620 0.140 75)"
-  accent-dark: "oklch(0.780 0.130 75)"
-  bg-light: "oklch(1.000 0.000 0)"
-  bg-dark: "oklch(0.090 0.000 0)"
-  surface-light: "oklch(0.970 0.002 340)"
-  surface-dark: "oklch(0.160 0.004 340)"
-  ink-light: "oklch(0.180 0.008 340)"
-  ink-dark: "oklch(0.930 0.004 340)"
-  muted-light: "oklch(0.550 0.006 340)"
-  muted-dark: "oklch(0.620 0.006 340)"
+  bg: { light: "oklch(0.990 0.001 265)", dark: "oklch(0.170 0.005 265)" }
+  shell: { light: "oklch(0.945 0.004 265)", dark: "oklch(0.145 0.005 265)" }
+  surface: { light: "oklch(1.000 0.000 0)", dark: "oklch(0.205 0.006 265)" }
+  raised: { light: "oklch(0.955 0.004 265)", dark: "oklch(0.245 0.007 265)" }
+  line: { light: "oklch(0.905 0.005 265)", dark: "oklch(0.290 0.008 265)" }
+  ink: { light: "oklch(0.220 0.010 265)", dark: "oklch(0.950 0.003 265)" }
+  ink-2: { light: "oklch(0.450 0.012 265)", dark: "oklch(0.750 0.008 265)" }
+  muted: { light: "oklch(0.540 0.012 265)", dark: "oklch(0.600 0.010 265)" }
+  primary: { light: "oklch(0.520 0.150 258)", dark: "oklch(0.720 0.120 255)" }
+  ok: { light: "oklch(0.560 0.140 155)", dark: "oklch(0.740 0.140 155)" }
+  warn: { light: "oklch(0.620 0.140 70)", dark: "oklch(0.800 0.130 80)" }
+  err: { light: "oklch(0.550 0.190 27)", dark: "oklch(0.700 0.170 25)" }
 typography:
-  display:
-    fontFamily: "Fraunces, Georgia, 'Times New Roman', serif"
-    fontWeight: 400
-    letterSpacing: "-0.02em"
-  body:
-    fontFamily: "Geist, -apple-system, BlinkMacSystemFont, sans-serif"
-    fontWeight: 400
-    lineHeight: 1.55
-  label:
-    fontFamily: "Geist, -apple-system, BlinkMacSystemFont, sans-serif"
-    fontWeight: 500
-    letterSpacing: "0.02em"
+  sans: "Geist"
+  mono: "Geist Mono"
+  scale: { caption: 12px, meta: 13px, body: 14px, title: 15px, heading: 22px }
 ---
 
 # Design System: Sazed
 
 ## 1. Overview
 
-**Creative North Star: "The Quiet Study"**
+A calm work tool in the family of Linear, Vercel and Tailscale's admin console. The console is mostly scanned and operated (activity, homelab, automations, the board), so it favors clear hierarchy and compact, consistent rows. It speaks in plain sentences where a sentence says more than a number, and uses monospace for figures.
 
-A small, considered room you return to throughout the day — not a control panel, not a demo of AI capability. The interface gets out of the way of two things: the conversation, and the page you're writing in. Warmth in this system comes entirely from one deliberate color (a deep rose, not the reflexive blue-or-purple of most AI chat tools) and from typography — never from a tinted background. Surfaces stay pure: true white in light mode, true near-black in dark mode. This is a direct correction of the saturated 2026 AI-design default (warm-cream body background, muted "elegant" accent) that the previous implementation in this repo fell into, and that this rebuild explicitly rejects.
+How it was chosen: a review of the old console, a sweep of how Linear, Vercel, Tailscale, Apple, Stripe and Raycast solve the same problems, then four directions on Home and Activity. Pryce picked D, the hybrid. The critique, reference board and mockups are in the side-session notes (`console-design-critique.md`) and the "Sazed console directions" artifact. Build new pages from those mockups; when you improve on one, say how.
 
-This system explicitly rejects: purple gradients, glassmorphism-as-decoration, hero-metric cards, uppercase tracked eyebrows, identical icon+heading+text card grids, warm-tinted "paper" backgrounds, and dense SaaS-dashboard chrome. It is built for a single window between 600px and 900px wide — every density and navigation decision is made for that size, not shrunk down from a wide-screen assumption.
-
-**Key Characteristics:**
-- Pure-neutral surfaces (true white / true near-black); all warmth lives in the rose primary and the gold accent, never in the background.
-- One primary color used sparingly (restrained strategy, target ≤10% of any given screen's surface area) for interactive elements, links, and primary actions.
-- A second, distinct accent (warm gold) reserved for status/secondary emphasis — never competing with primary for the same role.
-- Serif display type appears only at moments of presence (app name, empty-state greeting, section headers) — never in UI chrome or body text.
-- Flat by default; elevation is a response to state, not a resting decoration.
+**Key characteristics**
+- Mid-gray dark (not black) and a near-white light theme, each with steps: `shell` < `bg` < `surface` < `raised`.
+- The shell (sidebar, gaps) is darker and dimmer than the page, and the page sits on an inset panel, so content leads (Linear's 2026 refresh).
+- One sans face (Geist) at five sizes; Geist Mono for figures, durations, costs and code.
+- One blue accent (`primary`) for actions, links, focus and selection.
+- State colors (`ok`, `warn`, `err`) only for state. Healthy is neutral unless the screen is about health.
+- Flat. Panels separate by surface step and a 1px `line`, not shadow.
 
 ## 2. Colors
 
-Two brand colors on pure-neutral ground: a deep rose primary carries interaction and warmth, a warm gold secondary accent carries status and distinct emphasis. Neither the background nor the surface layer is tinted.
+All tokens live in `src/styles/globals.css` as Tailwind colors, light on `:root` and dark on `.dark`.
 
-### Primary
-- **Quiet Rose** (`oklch(0.560 0.150 340)` light / `oklch(0.680 0.160 340)` dark): The single interactive color — links, primary buttons, active nav state, focus rings, the send action. Deliberately not blue or purple (the reflexive AI-chat-tool choice); a deep rose reads as considered and personal without tipping into "creative tool" brightness. Dark mode lifts lightness and chroma slightly to stay legible against near-black.
-
-### Secondary
-- **Warm Gold** (`oklch(0.620 0.140 75)` light / `oklch(0.780 0.130 75)` dark): Reserved for status pills, secondary badges, and the display-serif greeting's occasional highlight word. Distinct from Quiet Rose in both hue (75° vs 340°) and role — it never appears on the same element as primary.
-
-### Neutral
-- **Pure White / Pure Near-Black** (`oklch(1.000 0.000 0)` / `oklch(0.090 0.000 0)`): The body background in light and dark mode respectively. Zero chroma — deliberately not tinted warm. This is the single most important color decision in the system; see the Named Rule below.
-- **Whisper Surface** (`oklch(0.970 0.002 340)` light / `oklch(0.160 0.004 340)` dark): Cards, panels, the sidebar, input fields — background pulled fractionally toward ink, same hue family, chroma near zero. The difference from bg should read as "a slightly raised plane," not as a visible tint.
-- **Ink** (`oklch(0.180 0.008 340)` light / `oklch(0.930 0.004 340)` dark): Body text. ≥7:1 contrast against bg in both modes.
-- **Muted** (`oklch(0.550 0.006 340)` light / `oklch(0.620 0.006 340)` dark): Secondary text — timestamps, placeholder copy, tertiary labels. ≥3.5:1 contrast against bg; verify at implementation time, don't let "muted" drift toward illegible light gray.
-
-### Named Rules
-**The Uncolored Ground Rule.** Background and surface carry zero chroma (or near-zero, ≤0.005) in both themes. Warmth is Quiet Rose's job, never the body background's. If a background value has chroma above 0.01, that's a bug, not a style choice — this is the exact mistake the previous implementation in this repo made.
-
-**The One Voice Rule.** Quiet Rose appears on ≤10% of any given screen's surface area. Its rarity is what makes it register as intentional rather than decorative.
+| Token | Use |
+|---|---|
+| `shell` (`bg-sidebar`) | Sidebar, gaps around the page panel, Tauri title bar |
+| `bg` | The page panel |
+| `surface` | Panels, list groups, inputs, outline buttons, phone tab bar |
+| `raised` | Hover, selected segment, menu highlight, icon tiles, active nav (dark) |
+| `line` | Borders and dividers (also shadcn's `--border`/`--input`) |
+| `ink` | Primary text |
+| `ink-2` | Secondary text: descriptions, inactive controls |
+| `muted` | Tertiary text: labels, timestamps, counts. AA on `bg` and `surface` in both themes. |
+| `primary` | The accent: buttons, links, focus |
+| `ok` / `warn` / `err` | State only. `accent` is a legacy alias of `warn`; `destructive` maps to `err`. |
 
 ## 3. Typography
 
-**Display Font:** Fraunces (with Georgia, Times New Roman, serif fallback)
-**Body Font:** Geist (with -apple-system, BlinkMacSystemFont, sans-serif fallback)
-**Label Font:** Geist, medium weight, slight positive tracking
+Geist everywhere. New UI uses only the five-step scale (`text-caption`, `text-meta`, `text-body`, `text-title`, `text-heading`). `cn()` in `src/lib/utils.ts` knows these names, so they survive class merging.
 
-**Character:** A warm literary serif reserved for rare moments of presence, paired with a clean, high-legibility grotesque that carries every interactive surface. The pairing is a deliberate contrast axis (serif × sans), not two similar sans-serifs competing — and specifically not the Newsreader-adjacent serif choice the previous implementation made, to avoid repeating a recognizable "AI redesigned this" signature.
+| Step | Size / line | Use |
+|---|---|---|
+| caption | 12 / 16 | Meta on rows, pills, counts |
+| meta | 13 / 18 | Descriptions, section labels, nav, segmented control, time column |
+| body | 14 / 20 | Row titles, body copy |
+| title | 15 / 22 | Page titles (`PageHeader`) |
+| heading | 22 / 28 | Rare: Home's greeting |
 
-### Hierarchy
-- **Display** (Fraunces, weight 400, `clamp(1.75rem, 4vw, 2.75rem)`, line-height 1.1, letter-spacing -0.02em): App name, empty-state greeting, journal entry titles. Appears rarely — this is presence, not a heading style to reach for by default.
-- **Headline** (Geist, weight 600, 20px, line-height 1.3): Section headers within the app (sidebar section labels, journal date headers).
-- **Body** (Geist, weight 400, 15px, line-height 1.55): Chat message text, journal entry body, general UI copy. Cap measure at 65-75ch where prose wraps freely (journal entries); chat messages follow the chat column's natural width instead.
-- **Label** (Geist, weight 500, 13px, letter-spacing 0.02em): Buttons, nav items, form labels, timestamps. Sentence case, never uppercase — this system has no tracked-uppercase eyebrows anywhere.
+Sentence case everywhere; no uppercase eyebrows. Figures in monospace or `tabular-nums`.
 
-### Named Rules
-**The Presence Rule.** Fraunces appears in at most one place per screen. If a screen already has a serif greeting, no other element on that screen may also be set in Fraunces.
+## 4. Layout and shell
 
-## 4. Elevation
-
-Flat by default — the Responsive motion energy this system commits to (feedback and transitions, not orchestrated choreography) implies restraint in elevation too. Depth is conveyed primarily through the Whisper Surface neutral (a lighter/darker plane, not a shadow) and only secondarily through a soft, low-opacity shadow when a surface truly floats above content (the composer, an open dropdown, the expanded sidebar).
-
-### Shadow Vocabulary
-- **Resting** (none): Cards, panels, and the collapsed sidebar sit flush — no shadow at rest.
-- **Floating** (`box-shadow: 0 8px 24px oklch(0 0 0 / 0.12)`): Reserved for elements that are genuinely temporary/overlaid — the expanded sidebar, an open menu, the composer's focus state, a toast.
-
-### Named Rules
-**The Flat-By-Default Rule.** Shadows appear only as a response to a genuinely overlaid or floating state. A resting card, panel, or message never carries a shadow.
+- Sidebar: labeled and grouped (Home, Chats / Watch / Work / Settings) from `md` (768px); an icon rail with tooltips between `sm` and `md`; the bottom tab bar on phones. The Activity entry shows how many jobs are waiting on you.
+- From `sm` up the page is an inset panel (8px gap, 12px radius, 1px `line`) on the shell. Phones are edge to edge.
+- The title bar only renders in the Tauri window (it's the drag region). The theme switch lives in Settings on desktop and in the More sheet on phones.
+- 4px spacing grid. Page gutter 16px on phones, 32px from `md`. `PageBody` is left-aligned with a 1024px max width.
+- Radii: 6px controls, 8px rows and tiles, 10px panels, 12px the page panel.
+- Shadow only for things that float (menus, sheets, dialogs): `shadow-floating`.
 
 ## 5. Components
 
-No component library exists yet (pre-implementation). Re-run `/impeccable document` once the rebuild has real components to extract exact shape, padding, and state treatment — this section is intentionally omitted here rather than fabricated, per seed-mode guidance.
+Shared components live in `src/components/system/` (import from `@/components/system`). shadcn primitives in `src/components/ui/` stay the base for buttons, menus, sheets and dialogs.
+
+| Component | What it is |
+|---|---|
+| `Page`, `PageHeader`, `PageBody` | Page frame: title + status + actions on one line, then a scrolling body |
+| `StatusPill` | Dot + short label for live, paused, connected |
+| `Segmented` | The one control for switching views or filters of the same content; options can carry a count ("Needs you 1") |
+| `ListSection`, `ListRow` | A titled group of rows: leading icon, title, description, right-aligned meta, a time column from `md`; rows can expand details under themselves |
+| `EmptyState` | What a list says when empty: what would appear and how to get some |
+| `Button` (ui) | `outline` for most actions, `default` (primary) for the one main action, `ghost` for low-weight actions |
+
+Activity (`src/features/activity/`) is the reference page: `DayChart` (totals plus a 24-hour bar chart), runs grouped by trace with steps folded in (`runs.ts`), Everything / Needs you / Errors.
 
 ## 6. Do's and Don'ts
 
-### Do:
-- **Do** keep bg and surface at zero or near-zero chroma (≤0.005) in both themes — pure white light, pure near-black dark.
-- **Do** let Quiet Rose (`oklch(0.560/0.680 0.150/0.160 340)`) be the only color that carries interactive meaning — links, primary actions, focus, active state.
-- **Do** reserve Fraunces for a single presence moment per screen; everything else is Geist.
-- **Do** keep shadows absent at rest; introduce them only for genuinely floating/overlaid elements.
-- **Do** design every layout for a 600-900px window first.
+**Do**
+- Start from the mockup, and say how and why when you improve on it.
+- Use the components above before hand-rolling a header, row, tab set or empty state.
+- Translate internals: model IDs to names ("Sonnet 5.5"), cron to sentences, outcomes to words ("Failed at the second opinion step").
+- Group repeated events (one row per run, steps inside), put what needs Pryce first, summarize before detail.
 
-### Don't:
-- **Don't** tint the body background warm ("claude-beige": cream/sand/paper bg + muted accent) — named explicitly because it is the saturated AI-design default of 2026 and the exact mistake this repo's previous redesign made.
-- **Don't** use purple gradients, glassmorphism as decoration, hero-metric cards, or identical icon+heading+text card grids (PRODUCT.md anti-references, carried through verbatim).
-- **Don't** set uppercase tracked "eyebrow" labels above sections — this system has no eyebrows anywhere.
-- **Don't** use `border-left`/`border-right` as a colored accent stripe on cards or list items.
-- **Don't** reach for a persistent, always-visible sidebar — the window is too small; use the collapsible icon-rail pattern instead.
-- **Don't** render chat messages as bubbles with container chrome — flat transcript, distinguished by weight/color only.
+**Don't**
+- Don't use pure black, or tint `bg` with the accent.
+- Don't add font sizes outside the scale, or uppercase tracked labels.
+- Don't put decorative dots or colored stripes on rows; a dot means state.
+- Don't build walls of equal tiles or icon grids (the self-hosted start-page look); one summary line or a row of chips, then lists.
+- Don't render chat messages as bubbles with container chrome.
+
+## 7. Migration
+
+Colors and the shell moved app-wide; pages move to the components one at a time and keep their own markup on the new colors until then. Done: Activity. Next: Home (D's mockup: date and greeting, one sentence on how things are, status chips, Next up, apps as a short list, an ask bar that also jumps to pages), then Gateway, Automations, Homelab List, Knowledge. New pages (Board, Atlas, notes) start on this system.

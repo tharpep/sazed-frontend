@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSettingsStore } from "../../store/settingsStore";
 import { archiveSessions } from "../../api/conversations";
 import { useSessionStore } from "../../store/sessionStore";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import styles from "./SettingsPage.module.css";
 
 const BUILD_BASE =
@@ -97,6 +98,13 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
+        </div>
+
+        <div className={styles.section}>
+          <span className={styles.label}>Theme</span>
+          <div>
+            <ThemeToggle orientation="horizontal" />
+          </div>
         </div>
 
         <div className={styles.section}>

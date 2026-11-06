@@ -79,6 +79,10 @@ export function clock(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" });
 }
 
+export function shortClock(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
 export function dayLabel(iso: string): string {
   const d = new Date(iso);
   const today = new Date();

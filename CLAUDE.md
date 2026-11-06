@@ -16,11 +16,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The app talks to the **Sazed** backend (agent API). Base URL and API key come from env: `VITE_SAZED_URL` (default `http://localhost:8000`) and `VITE_API_KEY` (optional). All requests go through `src/api/client.ts` (`apiFetch`).
 
-**Layout (`App.tsx` + `components/layout/`):** `AppShell` composes `TitleBar` (top, custom Tauri chrome) + `Sidebar` (left, collapsible icon-rail) + a content slot. `App.tsx` itself only holds view-switching state (via `uiStore` booleans, not routes — see below) and renders the active view into that slot. `main.tsx` separately mounts a `BrowserRouter` with two real routes: `/` (the app, i.e. `App.tsx`) and `/display` (`DisplayPage`, a self-contained kiosk-style display view, out of this rebuild's scope).
+**Layout (`App.tsx` + `components/layout/`):** `AppShell` composes `TitleBar` (Tauri window only) + `Sidebar` (labeled and grouped from md, icon rail from sm to md) + the page, which sits on an inset panel over the darker shell from sm up (DESIGN.md, Layout and shell). `App.tsx` itself only holds view-switching state (via `uiStore` booleans, not routes — see below) and renders the active view into that slot. `main.tsx` separately mounts a `BrowserRouter` with two real routes: `/` (the app, i.e. `App.tsx`) and `/display` (`DisplayPage`, a self-contained kiosk-style display view, out of this rebuild's scope).
 
 **View switching is boolean-flag-based, not routed.** `uiStore` holds one boolean per destination (`historyOpen`, `kbOpen`, `settingsOpen`, `auditOpen`, `financeOpen`, `journalOpen`); each `toggleX()` action resets all the others. `Sidebar` calls these toggles directly. `financeOpen`/`FinancePage` still exist and work but have no Sidebar entry — Finance was excluded from navigation by product decision, not deleted.
 
-**Theming:** `components/theme/ThemeProvider.tsx` — light/dark/system, persisted to `localStorage` (`sazed-theme` key), toggles the `.dark` class on `<html>`. `ThemeToggle` lives at the bottom of the Sidebar rail.
+**Theming:** `components/theme/ThemeProvider.tsx` — light/dark/system, persisted to `localStorage` (`sazed-theme` key), toggles the `.dark` class on `<html>`. `ThemeToggle` lives in Settings (desktop) and the More sheet (phone).
 
 **Source layout:**
 
@@ -32,6 +32,7 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 - `src/store/` — Zustand: `chatStore`, `sessionStore`, `uiStore` (view-switching booleans + online status), `settingsStore`, `configStore`, `kbStore`, `memoryStore`.
 - `src/components/ui/` — shadcn/ui primitives (button, dialog, sheet, dropdown-menu, tooltip, scroll-area, separator, switch, textarea, avatar, tabs, badge). Owned source, restyled per component as they're used — not consumed as a themed package.
 - `src/components/theme/` — `ThemeProvider`, `ThemeToggle`.
+- `src/components/system/` — the shared components from DESIGN.md (Page/PageHeader/PageBody, StatusPill, Segmented, ListSection/ListRow, EmptyState). Use these for new pages and when moving a page over.
 - `src/components/layout/` — `TitleBar`, `Sidebar`, `AppShell`.
 - `src/features/home/` — `HomePage`, the landing view when no conversation is open (it replaced the chat `EmptyState` and the Apps page). Top to bottom (no approvals strip; Pryce removed it, those stay on their pages and in Pushover): the greeting (tapping the name toggles private apps, `uiStore.privateRevealed`, in memory only and cleared whenever the console is backgrounded), a three-tile glance row (services up → Homelab List, free for media → Homelab Storage, next automation run → Automations), and `AppGrid`. App docks the composer below it; sending a message turns Home into the conversation, and tapping Home again (or the rail's Home) starts a new chat. The day brief, weather and suggestion pills were dropped from the landing (their hooks still feed `DisplayPage`).
 - `src/features/chat/` — `MessageList`, `MessageBlock` (markdown-rendered via `react-markdown`/`remark-gfm`/`rehype-highlight`), `Composer`, `ToolCallCard`, `StreamingIndicator`.
@@ -65,7 +66,7 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
   - Items are never deleted: dismissed ones stay so the scout won't re-propose them.
   - Data from Sazed `/backlog` via `src/api/backlog.ts`. Scout/triage automations (`pipeline` actions) show read-only in `AutomationSheet`.
 - `src/features/activity/` — the Activity page (`uiStore.auditOpen`, which it took over from the Tool log; desktop rail plus phone More sheet).
-  - `ActivityPage`: the timeline, with a 24-hour summary, a "now" line, category and errors filters, and Load older.
+  - `ActivityPage`: the reference page for the design system. `DayChart` (24-hour totals and events per hour, errors in red), Everything / Needs you / Errors (Needs you lists jobs waiting for approval or an answer and opens `JobSheet`), a Type menu, and runs grouped by `runs.ts`: events sharing a trace become one row, an automation's chat session and its Pushover fold into the run, outcomes read as words, and a row expands to its steps. Load older.
     - It streams live from Sazed `/activity/stream`, using fetch rather than EventSource so the key header works. It reconnects with backoff and catches up from the last id.
     - Pause holds new rows; running jobs show their latest step.
   - `FlowSheet`: the flow view for an event's trace, plus linked traces.
@@ -81,6 +82,7 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 
 ## Conventions
 
+- Visual work follows `DESIGN.md` (direction D: tokens, type scale, shell, components). Start from the approved mockup and say how when you improve on it.
 - Chat, journal, and the navigation shell are Tailwind utility classes + shadcn/ui primitives, following the OKLCH token system and Named Rules in `DESIGN.md` (read it before touching visual code in these areas) and the brand/product guidance in `PRODUCT.md`. No CSS Modules in these three areas.
 - Settings, Audit, Finance, and `DisplayPage` remain CSS Modules, styled through `legacy-compat.css`'s token aliases. If you're touching one of these and want it on the new system, that's a real (unscoped) redesign task — flag it rather than half-converting.
 - Markdown rendering is enabled in chat message bodies (`react-markdown` + `remark-gfm` + `rehype-highlight`, same stack the journal editor's read view already used).
