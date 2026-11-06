@@ -1,0 +1,97 @@
+import type { UsageWeek } from "@/api/claudeUsage";
+import { niceMax, weekLabel } from "./format";
+import { useWidth } from "./useWidth";
+
+const HEIGHT = 170;
+const PAD = { top: 16, right: 8, bottom: 22, left: 40 };
+
+interface Series {
+  label: string;
+  fill: string;
+  swatch: string;
+  values: number[];
+}
+
+function BarChart({ title, weeks, series }: { title: string; weeks: string[]; series: Series[] }) {
+  const [ref, width] = useWidth<HTMLDivElement>();
+  const totals = weeks.map((_, i) => series.reduce((n, s) => n + s.values[i], 0));
+  const yMax = niceMax(Math.max(...totals, 1));
+  const plotW = Math.max(width - PAD.left - PAD.right, 1);
+  const plotH = HEIGHT - PAD.top - PAD.bottom;
+  const band = plotW / Math.max(weeks.length, 1);
+  const barW = Math.min(36, band * 0.6);
+  const y = (v: number) => PAD.top + plotH - (v / yMax) * plotH;
+
+  return (
+    <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-line bg-surface px-3.5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <h3 className="text-meta text-muted">{title}</h3>
+        {series.length > 1 && (
+          <p className="flex gap-3 text-caption text-muted">
+            {series.map((s) => (
+              <span key={s.label} className="inline-flex items-center gap-1.5">
+                <span className={`size-2 rounded-[2px] ${s.swatch}`} aria-hidden="true" />
+                {s.label}
+              </span>
+            ))}
+          </p>
+        )}
+      </div>
+      <div ref={ref} className="w-full">
+        {width > 0 && (
+          <svg width={width} height={HEIGHT} role="img" aria-label={title} className="block font-mono text-[10.5px]">
+            {[0, yMax / 2, yMax].map((t) => (
+              <g key={t}>
+                <line x1={PAD.left} x2={PAD.left + plotW} y1={y(t)} y2={y(t)} className="stroke-line" />
+                <text x={PAD.left - 6} y={y(t) + 3.5} textAnchor="end" className="fill-muted">
+                  {t}
+                </text>
+              </g>
+            ))}
+            {weeks.map((w, i) => {
+              const cx = PAD.left + band * i + band / 2;
+              let base = 0;
+              return (
+                <g key={w}>
+                  {series.map((s) => {
+                    const top = y(base + s.values[i]);
+                    const bottom = y(base);
+                    base += s.values[i];
+                    return <rect key={s.label} x={cx - barW / 2} y={top} width={barW} height={Math.max(bottom - top, 0)} className={s.fill} />;
+                  })}
+                  <text x={cx} y={y(totals[i]) - 4} textAnchor="middle" className="fill-ink">
+                    {totals[i]}
+                  </text>
+                  <text x={cx} y={HEIGHT - 6} textAnchor="middle" className="fill-muted">
+                    {weekLabel(w)}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function Trends({ weekly }: { weekly: UsageWeek[] }) {
+  const weeks = weekly.map((w) => w.week);
+  return (
+    <section aria-label="Weekly trends" className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+      <BarChart
+        title="Prompts per week"
+        weeks={weeks}
+        series={[{ label: "Prompts", fill: "fill-primary", swatch: "bg-primary", values: weekly.map((w) => w.prompts) }]}
+      />
+      <BarChart
+        title="File writes per week"
+        weeks={weeks}
+        series={[
+          { label: "Bash", fill: "fill-ink-2", swatch: "bg-ink-2", values: weekly.map((w) => w.bash_writes) },
+          { label: "Edit", fill: "fill-primary", swatch: "bg-primary", values: weekly.map((w) => w.edit_writes) },
+        ]}
+      />
+    </section>
+  );
+}

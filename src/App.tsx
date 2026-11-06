@@ -13,6 +13,7 @@ import { HomelabPage } from "./features/homelab/HomelabPage";
 import { GatewayPage } from "./features/gateway/GatewayPage";
 import { AutomationsPage } from "./features/automations/AutomationsPage";
 import { BacklogPage } from "./features/backlog/BacklogPage";
+import { ClaudeUsagePage } from "./features/claude-usage/ClaudeUsagePage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
 import { apiFetch } from "./api/client";
@@ -27,6 +28,7 @@ function App() {
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
+  const claudeUsageOpen = useUiStore((s) => s.claudeUsageOpen);
   const historyOpen = useUiStore((s) => s.historyOpen);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
@@ -37,6 +39,7 @@ function App() {
   const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
+  const toggleClaudeUsage = useUiStore((s) => s.toggleClaudeUsage);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const setLinkedBacklogItem = useUiStore((s) => s.setLinkedBacklogItem);
@@ -65,6 +68,8 @@ function App() {
             ? "automations"
             : backlogOpen
             ? "backlog"
+            : claudeUsageOpen
+            ? "claude-usage"
             : kbOpen
               ? "kb"
               : view;
@@ -78,6 +83,7 @@ function App() {
     const ui = useUiStore.getState();
     const open: Record<string, () => void> = {
       backlog: ui.toggleBacklog,
+      "claude-usage": ui.toggleClaudeUsage,
       automations: ui.toggleAutomations,
       homelab: ui.toggleHomelab,
       apps: ui.closeAll, // the Apps page is now part of Home
@@ -121,6 +127,7 @@ function App() {
         else if (gatewayOpen) toggleGateway();
         else if (automationsOpen) toggleAutomations();
         else if (backlogOpen) toggleBacklog();
+        else if (claudeUsageOpen) toggleClaudeUsage();
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -136,6 +143,7 @@ function App() {
     gatewayOpen,
     automationsOpen,
     backlogOpen,
+    claudeUsageOpen,
     setHistoryOpen,
     toggleKb,
     setSettingsOpen,
@@ -146,6 +154,7 @@ function App() {
     toggleGateway,
     toggleAutomations,
     toggleBacklog,
+    toggleClaudeUsage,
   ]);
 
   return (
@@ -194,6 +203,8 @@ function App() {
           <AutomationsPage />
         ) : backlogOpen ? (
           <BacklogPage />
+        ) : claudeUsageOpen ? (
+          <ClaudeUsagePage />
         ) : kbOpen ? (
           <KnowledgePage />
         ) : view === "empty" ? (
