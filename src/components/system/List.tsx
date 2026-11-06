@@ -17,7 +17,7 @@ export function ListSection({ title, children }: { title?: string; children: Rea
 interface ListRowProps {
   title: ReactNode;
   description?: ReactNode;
-  /** Icon (or dot) on the left; color it with a tone class. */
+  /** Icon (or dot) on the left; color it with a tone class. Rows without one drop the column. */
   leading?: ReactNode;
   /** Its own column from md up. Phones don't show it, so repeat it in `meta` if they need it. */
   time?: string;
@@ -30,14 +30,17 @@ interface ListRowProps {
 
 export function ListRow({ title, description, leading, time, meta, onClick, expanded }: ListRowProps) {
   const className = cn(
-    "grid w-full grid-cols-[1.25rem_minmax(0,1fr)_auto] items-start gap-x-3 px-3 py-2.5 text-left md:px-4",
-    time && "md:grid-cols-[4.5rem_1.25rem_minmax(0,1fr)_auto]",
+    "grid w-full items-start gap-x-3 px-3 py-2.5 text-left md:px-4",
+    leading
+      ? "grid-cols-[1.25rem_minmax(0,1fr)_auto]"
+      : "grid-cols-[minmax(0,1fr)_auto]",
+    time && (leading ? "md:grid-cols-[4.5rem_1.25rem_minmax(0,1fr)_auto]" : "md:grid-cols-[4.5rem_minmax(0,1fr)_auto]"),
     onClick && "transition-colors hover:bg-raised/60 focus-visible:-outline-offset-2"
   );
   const body = (
     <>
       {time && <span className="hidden pt-px text-meta text-muted tabular-nums md:block">{time}</span>}
-      <span className="flex h-5 items-center [&_svg]:size-4">{leading}</span>
+      {leading && <span className="flex h-5 items-center [&_svg]:size-4">{leading}</span>}
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate text-body font-medium text-ink">{title}</span>
         {description && <span className="line-clamp-2 text-meta text-ink-2">{description}</span>}

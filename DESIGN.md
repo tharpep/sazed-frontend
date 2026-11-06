@@ -86,8 +86,9 @@ Shared components live in `src/components/system/` (import from `@/components/sy
 | `Page`, `PageHeader`, `PageBody` | Page frame: title + status + actions on one line, then a scrolling body |
 | `StatusPill` | Dot + short label for live, paused, connected |
 | `Segmented` | The one control for switching views or filters of the same content; options can carry a count ("Needs you 1") |
-| `ListSection`, `ListRow` | A titled group of rows: leading icon, title, description, right-aligned meta, a time column from `md`; rows can expand details under themselves |
+| `ListSection`, `ListRow` | A titled group of rows: leading icon (optional), title, description, right-aligned meta, a time column from `md`; rows can expand details under themselves |
 | `EmptyState` | What a list says when empty: what would appear and how to get some |
+| `Chip` | One figure in a row of status chips (label, monospace value, optional state dot), as on Home |
 | `Button` (ui) | `outline` for most actions, `default` (primary) for the one main action, `ghost` for low-weight actions |
 
 Activity (`src/features/activity/`) is the reference page: `DayChart` (totals plus a 24-hour bar chart), runs grouped by trace with steps folded in (`runs.ts`), Everything / Needs you / Errors.
@@ -109,4 +110,4 @@ Activity (`src/features/activity/`) is the reference page: `DayChart` (totals pl
 
 ## 7. Migration
 
-Colors and the shell moved app-wide; pages move to the components one at a time and keep their own markup on the new colors until then. Done: Activity. Next: Home (D's mockup: date and greeting, one sentence on how things are, status chips, Next up, apps as a short list, an ask bar that also jumps to pages), then Gateway, Automations, Homelab List, Knowledge. New pages (Board, Atlas, notes) start on this system.
+Colors and the shell moved app-wide; pages move to the components one at a time and keep their own markup on the new colors until then. Done: Activity, Home. Next: Gateway, Automations, Homelab List, Knowledge. New pages (Board, Atlas, notes) start on this system.
