@@ -1,6 +1,0 @@
-.row {
-  display: flex;
-  gap: var(--space-1-5);
-  flex-wrap: wrap;
-  margin: var(--space-1) 0 var(--space-2);
-}

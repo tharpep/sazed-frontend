@@ -1,0 +1,15 @@
+{
+  "id": "/display",
+  "name": "Sazed Display",
+  "short_name": "Display",
+  "description": "Sazed's always-on display: the time, what's next, and a voice to ask.",
+  "start_url": "/display",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
