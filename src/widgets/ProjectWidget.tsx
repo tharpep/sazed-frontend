@@ -72,7 +72,7 @@ export function ProjectWidget({ onBack, ...project }: ProjectWidgetProps) {
         <h2 className="text-title font-semibold text-ink">{project.title}</h2>
         <p className="text-meta text-ink-2">{project.latest_update ?? project.headline}</p>
         <div className="flex items-center gap-3">
-          <ProgressBar progress={progress} className="max-w-xs flex-1" />
+          <ProgressBar bar={project.bar} className="max-w-xs flex-1" />
           <span className="font-mono text-caption whitespace-nowrap text-muted tabular-nums">
             {project.steps_done}/{project.steps_total} steps · {progress.done}/{progress.total} cards
           </span>
@@ -87,7 +87,7 @@ export function ProjectWidget({ onBack, ...project }: ProjectWidgetProps) {
               <span className="min-w-0 text-body font-medium text-ink">{w.title}</span>
               <span className={`text-caption md:order-5 md:text-right ${STATUS_TEXT[w.status]}`}>{STATUS_LABEL[w.status]}</span>
               <ProgressBar
-                progress={w.progress}
+                bar={w.bar}
                 className="col-span-3 self-center md:order-3 md:col-span-1 md:min-w-0"
               />
               <span className="hidden font-mono text-caption whitespace-nowrap text-muted tabular-nums md:order-4 md:inline">

@@ -1,4 +1,5 @@
 import type {
+  BoardBar,
   BoardProgress,
   CardStage,
   Project,
@@ -51,6 +52,18 @@ function progressOf(cards: ProjectCard[]): BoardProgress {
   return { done, in_flight, needs_me, next, total: done + in_flight + needs_me + next };
 }
 
+function stepBar(state: Workstream["state"], p: BoardProgress): BoardBar {
+  if (state === "done") return { done: 1, in_flight: 0, needs_me: 0, next: 0 };
+  const f = (n: number) => (p.total ? n / p.total : 0);
+  return { done: f(p.done), in_flight: f(p.in_flight), needs_me: f(p.needs_me), next: f(p.next) };
+}
+
+function projectBar(steps: Workstream[]): BoardBar {
+  const live = steps.filter((w) => w.state !== "dropped");
+  const avg = (k: keyof BoardBar) => (live.length ? live.reduce((a, w) => a + w.bar[k], 0) / live.length : 0);
+  return { done: avg("done"), in_flight: avg("in_flight"), needs_me: avg("needs_me"), next: avg("next") };
+}
+
 function sum(parts: BoardProgress[]): BoardProgress {
   const add = (k: keyof BoardProgress) => parts.reduce((a, p) => a + p[k], 0);
   return {
@@ -73,15 +86,18 @@ function build(
   const workstreams: Workstream[] = specs.map(([wsTitle, status, summary, cards, dependsOn], i) => {
     const id = `${slug}-ws${i + 1}`;
     const built = cards.map((c) => card(c, repo, id));
+    const state: Workstream["state"] = status === "done" ? "done" : status === "dropped" ? "dropped" : "open";
+    const progress = progressOf(built);
     return {
       id,
       title: wsTitle,
       summary,
       position: i + 1,
-      state: status === "done" ? "done" : status === "dropped" ? "dropped" : "open",
+      state,
       status,
       depends_on: dependsOn ?? [],
-      progress: progressOf(built),
+      progress,
+      bar: stepBar(state, progress),
       cards: built,
     };
   });
@@ -100,6 +116,7 @@ function build(
     updated_at: ago(2),
     headline,
     progress: sum(workstreams.map((w) => w.progress)),
+    bar: projectBar(workstreams),
     steps_done: workstreams.filter((w) => w.status === "done").length,
     steps_total: workstreams.length,
     current: open ? { id: open.id, title: open.title, status: open.status } : null,
