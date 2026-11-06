@@ -57,13 +57,17 @@ export function ProjectsWidget({ projects, onOpen }: ProjectsWidgetProps) {
                 )}
                 <div className="col-start-2 flex items-center gap-3 md:col-start-3">
                   <ProgressBar progress={p.progress} className="flex-1" />
-                  <span className="font-mono text-caption whitespace-nowrap text-muted tabular-nums md:hidden">
-                    {p.progress.done}/{p.progress.total} done
+                  <span className="flex flex-col items-end font-mono text-caption whitespace-nowrap text-muted tabular-nums md:hidden">
+                    <span>{p.steps_done}/{p.steps_total} steps</span>
+                    <span>{p.progress.done}/{p.progress.total} cards</span>
                   </span>
                 </div>
                 <div className="hidden flex-col items-end text-caption whitespace-nowrap text-muted tabular-nums md:flex">
                   <span className="font-mono">
-                    {p.progress.done}/{p.progress.total} done
+                    {p.steps_done}/{p.steps_total} steps
+                  </span>
+                  <span className="font-mono">
+                    {p.progress.done}/{p.progress.total} cards
                   </span>
                 </div>
                 <p className="col-start-2 text-meta text-ink-2 md:col-span-3 md:col-start-2">

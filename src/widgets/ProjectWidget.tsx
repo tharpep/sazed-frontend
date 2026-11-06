@@ -74,7 +74,7 @@ export function ProjectWidget({ onBack, ...project }: ProjectWidgetProps) {
         <div className="flex items-center gap-3">
           <ProgressBar progress={progress} className="max-w-xs flex-1" />
           <span className="font-mono text-caption whitespace-nowrap text-muted tabular-nums">
-            {progress.done}/{progress.total} done
+            {project.steps_done}/{project.steps_total} steps · {progress.done}/{progress.total} cards
           </span>
         </div>
       </div>
