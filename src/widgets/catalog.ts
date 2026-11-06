@@ -85,6 +85,13 @@ const gitHubIssue = z.object({
   reason: z.string().optional(),
 });
 
+const boardBar = z.object({
+  done: z.number(),
+  in_flight: z.number(),
+  needs_me: z.number(),
+  next: z.number(),
+});
+
 const boardProgress = z.object({
   done: z.number(),
   in_flight: z.number(),
@@ -128,6 +135,7 @@ const workstream = z.object({
   status: workstreamStatus,
   depends_on: z.array(z.string()),
   progress: boardProgress,
+  bar: boardBar,
   cards: z.array(projectCard).optional().describe("Present when one project is fetched, absent in the list"),
 });
 
@@ -145,6 +153,7 @@ const project = z.object({
   updated_at: z.string(),
   headline: z.string().describe("Plain line for when latest_update is null"),
   progress: boardProgress,
+  bar: boardBar,
   steps_done: z.number(),
   steps_total: z.number(),
   current: z.object({ id: z.string(), title: z.string(), status: workstreamStatus }).nullable(),

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { BoardProgress, WorkstreamStatus } from "@/api/projects";
+import type { BoardBar, WorkstreamStatus } from "@/api/projects";
 
 export const STATUS_LABEL: Record<WorkstreamStatus, string> = {
   done: "done",
@@ -28,20 +28,19 @@ const SEGMENTS = [
   ["next", "bg-muted/55"],
 ] as const;
 
-/** Split bar: done, in flight, needs you, next. Ideas are not on it. */
-export function ProgressBar({ progress, className }: { progress: BoardProgress; className?: string }) {
+/** Split bar from the API's fractions: done, in flight, needs you, next. */
+export function ProgressBar({ bar, className }: { bar: BoardBar; className?: string }) {
   return (
     <div
       role="img"
-      aria-label={`${progress.done} of ${progress.total} done`}
+      aria-label={`${Math.round(bar.done * 100)}% done`}
       className={cn("flex h-1.5 min-w-24 overflow-hidden rounded-[3px] bg-raised", className)}
     >
-      {progress.total > 0 &&
-        SEGMENTS.map(([key, color]) =>
-          progress[key] > 0 ? (
-            <i key={key} className={cn("block h-full", color)} style={{ width: `${(progress[key] / progress.total) * 100}%` }} />
-          ) : null
-        )}
+      {SEGMENTS.map(([key, color]) =>
+        bar[key] > 0 ? (
+          <i key={key} className={cn("block h-full", color)} style={{ width: `${bar[key] * 100}%` }} />
+        ) : null
+      )}
     </div>
   );
 }

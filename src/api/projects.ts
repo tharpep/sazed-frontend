@@ -11,6 +11,13 @@ export interface BoardProgress {
   total: number;
 }
 
+export interface BoardBar {
+  done: number;
+  in_flight: number;
+  needs_me: number;
+  next: number;
+}
+
 export interface ProjectCard {
   id: string;
   kind: "item" | "job";
@@ -44,6 +51,7 @@ export interface Workstream {
   status: WorkstreamStatus;
   depends_on: string[];
   progress: BoardProgress;
+  bar: BoardBar;
   cards?: ProjectCard[];
 }
 
@@ -61,6 +69,7 @@ export interface Project {
   updated_at: string;
   headline: string;
   progress: BoardProgress;
+  bar: BoardBar;
   steps_done: number;
   steps_total: number;
   current: { id: string; title: string; status: WorkstreamStatus } | null;
