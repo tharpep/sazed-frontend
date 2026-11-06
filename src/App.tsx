@@ -204,7 +204,7 @@ function App() {
       </div>
       {(viewKey === "chat" || viewKey === "empty") && (
         <Composer
-          variant="docked"
+          variant={viewKey === "empty" ? "ask" : "docked"}
           onSend={send}
           disabled={isStreaming}
           isStreaming={isStreaming}
