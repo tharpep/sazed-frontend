@@ -8,6 +8,7 @@ import {
   MessagesSquare,
   House,
   Activity,
+  Gauge,
   CalendarClock,
   Lightbulb,
   Server,
@@ -86,6 +87,7 @@ export function Sidebar() {
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
+  const claudeUsageOpen = useUiStore((s) => s.claudeUsageOpen);
   const auditOpen = useUiStore((s) => s.auditOpen);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const toggleHistory = useUiStore((s) => s.toggleHistory);
@@ -95,6 +97,7 @@ export function Sidebar() {
   const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
+  const toggleClaudeUsage = useUiStore((s) => s.toggleClaudeUsage);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
@@ -110,7 +113,7 @@ export function Sidebar() {
   const online = useUiStore((s) => s.online);
   const waiting = useWaitingCount();
   const onHome =
-    !historyOpen && !journalOpen && !kbOpen && !homelabOpen && !gatewayOpen && !automationsOpen && !backlogOpen && !auditOpen && !settingsOpen;
+    !historyOpen && !journalOpen && !kbOpen && !homelabOpen && !gatewayOpen && !automationsOpen && !backlogOpen && !claudeUsageOpen && !auditOpen && !settingsOpen;
 
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -166,6 +169,7 @@ export function Sidebar() {
             <NavItem label="Homelab" icon={Server} active={homelabOpen} onClick={toggleHomelab} />
             <NavItem label="Activity" icon={Activity} active={auditOpen} onClick={toggleAudit} count={waiting} />
             <NavItem label="Gateway" icon={Waypoints} active={gatewayOpen} onClick={toggleGateway} />
+            <NavItem label="Claude usage" icon={Gauge} active={claudeUsageOpen} onClick={toggleClaudeUsage} />
           </NavGroup>
           <NavGroup label="Work">
             <NavItem label="Automations" icon={CalendarClock} active={automationsOpen} onClick={toggleAutomations} />
