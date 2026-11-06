@@ -13,6 +13,23 @@
   --color-muted: var(--color-text-tertiary, light-dark(#73726c, #9c9a92));
   --color-accent: var(--color-text-warning, light-dark(#5a4815, #d1a041));
   --color-border: var(--color-border-tertiary, light-dark(#1f1e1d26, #dedcd126));
+
+  /* Console tokens the project widgets use; text colors follow the host where it has one. */
+  --color-raised: light-dark(oklch(0.955 0.004 265), oklch(0.245 0.007 265));
+  --color-line: var(--color-border);
+  --color-ink-2: var(--color-text-secondary, light-dark(#3d3d3a, #c2c0b6));
+  --color-primary: light-dark(oklch(0.520 0.150 258), oklch(0.720 0.120 255));
+  --color-ok: var(--color-text-success, light-dark(oklch(0.560 0.140 155), oklch(0.740 0.140 155)));
+  --color-warn: var(--color-text-warning, light-dark(oklch(0.620 0.140 70), oklch(0.800 0.130 80)));
+  --color-err: var(--color-text-danger, light-dark(oklch(0.550 0.190 27), oklch(0.700 0.170 25)));
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.125rem;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.25rem;
+  --text-title: 0.9375rem;
+  --text-title--line-height: 1.375rem;
 }
 
 :root {

@@ -11,6 +11,7 @@ interface UiState {
   gatewayOpen: boolean;
   automationsOpen: boolean;
   backlogOpen: boolean;
+  projectsOpen: boolean;
   moreOpen: boolean;
   online: boolean;
   // Private apps (registry `private`) stay hidden until Pryce taps his name on Home. In memory
@@ -21,6 +22,9 @@ interface UiState {
   // Backlog item to open, from a ?page=backlog&item=<id> link (Pushover buttons)
   linkedBacklogItem: string | null;
   setLinkedBacklogItem: (id: string | null) => void;
+  // Project to open, from a ?page=projects&project=<slug> link
+  linkedProject: string | null;
+  setLinkedProject: (slug: string | null) => void;
   toggleHistory: () => void;
   setHistoryOpen: (v: boolean) => void;
   toggleKb: () => void;
@@ -34,6 +38,7 @@ interface UiState {
   toggleGateway: () => void;
   toggleAutomations: () => void;
   toggleBacklog: () => void;
+  toggleProjects: () => void;
   toggleMore: () => void;
   setMoreOpen: (v: boolean) => void;
   closeAll: () => void;
@@ -53,6 +58,7 @@ const ALL_CLOSED = {
   gatewayOpen: false,
   automationsOpen: false,
   backlogOpen: false,
+  projectsOpen: false,
   moreOpen: false,
 } as const;
 
@@ -64,6 +70,8 @@ export const useUiStore = create<UiState>((set) => ({
   hidePrivate: () => set({ privateRevealed: false }),
   linkedBacklogItem: null,
   setLinkedBacklogItem: (id) => set({ linkedBacklogItem: id }),
+  linkedProject: null,
+  setLinkedProject: (slug) => set({ linkedProject: slug }),
   toggleHistory: () => set((s) => ({ ...ALL_CLOSED, historyOpen: !s.historyOpen })),
   setHistoryOpen: (v) => set({ ...ALL_CLOSED, historyOpen: v }),
   toggleKb: () => set((s) => ({ ...ALL_CLOSED, kbOpen: !s.kbOpen })),
@@ -77,6 +85,7 @@ export const useUiStore = create<UiState>((set) => ({
   toggleGateway: () => set((s) => ({ ...ALL_CLOSED, gatewayOpen: !s.gatewayOpen })),
   toggleAutomations: () => set((s) => ({ ...ALL_CLOSED, automationsOpen: !s.automationsOpen })),
   toggleBacklog: () => set((s) => ({ ...ALL_CLOSED, backlogOpen: !s.backlogOpen })),
+  toggleProjects: () => set((s) => ({ ...ALL_CLOSED, projectsOpen: !s.projectsOpen })),
   toggleMore: () => set((s) => ({ ...ALL_CLOSED, moreOpen: !s.moreOpen })),
   setMoreOpen: (v) => set({ ...ALL_CLOSED, moreOpen: v }),
   closeAll: () => set({ ...ALL_CLOSED }),

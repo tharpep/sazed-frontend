@@ -13,6 +13,7 @@ import { HomelabPage } from "./features/homelab/HomelabPage";
 import { GatewayPage } from "./features/gateway/GatewayPage";
 import { AutomationsPage } from "./features/automations/AutomationsPage";
 import { BacklogPage } from "./features/backlog/BacklogPage";
+import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
 import { apiFetch } from "./api/client";
@@ -27,6 +28,7 @@ function App() {
   const gatewayOpen = useUiStore((s) => s.gatewayOpen);
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
+  const projectsOpen = useUiStore((s) => s.projectsOpen);
   const historyOpen = useUiStore((s) => s.historyOpen);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
@@ -37,9 +39,11 @@ function App() {
   const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
+  const toggleProjects = useUiStore((s) => s.toggleProjects);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const setLinkedBacklogItem = useUiStore((s) => s.setLinkedBacklogItem);
+  const setLinkedProject = useUiStore((s) => s.setLinkedProject);
   const hidePrivate = useUiStore((s) => s.hidePrivate);
   const messages = useChatStore((s) => s.messages);
   const send = useChatStore((s) => s.send);
@@ -65,6 +69,8 @@ function App() {
             ? "automations"
             : backlogOpen
             ? "backlog"
+            : projectsOpen
+            ? "projects"
             : kbOpen
               ? "kb"
               : view;
@@ -78,6 +84,7 @@ function App() {
     const ui = useUiStore.getState();
     const open: Record<string, () => void> = {
       backlog: ui.toggleBacklog,
+      projects: ui.toggleProjects,
       automations: ui.toggleAutomations,
       homelab: ui.toggleHomelab,
       apps: ui.closeAll, // the Apps page is now part of Home
@@ -86,8 +93,9 @@ function App() {
     };
     open[page]?.();
     if (page === "backlog") setLinkedBacklogItem(params.get("item"));
+    if (page === "projects") setLinkedProject(params.get("project"));
     window.history.replaceState(null, "", window.location.pathname);
-  }, [setLinkedBacklogItem]);
+  }, [setLinkedBacklogItem, setLinkedProject]);
 
   // Private apps never stay revealed once the console leaves the screen.
   useEffect(() => {
@@ -121,6 +129,7 @@ function App() {
         else if (gatewayOpen) toggleGateway();
         else if (automationsOpen) toggleAutomations();
         else if (backlogOpen) toggleBacklog();
+        else if (projectsOpen) toggleProjects();
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -136,6 +145,7 @@ function App() {
     gatewayOpen,
     automationsOpen,
     backlogOpen,
+    projectsOpen,
     setHistoryOpen,
     toggleKb,
     setSettingsOpen,
@@ -146,6 +156,7 @@ function App() {
     toggleGateway,
     toggleAutomations,
     toggleBacklog,
+    toggleProjects,
   ]);
 
   return (
@@ -194,6 +205,8 @@ function App() {
           <AutomationsPage />
         ) : backlogOpen ? (
           <BacklogPage />
+        ) : projectsOpen ? (
+          <ProjectsPage />
         ) : kbOpen ? (
           <KnowledgePage />
         ) : view === "empty" ? (
