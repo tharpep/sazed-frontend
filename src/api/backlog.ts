@@ -27,6 +27,7 @@ export interface BacklogItem {
   created_at: string;
   updated_at: string;
   decided_at: string | null;
+  workstream_id?: string | null;
 }
 
 export async function listBacklog(view: BacklogView, type?: BacklogType): Promise<BacklogItem[]> {
@@ -46,13 +47,19 @@ export async function createBacklogItem(input: {
   summary?: string;
   why?: string;
   repos?: string[];
+  workstream_id?: string;
 }): Promise<BacklogItem> {
   return apiFetch("/backlog", { method: "POST", body: JSON.stringify(input) }) as Promise<BacklogItem>;
 }
 
 export async function updateBacklogItem(
   id: string,
-  patch: { status?: "new" | "shortlisted" | "done" | "dismissed"; type?: BacklogType; note?: string }
+  patch: {
+    status?: "new" | "shortlisted" | "done" | "dismissed";
+    type?: BacklogType;
+    note?: string;
+    workstream_id?: string | null;
+  }
 ): Promise<BacklogItem> {
   return apiFetch(`/backlog/${encodeURIComponent(id)}`, {
     method: "PATCH",

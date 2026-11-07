@@ -4,6 +4,9 @@ import { EmptyState, Page, PageBody, PageHeader } from "@/components/system";
 import { errorText } from "@/api/homelab";
 import { getProject, listProjects, type Project } from "@/api/projects";
 import { ProjectPlans } from "@/features/plans/ProjectPlans";
+import { Button } from "@/components/ui/button";
+import { NewProjectForm } from "./NewProjectForm";
+import { ProjectEditor } from "./ProjectEditor";
 import { useUiStore } from "@/store/uiStore";
 import { ProjectWidget } from "@/widgets/ProjectWidget";
 import { ProjectsWidget } from "@/widgets/ProjectsWidget";
@@ -15,6 +18,8 @@ export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [creating, setCreating] = useState(false);
   const requestId = useRef(0);
 
   useEffect(() => {
@@ -51,12 +56,14 @@ export function ProjectsPage() {
     };
   }, [load]);
 
-  function open(next: string) {
+  function open(next: string, edit = false) {
     setProject(null);
+    setEditing(edit);
     setSlug(next);
   }
 
   function back() {
+    setEditing(false);
     setSlug(null);
   }
 
@@ -64,24 +71,56 @@ export function ProjectsPage() {
 
   return (
     <Page>
-      <PageHeader title="Projects" />
+      <PageHeader
+        title="Projects"
+        actions={
+          slug ? (
+            shown && !editing && (
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                Edit
+              </Button>
+            )
+          ) : (
+            !creating && (
+              <Button size="sm" onClick={() => setCreating(true)}>
+                New project
+              </Button>
+            )
+          )
+        }
+      />
       <PageBody>
         {error && <p className="text-meta text-err">Couldn't load projects: {error}</p>}
         {slug ? (
           shown ? (
-            <>
-              <ProjectWidget {...shown} onBack={back} />
-              <ProjectPlans project={shown.slug} />
-            </>
+            editing ? (
+              <ProjectEditor project={shown} onChanged={load} onDone={() => setEditing(false)} />
+            ) : (
+              <>
+                <ProjectWidget {...shown} onBack={back} />
+                <ProjectPlans project={shown.slug} />
+              </>
+            )
           ) : (
             !error && <p className="text-meta text-muted">Loading…</p>
           )
         ) : projects ? (
-          projects.length === 0 ? (
-            <EmptyState title="No projects yet">Projects group a plan's workstreams and their cards.</EmptyState>
-          ) : (
-            <ProjectsWidget projects={projects} onOpen={open} />
-          )
+          <>
+            {creating && (
+              <NewProjectForm
+                onCancel={() => setCreating(false)}
+                onCreated={(p) => {
+                  setCreating(false);
+                  open(p.slug, true);
+                }}
+              />
+            )}
+            {projects.length === 0 ? (
+              <EmptyState title="No projects yet">Projects group a plan's workstreams and their cards.</EmptyState>
+            ) : (
+              <ProjectsWidget projects={projects} onOpen={(s) => open(s)} />
+            )}
+          </>
         ) : (
           !error && <p className="text-meta text-muted">Loading…</p>
         )}
