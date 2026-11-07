@@ -14,6 +14,7 @@ import { ApiError } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { field } from "@/features/projects/fields";
+import { GrantsEditor, grantsProblem, mcpToRows, rowsToMcp, type GrantRow } from "./McpGrants";
 
 export const BLANK: ProfileValues = {
   model: "sonnet",
@@ -23,6 +24,7 @@ export const BLANK: ProfileValues = {
   read_only: false,
   evidence_required: false,
   description: "",
+  mcp: {},
 };
 
 interface Props {
@@ -46,6 +48,7 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 export function ProfileForm({ initial, name: fixedName, submitLabel, onSubmit, onReload, onCancel }: Props) {
   const [name, setName] = useState(fixedName ?? "");
   const [values, setValues] = useState(initial);
+  const [rows, setRows] = useState<GrantRow[]>(() => mcpToRows(initial.mcp ?? {}));
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +62,7 @@ export function ProfileForm({ initial, name: fixedName, submitLabel, onSubmit, o
       `Budget: ${BUDGET_RANGE[0]} to ${BUDGET_RANGE[1]} dollars.`,
     !(values.timeout_s >= TIMEOUT_RANGE[0] && values.timeout_s <= TIMEOUT_RANGE[1]) &&
       `Timeout: ${TIMEOUT_RANGE[0]} to ${TIMEOUT_RANGE[1]} seconds.`,
+    grantsProblem(rows),
   ].filter(Boolean) as string[];
   const ready = problems.length === 0 && reason.trim().length > 0 && !busy;
 
@@ -68,7 +72,7 @@ export function ProfileForm({ initial, name: fixedName, submitLabel, onSubmit, o
     setError(null);
     setStale(false);
     try {
-      await onSubmit(values, reason.trim(), name);
+      await onSubmit({ ...values, mcp: rowsToMcp(rows) }, reason.trim(), name);
     } catch (err) {
       if (fixedName && err instanceof ApiError && err.status === 409) setStale(true);
       else setError(profileError(err));
@@ -147,6 +151,7 @@ export function ProfileForm({ initial, name: fixedName, submitLabel, onSubmit, o
         Description
         <input value={values.description} onChange={(e) => set("description", e.target.value)} className={field} />
       </label>
+      <GrantsEditor rows={rows} onChange={setRows} />
       <label className="flex flex-col gap-1 text-caption text-muted">
         Reason for this change
         <input value={reason} onChange={(e) => setReason(e.target.value)} className={field} />

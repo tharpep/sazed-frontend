@@ -9,6 +9,7 @@ export interface ProfileValues {
   read_only: boolean;
   evidence_required: boolean;
   description: string;
+  mcp: Record<string, string[]>;
 }
 
 export interface Profile extends ProfileValues {

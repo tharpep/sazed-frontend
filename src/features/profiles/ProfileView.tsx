@@ -10,12 +10,12 @@ import {
   saveProfile,
   type ProfileDetail,
   type ProfileValues,
-  type ProfileVersion,
 } from "@/api/profiles";
 import { Button } from "@/components/ui/button";
 import { Author, ago } from "@/features/plans/planParts";
 import { field } from "@/features/projects/fields";
 import { budget, timeout } from "./format";
+import { GrantsList } from "./McpGrants";
 import { ProfileForm } from "./ProfileForm";
 
 function Facts({ values }: { values: ProfileValues }) {
@@ -38,16 +38,24 @@ function Facts({ values }: { values: ProfileValues }) {
         ))}
       </dl>
       {values.description && <p className="text-meta text-ink-2">{values.description}</p>}
+      <GrantsList mcp={values.mcp ?? {}} />
     </div>
   );
 }
 
-function History({
+export interface HistoryEntry {
+  version: number;
+  author: string;
+  reason: string;
+  at: string;
+}
+
+export function History({
   versions,
   shown,
   onView,
 }: {
-  versions: ProfileVersion[];
+  versions: HistoryEntry[];
   shown: number;
   onView: (version: number) => void;
 }) {
@@ -80,7 +88,15 @@ function History({
   );
 }
 
-function DeleteBox({ name, onDeleted }: { name: string; onDeleted: () => void }) {
+interface DeleteBoxProps {
+  name: string;
+  noun: string;
+  consequence: string;
+  remove: (reason: string) => Promise<unknown>;
+  onDeleted: () => void;
+}
+
+export function DeleteBox({ name, noun, consequence, remove, onDeleted }: DeleteBoxProps) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -90,7 +106,7 @@ function DeleteBox({ name, onDeleted }: { name: string; onDeleted: () => void })
     setBusy(true);
     setError(null);
     try {
-      await deleteProfile(name, reason.trim());
+      await remove(reason.trim());
       onDeleted();
     } catch (err) {
       setError(profileError(err));
@@ -101,14 +117,14 @@ function DeleteBox({ name, onDeleted }: { name: string; onDeleted: () => void })
   if (!open) {
     return (
       <Button size="sm" variant="outline" className="self-start text-err" onClick={() => setOpen(true)}>
-        Delete profile
+        Delete {noun}
       </Button>
     );
   }
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-err/40 bg-surface p-3">
       <p className="text-meta text-ink">
-        Delete <span className="font-mono">{name}</span>? Dispatch plans that name it will stop resolving.
+        Delete <span className="font-mono">{name}</span>? {consequence}
       </p>
       <input
         value={reason}
@@ -218,6 +234,9 @@ export function ProfileView({ name, onBack, onChanged }: Props) {
               />
               <DeleteBox
                 name={detail.name}
+                noun="profile"
+                consequence="Dispatch plans that name it will stop resolving."
+                remove={(reason) => deleteProfile(name, reason)}
                 onDeleted={() => {
                   onChanged();
                   onBack();
