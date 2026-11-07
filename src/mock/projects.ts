@@ -40,6 +40,9 @@ function card(spec: CardSpec, repo: string, workstream: string): ProjectCard {
     pr_number: pr ?? null,
     pr_url: pr ? `https://github.com/pryce/${repo}/pull/${pr}` : null,
     pr_draft: pr ? false : null,
+    plan_id: null,
+    plan_section: null,
+    plan_version: null,
   };
 }
 

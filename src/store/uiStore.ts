@@ -12,6 +12,7 @@ interface UiState {
   automationsOpen: boolean;
   backlogOpen: boolean;
   projectsOpen: boolean;
+  plansOpen: boolean;
   moreOpen: boolean;
   online: boolean;
   // Private apps (registry `private`) stay hidden until Pryce taps his name on Home. In memory
@@ -25,6 +26,9 @@ interface UiState {
   // Project to open, from a ?page=projects&project=<slug> link
   linkedProject: string | null;
   setLinkedProject: (slug: string | null) => void;
+  // Plan to open, from a ?page=plans&plan=<slug>&version=<n> link or a project's Plans list
+  linkedPlan: { slug: string; version: number | null } | null;
+  setLinkedPlan: (plan: { slug: string; version: number | null } | null) => void;
   toggleHistory: () => void;
   setHistoryOpen: (v: boolean) => void;
   toggleKb: () => void;
@@ -39,6 +43,7 @@ interface UiState {
   toggleAutomations: () => void;
   toggleBacklog: () => void;
   toggleProjects: () => void;
+  togglePlans: () => void;
   toggleMore: () => void;
   setMoreOpen: (v: boolean) => void;
   closeAll: () => void;
@@ -59,6 +64,7 @@ const ALL_CLOSED = {
   automationsOpen: false,
   backlogOpen: false,
   projectsOpen: false,
+  plansOpen: false,
   moreOpen: false,
 } as const;
 
@@ -72,6 +78,8 @@ export const useUiStore = create<UiState>((set) => ({
   setLinkedBacklogItem: (id) => set({ linkedBacklogItem: id }),
   linkedProject: null,
   setLinkedProject: (slug) => set({ linkedProject: slug }),
+  linkedPlan: null,
+  setLinkedPlan: (plan) => set({ linkedPlan: plan }),
   toggleHistory: () => set((s) => ({ ...ALL_CLOSED, historyOpen: !s.historyOpen })),
   setHistoryOpen: (v) => set({ ...ALL_CLOSED, historyOpen: v }),
   toggleKb: () => set((s) => ({ ...ALL_CLOSED, kbOpen: !s.kbOpen })),
@@ -86,6 +94,7 @@ export const useUiStore = create<UiState>((set) => ({
   toggleAutomations: () => set((s) => ({ ...ALL_CLOSED, automationsOpen: !s.automationsOpen })),
   toggleBacklog: () => set((s) => ({ ...ALL_CLOSED, backlogOpen: !s.backlogOpen })),
   toggleProjects: () => set((s) => ({ ...ALL_CLOSED, projectsOpen: !s.projectsOpen })),
+  togglePlans: () => set((s) => ({ ...ALL_CLOSED, plansOpen: !s.plansOpen })),
   toggleMore: () => set((s) => ({ ...ALL_CLOSED, moreOpen: !s.moreOpen })),
   setMoreOpen: (v) => set({ ...ALL_CLOSED, moreOpen: v }),
   closeAll: () => set({ ...ALL_CLOSED }),

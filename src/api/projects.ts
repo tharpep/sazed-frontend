@@ -40,6 +40,9 @@ export interface ProjectCard {
   pr_number: number | null;
   pr_url: string | null;
   pr_draft: boolean | null;
+  plan_id: string | null;
+  plan_section: string | null;
+  plan_version: number | null;
 }
 
 export interface Workstream {

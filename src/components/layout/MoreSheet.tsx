@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Activity, BookOpen, FolderKanban, History as HistoryIcon, Lightbulb, Settings as SettingsIcon, Waypoints } from "lucide-react";
+import { Activity, BookOpen, FolderKanban, History as HistoryIcon, Lightbulb, ScrollText, Settings as SettingsIcon, Waypoints } from "lucide-react";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -18,6 +18,7 @@ export function MoreSheet() {
   const toggleGateway = useUiStore((s) => s.toggleGateway);
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
   const toggleProjects = useUiStore((s) => s.toggleProjects);
+  const togglePlans = useUiStore((s) => s.togglePlans);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const isMobile = useIsMobile();
 
@@ -67,6 +68,14 @@ export function MoreSheet() {
           >
             <FolderKanban className="size-4 text-muted" aria-hidden="true" />
             Projects
+          </button>
+          <button
+            type="button"
+            onClick={togglePlans}
+            className="flex items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm text-ink transition-colors hover:bg-surface"
+          >
+            <ScrollText className="size-4 text-muted" aria-hidden="true" />
+            Plans
           </button>
           <button
             type="button"

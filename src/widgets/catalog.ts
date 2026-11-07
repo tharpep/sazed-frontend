@@ -124,6 +124,9 @@ const projectCard = z.object({
   pr_number: z.number().nullable(),
   pr_url: z.string().nullable(),
   pr_draft: z.boolean().nullable(),
+  plan_id: z.string().nullable(),
+  plan_section: z.string().nullable(),
+  plan_version: z.number().nullable(),
 });
 
 const workstream = z.object({
