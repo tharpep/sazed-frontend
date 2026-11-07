@@ -187,7 +187,7 @@ export function mockOverview({ days }: UsageQuery): UsageOverview {
   };
 }
 
-const HUB_NOW = Date.parse("2026-11-07T20:00:00Z");
+const HUB_NOW = Date.now();
 const DAY_MS = 86_400_000;
 
 function hubDay(source: string, machine: string, model: string, kind: UsageKind, day: string, scale: number, usd: number | null): HubDay {

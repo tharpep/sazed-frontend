@@ -1,4 +1,5 @@
 import type { UsageWeek } from "@/api/claudeUsage";
+import { Card } from "./Card";
 import { dollars, niceMax, weekLabel } from "./format";
 import { useWidth } from "./useWidth";
 
@@ -30,21 +31,22 @@ function BarChart({ title, weeks, series, format = String }: ChartProps) {
   const y = (v: number) => PAD.top + plotH - (v / yMax) * plotH;
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-line bg-surface px-3.5 py-3">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <h3 className="text-meta text-muted">{title}</h3>
-        {series.length > 1 && (
-          <p className="flex gap-3 text-caption text-muted">
+    <Card
+      title={title}
+      note={
+        series.length > 1 && (
+          <span className="flex gap-3">
             {series.map((s) => (
               <span key={s.label} className="inline-flex items-center gap-1.5">
                 <span className={`size-2 rounded-[2px] ${s.swatch}`} aria-hidden="true" />
                 {s.label}
               </span>
             ))}
-          </p>
-        )}
-      </div>
-      <div ref={ref} className="w-full">
+          </span>
+        )
+      }
+    >
+      <div ref={ref} className="w-full px-4 py-3">
         {width > 0 && (
           <svg width={width} height={HEIGHT} role="img" aria-label={title} className="block font-mono text-[10.5px]">
             {[0, yMax / 2, yMax].map((t) => (
@@ -78,14 +80,14 @@ function BarChart({ title, weeks, series, format = String }: ChartProps) {
           </svg>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 
 export function Trends({ weekly }: { weekly: UsageWeek[] }) {
   const weeks = weekly.map((w) => w.week);
   return (
-    <section aria-label="Weekly trends" className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+    <section aria-label="Weekly trends" className="grid grid-cols-1 gap-3 md:grid-cols-2">
       <BarChart
         title="Spend per week"
         weeks={weeks}

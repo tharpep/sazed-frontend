@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import type { HubDay, UsageHub } from "@/api/claudeUsage";
 import { EmptyState, Segmented } from "@/components/system";
+import { Card } from "./Card";
 import { CostChart } from "./CostChart";
 import { dollars, modelName, tokens } from "./format";
 import { freshTokens, rangeDays, SOURCE_NAME, type Metric } from "./hub";
@@ -65,16 +66,19 @@ export function SourceTab({ hub, sources, metrics, callsLabel, empty }: Props) {
 
   return (
     <>
-      <section aria-label="Usage per day" className="flex flex-col gap-3 rounded-lg border border-line bg-surface px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-meta text-muted">
-            {metric === "tokens" ? `Tokens per day, cache reads left out · ${tokens(total)} in range` : "Cost per day by model"}
-          </h2>
-          {metrics.length > 1 && <Segmented label="Measure" options={metrics} value={metric} onChange={setMetric} />}
+      <Card
+        title={metric === "tokens" ? "Tokens per day by model" : "Cost per day by model"}
+        actions={metrics.length > 1 && <Segmented label="Measure" options={metrics} value={metric} onChange={setMetric} />}
+      >
+        <div className="flex flex-col gap-2 px-4 py-3">
+          <CostChart days={rangeDays(hub)} rows={rows} metric={metric} groupBy="model" />
+          {metric === "tokens" && (
+            <p className="text-caption text-muted">{tokens(total)} in range. Input, output, cache writes and thinking; cache reads are left out.</p>
+          )}
         </div>
-        <CostChart days={rangeDays(hub)} rows={rows} metric={metric} groupBy="model" />
-      </section>
-      <section aria-label="By model" className="overflow-x-auto rounded-lg border border-line bg-surface">
+      </Card>
+      <Card title="By model">
+        <div className="overflow-x-auto">
         <table className="w-full text-meta">
           <thead>
             <tr className="border-b border-line text-left text-caption text-muted">
@@ -104,7 +108,8 @@ export function SourceTab({ hub, sources, metrics, callsLabel, empty }: Props) {
             ))}
           </tbody>
         </table>
-      </section>
+        </div>
+      </Card>
     </>
   );
 }

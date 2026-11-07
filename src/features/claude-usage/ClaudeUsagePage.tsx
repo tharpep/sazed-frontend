@@ -10,6 +10,7 @@ import {
 } from "@/api/claudeUsage";
 import { errorText } from "@/api/homelab";
 import { EmptyState, Page, PageBody, PageHeader, Segmented } from "@/components/system";
+import { Tabs } from "./Card";
 import type { Tab } from "./hub";
 import { Overview } from "./Overview";
 import { SourceTab } from "./SourceTab";
@@ -103,7 +104,7 @@ export function ClaudeUsagePage() {
     <Page>
       <PageHeader title="Usage" />
       <PageBody>
-        <Segmented label="Usage view" options={TABS} value={tab} onChange={setTab} className="self-start" />
+        <Tabs label="Usage view" options={TABS} value={tab} onChange={setTab} />
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filters">
           <Segmented
             label="Range"

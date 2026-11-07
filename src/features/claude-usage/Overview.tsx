@@ -1,8 +1,9 @@
 import { useState } from "react";
 
 import type { HubDay, HubLimit, HubSource, UsageHub } from "@/api/claudeUsage";
-import { Segmented, toneDot, toneText } from "@/components/system";
+import { Segmented, toneDot, toneText, type Tone } from "@/components/system";
 import { cn } from "@/lib/utils";
+import { Card, stateText } from "./Card";
 import { CostChart } from "./CostChart";
 import { dollars, shortTime, tokens } from "./format";
 import {
@@ -11,12 +12,12 @@ import {
   feedVerb,
   freshTokens,
   rangeDays,
+  SOURCE_METHOD,
   SOURCE_TAB,
   sourceLabel,
   type GroupBy,
   type Metric,
   type Tab,
-  until,
   WINDOW_NAME,
   windowTone,
 } from "./hub";
@@ -31,11 +32,13 @@ const GROUPS: { value: GroupBy; label: string }[] = [
   { value: "model", label: "Model" },
   { value: "machine", label: "Machine" },
 ];
+const FILL: Record<Tone, string> = { neutral: "bg-ink-2", accent: "bg-primary", ok: "bg-ink-2", warn: "bg-warn", err: "bg-err" };
+const ROW = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-4 py-2.5 md:grid-cols-[minmax(150px,1.3fr)_minmax(80px,1fr)_96px_170px]";
 
-function Meter({ pct, tone, mark }: { pct: number; tone: string; mark?: number | null }) {
+function Meter({ pct, tone, mark }: { pct: number; tone: Tone; mark?: number | null }) {
   return (
     <div className="relative h-2 rounded-full bg-raised">
-      <div className={cn("absolute inset-y-0 left-0 rounded-full", tone)} style={{ width: `${Math.min(pct, 100)}%` }} />
+      <div className={cn("absolute inset-y-0 left-0 rounded-full", FILL[tone])} style={{ width: `${Math.min(pct, 100)}%` }} />
       {mark != null && mark > pct && (
         <div
           className="absolute -inset-y-0.5 border-l-2 border-dashed border-ink-2"
@@ -47,66 +50,78 @@ function Meter({ pct, tone, mark }: { pct: number; tone: string; mark?: number |
   );
 }
 
-function LimitCell({ limit }: { limit: HubLimit | undefined; }) {
-  if (!limit) return null;
-  const tone = windowTone(limit);
-  const fill = tone === "neutral" ? "bg-ink-2" : tone === "warn" ? "bg-warn" : "bg-err";
-  const notes = limit.reset_since
-    ? [`reset since the last reading ${ago(limit.read_at)}`]
-    : [
-        limit.projected_pct != null ? `${Math.round(limit.projected_pct)}% by reset at this pace` : null,
-        `reading ${ago(limit.read_at)}`,
-      ].filter(Boolean);
+function Cell({ label, aside, value, valueClass, meter, note }: {
+  label: string;
+  aside?: string;
+  value: string;
+  valueClass: string;
+  meter: React.ReactNode;
+  note: string;
+}) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5 px-4 py-3">
       <div className="flex justify-between gap-2 text-caption text-muted">
-        <span>{WINDOW_NAME[limit.window]}</span>
-        {limit.resets_at && !limit.reset_since && (
-          <span title={until(limit.resets_at)}>resets {shortTime(limit.resets_at)}</span>
-        )}
+        <span>{label}</span>
+        {aside && <span>{aside}</span>}
       </div>
-      <span className={cn("font-mono text-heading", limit.reset_since ? "text-muted" : toneText[tone] === "text-muted" ? "text-ink" : toneText[tone])}>
-        {Math.round(limit.used_pct)}%
-      </span>
-      <Meter pct={limit.reset_since ? 0 : limit.used_pct} tone={fill} mark={limit.reset_since ? null : limit.projected_pct} />
-      <span className="text-caption text-ink-2">{notes.join(" · ")}</span>
+      <span className={cn("font-mono text-[18px] leading-6 font-medium tabular-nums", valueClass)}>{value}</span>
+      {meter}
+      <span className="text-caption text-ink-2">{note}</span>
     </div>
   );
 }
 
-function BilledCell({ hub, apiEquivalent }: { hub: UsageHub; apiEquivalent: number }) {
-  const { usd, alert_usd } = hub.billed;
+function resetLabel(iso: string): string {
+  const soon = Date.parse(iso) - Date.now() < 86_400_000;
+  const day = soon ? "" : `${new Date(iso).toLocaleDateString(undefined, { weekday: "short" })} `;
+  return `${day}${shortTime(iso)}`;
+}
+
+function LimitCell({ limit }: { limit: HubLimit }) {
+  const tone = windowTone(limit);
+  const note = limit.reset_since
+    ? `reset since the last reading ${ago(limit.read_at)}`
+    : [
+        limit.projected_pct != null ? `${Math.round(limit.projected_pct)}% by reset at this pace` : null,
+        `reading ${ago(limit.read_at)}`,
+      ]
+        .filter(Boolean)
+        .join(" · ");
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 px-4 py-3">
-      <div className="flex justify-between gap-2 text-caption text-muted">
-        <span>Billed this month</span>
-        <span>Sazed API</span>
-      </div>
-      <span className="font-mono text-heading text-ink">${usd.toFixed(2)}</span>
-      <Meter pct={alert_usd ? (usd / alert_usd) * 100 : 0} tone="bg-ink-2" />
-      <span className="text-caption text-ink-2">
-        {alert_usd ? `of the ${dollars(alert_usd)} spend alert` : "no spend alert set"} · API-equivalent {dollars(apiEquivalent)} in range
-      </span>
-    </div>
+    <Cell
+      label={WINDOW_NAME[limit.window]}
+      aside={limit.resets_at && !limit.reset_since ? `resets ${resetLabel(limit.resets_at)}` : undefined}
+      value={`${Math.round(limit.used_pct)}%`}
+      valueClass={limit.reset_since ? "text-muted" : stateText(tone)}
+      meter={<Meter pct={limit.reset_since ? 0 : limit.used_pct} tone={tone} mark={limit.reset_since ? null : limit.projected_pct} />}
+      note={note}
+    />
   );
 }
 
 function LimitsStrip({ hub, apiEquivalent }: { hub: UsageHub; apiEquivalent: number }) {
-  const byWindow = new Map(hub.limits.map((l) => [l.window, l]));
+  const { usd, alert_usd } = hub.billed;
+  const windows = (["five_hour", "seven_day"] as const)
+    .map((w) => hub.limits.find((l) => l.window === w))
+    .filter((l): l is HubLimit => Boolean(l));
   return (
     <section
       aria-label="Plan limits and billed spend"
-      className="grid grid-cols-1 divide-y divide-line rounded-lg border border-line bg-surface md:grid-cols-3 md:divide-x md:divide-y-0"
+      className="grid grid-cols-1 divide-y divide-line rounded-[10px] border border-line bg-surface md:grid-cols-3 md:divide-x md:divide-y-0"
     >
-      {hub.limits.length === 0 ? (
+      {windows.length === 0 ? (
         <div className="px-4 py-3 text-meta text-muted md:col-span-2">No plan readings yet. They arrive with the next Claude worker job.</div>
       ) : (
-        <>
-          <LimitCell limit={byWindow.get("five_hour")} />
-          <LimitCell limit={byWindow.get("seven_day")} />
-        </>
+        windows.map((l) => <LimitCell key={l.window} limit={l} />)
       )}
-      <BilledCell hub={hub} apiEquivalent={apiEquivalent} />
+      <Cell
+        label="Billed this month"
+        aside="Sazed API"
+        value={`$${usd.toFixed(2)}`}
+        valueClass="text-ink"
+        meter={<Meter pct={alert_usd ? (usd / alert_usd) * 100 : 0} tone="neutral" />}
+        note={`${alert_usd ? `of the ${dollars(alert_usd)} spend alert` : "no spend alert set"} · API-equivalent ${dollars(apiEquivalent)}`}
+      />
     </section>
   );
 }
@@ -120,78 +135,99 @@ function Sparkline({ values }: { values: number[] }) {
     .join(" ");
   return (
     <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-6 w-full" aria-hidden="true">
-      <polyline points={points} fill="none" className="stroke-muted" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+      <polyline points={points} fill="none" className="stroke-ink-2" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
 
-interface SourceRowData {
-  source: HubSource;
-  total: string;
+function RowBody({ name, method, values, total, tone, fresh }: {
+  name: string;
+  method: string;
   values: number[];
-}
-
-function sourceRows(hub: UsageHub, days: string[], rows: HubDay[]): SourceRowData[] {
-  const index = new Map(days.map((d, i) => [d, i]));
-  return hub.sources.map((source) => {
-    const mine = rows.filter((r) => r.source === source.source && r.machine === source.machine);
-    const priced = source.source !== "worker_agy";
-    const values = days.map(() => 0);
-    let sum = 0;
-    for (const r of mine) {
-      const v = priced ? (r.usd ?? 0) : freshTokens(r);
-      sum += v;
-      const i = index.get(r.day);
-      if (i !== undefined) values[i] += v;
-    }
-    return { source, values, total: priced ? dollars(sum) : `${tokens(sum)} tok` };
-  });
-}
-
-function SourceRows({ hub, days, rows, onOpen }: { hub: UsageHub; days: string[]; rows: HubDay[]; onOpen: (tab: Tab) => void }) {
-  const items = sourceRows(hub, days, rows);
-  const limits = hub.limits;
+  total: string;
+  tone: Tone;
+  fresh: string;
+}) {
   return (
-    <section aria-label="Sources" className="rounded-lg border border-line bg-surface">
-      <h2 className="border-b border-line px-4 py-2.5 text-meta text-muted">Sources</h2>
-      <ul>
-        {items.map(({ source, values, total }) => {
-          const tone = feedTone(source);
+    <>
+      <span className="min-w-0">
+        <span className="block truncate text-meta font-medium text-ink">{name}</span>
+        <span className="block truncate text-caption text-muted">{method}</span>
+      </span>
+      <span className="col-span-2 row-start-3 md:col-span-1 md:row-start-auto">
+        <Sparkline values={values} />
+      </span>
+      <span className="col-start-2 row-start-1 text-right font-mono text-meta text-ink tabular-nums md:col-start-auto md:row-start-auto">
+        {total}
+      </span>
+      <span className={cn("col-span-2 inline-flex items-center gap-1.5 text-caption whitespace-nowrap md:col-span-1", tone === "neutral" ? "text-ink-2" : toneText[tone])}>
+        <span className={cn("size-[7px] rounded-full", toneDot[tone])} aria-hidden="true" />
+        {fresh}
+      </span>
+    </>
+  );
+}
+
+function sourceTotals(source: HubSource, days: string[], rows: HubDay[]): { values: number[]; total: string } {
+  const index = new Map(days.map((d, i) => [d, i]));
+  const priced = source.source !== "worker_agy";
+  const values = days.map(() => 0);
+  let sum = 0;
+  for (const r of rows) {
+    if (r.source !== source.source || r.machine !== source.machine) continue;
+    const v = priced ? (r.usd ?? 0) : freshTokens(r);
+    sum += v;
+    const i = index.get(r.day);
+    if (i !== undefined) values[i] += v;
+  }
+  return { values, total: priced ? dollars(sum) : `${tokens(sum)} tok` };
+}
+
+function Sources({ sources, limits, days, rows, onOpen }: {
+  sources: HubSource[];
+  limits: HubLimit[];
+  days: string[];
+  rows: HubDay[];
+  onOpen: (tab: Tab) => void;
+}) {
+  return (
+    <Card title="Sources" note="select a row for its tab">
+      <ul className="divide-y divide-line">
+        {sources.map((source) => {
+          const { values, total } = sourceTotals(source, days, rows);
           return (
-            <li key={`${source.source}:${source.machine}`} className="border-t border-line first:border-t-0">
+            <li key={`${source.source}:${source.machine}`}>
               <button
                 type="button"
                 onClick={() => onOpen(SOURCE_TAB[source.source] ?? "overview")}
-                className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-4 py-2.5 text-left hover:bg-raised md:grid-cols-[minmax(0,1.3fr)_minmax(80px,1fr)_96px_170px]"
+                className={cn(ROW, "w-full text-left transition-colors hover:bg-raised/60")}
               >
-                <span className="min-w-0 truncate text-meta font-medium text-ink">{sourceLabel(source.source, source.machine)}</span>
-                <span className="col-span-2 row-start-3 md:col-span-1 md:row-start-auto">
-                  <Sparkline values={values} />
-                </span>
-                <span className="text-right font-mono text-meta text-ink">{total}</span>
-                <span className={cn("col-span-2 inline-flex items-center gap-1.5 text-caption md:col-span-1", toneText[tone] === "text-muted" ? "text-ink-2" : toneText[tone])}>
-                  <span className={cn("size-1.5 rounded-full", toneDot[tone])} aria-hidden="true" />
-                  {feedVerb(source.source)} {ago(source.last_at)}
-                </span>
+                <RowBody
+                  name={sourceLabel(source.source, source.machine)}
+                  method={SOURCE_METHOD[source.source] ?? ""}
+                  values={values}
+                  total={total}
+                  tone={feedTone(source)}
+                  fresh={`${feedVerb(source.source)} ${ago(source.last_at)}`}
+                />
               </button>
             </li>
           );
         })}
         {limits.length > 0 && (
-          <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-t border-line px-4 py-2.5 md:grid-cols-[minmax(0,1.3fr)_minmax(80px,1fr)_96px_170px]">
-            <span className="text-meta font-medium text-ink">Plan limits</span>
-            <span className="col-span-2 row-start-3 md:col-span-1 md:row-start-auto">
-              <Sparkline values={(limits[0].points ?? []).map((p) => p.used_pct)} />
-            </span>
-            <span className="text-right font-mono text-meta text-ink">{limits.map((l) => `${Math.round(l.used_pct)}%`).join(" / ")}</span>
-            <span className="col-span-2 inline-flex items-center gap-1.5 text-caption text-ink-2 md:col-span-1">
-              <span className="size-1.5 rounded-full bg-muted" aria-hidden="true" />
-              reading {ago(limits[0].read_at)}
-            </span>
+          <li className={ROW}>
+            <RowBody
+              name="Plan limits"
+              method="readings from Claude jobs"
+              values={limits[0].points.map((p) => p.used_pct)}
+              total={limits.map((l) => `${Math.round(l.used_pct)}%`).join(" / ")}
+              tone="neutral"
+              fresh={`reading ${ago(limits[0].read_at)}`}
+            />
           </li>
         )}
       </ul>
-    </section>
+    </Card>
   );
 }
 
@@ -206,32 +242,32 @@ export function Overview({ hub, machine, onOpen }: OverviewProps) {
   const [groupBy, setGroupBy] = useState<GroupBy>("source");
   const days = rangeDays(hub);
   const rows = machine ? hub.days.filter((d) => d.machine === machine) : hub.days;
+  const sources = machine ? hub.sources.filter((s) => s.machine === machine) : hub.sources;
   const apiEquivalent = hub.days.reduce((n, d) => n + (d.kind === "api_equivalent" ? (d.usd ?? 0) : 0), 0);
 
   return (
     <>
       <LimitsStrip hub={hub} apiEquivalent={apiEquivalent} />
-      <section aria-label="Usage per day" className="flex flex-col gap-3 rounded-lg border border-line bg-surface px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-meta text-muted">{metric === "tokens" ? "Tokens per day, cache reads left out" : "Cost per day"}</h2>
-          <div className="flex flex-wrap gap-2">
+      <Card
+        title={metric === "tokens" ? "Tokens per day" : "Cost per day"}
+        actions={
+          <>
             <Segmented label="Measure" options={METRICS} value={metric} onChange={setMetric} />
             <Segmented label="Group by" options={GROUPS} value={groupBy} onChange={setGroupBy} />
-          </div>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-2 px-4 py-3">
+          <CostChart days={days} rows={rows} metric={metric} groupBy={groupBy} />
+          {metric === "tokens" && <p className="text-caption text-muted">Input, output, cache writes and thinking. Cache reads are left out.</p>}
+          {hub.unpriced.length > 0 && (
+            <p className="text-caption text-muted">
+              No price for {hub.unpriced.map((u) => `${u.model} (${u.calls})`).join(", ")}; their tokens show under Tokens only.
+            </p>
+          )}
         </div>
-        <CostChart days={days} rows={rows} metric={metric} groupBy={groupBy} />
-        {hub.unpriced.length > 0 && (
-          <p className="text-caption text-muted">
-            No price for {hub.unpriced.map((u) => `${u.model} (${u.calls})`).join(", ")}; their tokens show under Tokens only.
-          </p>
-        )}
-      </section>
-      <SourceRows
-        hub={machine ? { ...hub, sources: hub.sources.filter((s) => s.machine === machine) } : hub}
-        days={days}
-        rows={rows}
-        onOpen={onOpen}
-      />
+      </Card>
+      <Sources sources={sources} limits={hub.limits} days={days} rows={rows} onOpen={onOpen} />
     </>
   );
 }

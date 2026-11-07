@@ -3,7 +3,7 @@ import { dollars, niceMax, shortDate, tokens } from "./format";
 import { buildSeries, type GroupBy, type Metric } from "./hub";
 import { useWidth } from "./useWidth";
 
-const HEIGHT = 200;
+const HEIGHT = 220;
 const PAD = { top: 12, right: 4, bottom: 22, left: 44 };
 const NARROW = 520;
 const NARROW_DAYS = 14;
@@ -47,7 +47,6 @@ export function CostChart({ days: allDays, rows, metric, groupBy }: Props) {
             <span key={s.key} className="inline-flex items-center gap-1.5">
               <span className={`size-2 rounded-[2px] ${colors[i].swatch}`} aria-hidden="true" />
               {s.key}
-              <span className="font-mono text-ink-2">{format(s.total)}</span>
             </span>
           ))}
         </p>

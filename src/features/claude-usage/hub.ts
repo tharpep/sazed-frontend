@@ -15,6 +15,13 @@ export const SOURCE_NAME: Record<string, string> = {
   sazed_api: "Sazed API",
 };
 
+export const SOURCE_METHOD: Record<string, string> = {
+  claude_code: "SessionEnd push",
+  worker_claude: "job usage",
+  worker_agy: "job usage, tokens only",
+  sazed_api: "llm_calls, billed",
+};
+
 export const SOURCE_TAB: Record<string, Tab> = {
   claude_code: "claude_code",
   worker_claude: "worker",

@@ -1,5 +1,6 @@
 import type { UsageLimits, UsageTiles } from "@/api/claudeUsage";
-import { StatusPill, type Tone } from "@/components/system";
+import type { Tone } from "@/components/system";
+import { Tile } from "./Card";
 import { contextTone, percent, tokens } from "./format";
 
 interface Tile {
@@ -7,10 +8,7 @@ interface Tile {
   value: string;
   note: string;
   tone: Tone;
-  chip: string;
 }
-
-const CHIP: Record<Tone, string> = { ok: "Good", warn: "Warn", err: "Bad", neutral: "Pending", accent: "" };
 
 function rateTone(rate: number | null, warnAt: number, badAt: number): Tone {
   if (rate === null) return "neutral";
@@ -26,7 +24,6 @@ function build(t: UsageTiles, limits: UsageLimits): Tile[] {
     value,
     note,
     tone,
-    chip: CHIP[tone],
   });
   return [
     tile(
@@ -57,16 +54,9 @@ function build(t: UsageTiles, limits: UsageLimits): Tile[] {
 
 export function Tiles({ tiles, limits }: { tiles: UsageTiles; limits: UsageLimits }) {
   return (
-    <section aria-label="Targets" className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+    <section aria-label="Targets" className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {build(tiles, limits).map((t) => (
-        <div key={t.label} className="flex min-w-0 flex-col gap-1 rounded-lg border border-line bg-surface px-3.5 py-3">
-          <span className="text-meta text-muted">{t.label}</span>
-          <span className="font-mono text-heading font-medium text-ink tabular-nums">{t.value}</span>
-          <span className="text-caption text-muted">{t.note}</span>
-          <span className="mt-1 self-start">
-            <StatusPill tone={t.tone}>{t.chip}</StatusPill>
-          </span>
-        </div>
+        <Tile key={t.label} label={t.label} value={t.value} note={t.note} tone={t.tone} />
       ))}
     </section>
   );

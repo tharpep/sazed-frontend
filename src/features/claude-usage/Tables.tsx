@@ -1,19 +1,19 @@
 import type { UsageOverview } from "@/api/claudeUsage";
+import { Card } from "./Card";
 import { dollars, modelName, percent, SOURCE_LABEL, tokens } from "./format";
 
 function SmallTable({ title, heads, rows }: { title: string; heads: string[]; rows: string[][] }) {
   return (
-    <section className="flex min-w-0 flex-col gap-1.5">
-      <h2 className="px-0.5 text-meta text-muted">{title}</h2>
-      <div className="overflow-hidden rounded-lg border border-line bg-surface">
+    <Card title={title}>
+      <div>
         {rows.length === 0 ? (
-          <p className="px-3.5 py-3 text-meta text-muted">None in this range.</p>
+          <p className="px-4 py-3 text-meta text-muted">None in this range.</p>
         ) : (
           <table className="w-full text-meta">
             <thead>
               <tr className="border-b border-line text-caption text-muted">
                 {heads.map((h, i) => (
-                  <th key={h} scope="col" className={`px-3.5 py-1.5 font-normal ${i ? "text-right" : "w-[30%] text-left"}`}>
+                  <th key={h} scope="col" className={`px-4 py-2 font-normal ${i ? "text-right" : "w-[30%] text-left"}`}>
                     {h}
                   </th>
                 ))}
@@ -25,7 +25,7 @@ function SmallTable({ title, heads, rows }: { title: string; heads: string[]; ro
                   {r.map((cell, i) => (
                     <td
                       key={i}
-                      className={i ? "px-3.5 py-1.5 text-right font-mono text-ink-2 tabular-nums" : "max-w-0 truncate px-3.5 py-1.5 text-ink"}
+                      className={i ? "px-4 py-2 text-right font-mono text-ink-2 tabular-nums" : "max-w-0 truncate px-4 py-2 text-ink"}
                     >
                       {cell}
                     </td>
@@ -36,13 +36,13 @@ function SmallTable({ title, heads, rows }: { title: string; heads: string[]; ro
           </table>
         )}
       </div>
-    </section>
+    </Card>
   );
 }
 
 export function Tables({ overview }: { overview: UsageOverview }) {
   return (
-    <div className="grid grid-cols-1 gap-x-2.5 gap-y-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       <SmallTable
         title="Spend by model"
         heads={["Model", "Spend", "Share", "Output", "Cache read"]}
