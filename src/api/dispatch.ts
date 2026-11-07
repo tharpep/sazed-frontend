@@ -45,6 +45,7 @@ export interface DispatchTask {
 }
 
 export interface DispatchPlan extends DispatchPlanSummary {
+  now?: string;
   tasks: DispatchTask[];
 }
 

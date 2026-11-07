@@ -44,10 +44,7 @@ export const costOf = (task: DispatchTask) => runRows(task).reduce((sum, r) => s
 export const tries = (task: DispatchTask) => runRows(task).filter((r) => r.state === "running").length;
 
 export function isSettled(tasks: DispatchTask[]): boolean {
-  return tasks.every((t) => {
-    const state = last(t.rows)?.state;
-    return state === "landed" || state === "cleaned";
-  });
+  return tasks.every((t) => stateOf(t) === "landed");
 }
 
 export function clock(seconds: number): string {

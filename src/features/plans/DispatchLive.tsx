@@ -8,6 +8,7 @@ import { MiniRow, SystemBox, TaskCard } from "./DispatchCards";
 import { DispatchEdges } from "./DispatchEdges";
 import { DispatchPanel } from "./DispatchPanel";
 import { columnOf, costOf, dollars, isSettled, stateOf, type Column } from "./dispatchRun";
+import { syncServerClock } from "./useNow";
 
 const POLL_MS = 3000;
 
@@ -24,7 +25,7 @@ function usePlan(plan: string) {
     let live = true;
     const load = () =>
       getDispatchPlan(plan)
-        .then((p) => live && (setData(p), setError(null)))
+        .then((p) => live && (syncServerClock(p.now), setData(p), setError(null)))
         .catch((err) => live && setError(errorText(err)));
     load();
     if (settled) return () => void (live = false);
