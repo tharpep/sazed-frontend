@@ -11,6 +11,7 @@ function ago(iso: string): string {
 }
 
 function tone(card: NeedsCard): string {
+  if (card.kind === "dispatch") return card.question ? "bg-accent" : "bg-err";
   if (card.job_status === "failed" || card.job_status === "timed_out" || card.ci_state === "failure") return "bg-err";
   if (card.actions.some((a) => a.id === "merge")) return "bg-ok";
   return "bg-accent";
@@ -32,6 +33,7 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
       <ul className="divide-y divide-line">
         {cards.map((card) => {
           const asking = card.job_status === "needs_input";
+          const dispatchQuestion = card.kind === "dispatch" && card.question;
           return (
             <li
               key={card.id}
@@ -66,6 +68,7 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
                   </div>
                 )}
               </div>
+              {dispatchQuestion && <p className="mt-1 pl-[18px] text-body text-ink">{card.question}</p>}
               {asking && (
                 <div className="mt-1.5 flex flex-col gap-1.5 pl-[18px]">
                   {card.question && <p className="text-body text-ink">{card.question}</p>}
