@@ -101,7 +101,7 @@ export function MoreSheet() {
             className="flex items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm text-ink transition-colors hover:bg-surface"
           >
             <Gauge className="size-4 text-muted" aria-hidden="true" />
-            Claude usage
+            Usage
           </button>
           <button
             type="button"

@@ -124,3 +124,56 @@ export async function listUsageSessions(query: UsageQuery): Promise<UsageSession
   }
   return apiFetch(`/claude-usage/sessions?${params(query)}`) as Promise<UsageSessions>;
 }
+
+export type UsageKind = "api_equivalent" | "billed" | "tokens";
+
+export interface HubDay {
+  day: string;
+  source: string;
+  machine: string;
+  model: string | null;
+  kind: UsageKind;
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  thinking_tokens: number;
+  usd: number | null;
+}
+
+export interface HubLimit {
+  window: "five_hour" | "seven_day";
+  used_pct: number;
+  resets_at: string | null;
+  read_at: string;
+  status: string | null;
+  source: string;
+  reset_since: boolean;
+  projected_pct: number | null;
+  points: { read_at: string; used_pct: number }[];
+}
+
+export interface HubSource {
+  source: string;
+  machine: string;
+  last_at: string | null;
+}
+
+export interface UsageHub {
+  range: { from: string; to: string };
+  timezone: string;
+  prices_as_of: string;
+  limits: HubLimit[];
+  billed: { month: string; usd: number; alert_usd: number | null; unpriced: string[] };
+  days: HubDay[];
+  sources: HubSource[];
+  unpriced: { model: string; calls: number }[];
+}
+
+export async function getUsageHub(days: number): Promise<UsageHub> {
+  if (import.meta.env.VITE_CLAUDE_USAGE_MOCK) {
+    return (await import("@/mock/claudeUsage")).mockHub(days);
+  }
+  return apiFetch(`/claude-usage/hub?days=${days}`) as Promise<UsageHub>;
+}

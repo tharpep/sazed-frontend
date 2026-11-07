@@ -178,7 +178,7 @@ export function Sidebar() {
             <NavItem label="Apps" icon={LayoutGrid} active={appsOpen} onClick={toggleApps} />
             <NavItem label="Activity" icon={Activity} active={auditOpen} onClick={toggleAudit} count={waiting} />
             <NavItem label="Gateway" icon={Waypoints} active={gatewayOpen} onClick={toggleGateway} />
-            <NavItem label="Claude usage" icon={Gauge} active={claudeUsageOpen} onClick={toggleClaudeUsage} />
+            <NavItem label="Usage" icon={Gauge} active={claudeUsageOpen} onClick={toggleClaudeUsage} />
           </NavGroup>
           <NavGroup label="Work">
             <NavItem label="Automations" icon={CalendarClock} active={automationsOpen} onClick={toggleAutomations} />

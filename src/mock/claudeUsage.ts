@@ -1,4 +1,4 @@
-import type { UsageOverview, UsageQuery, UsageSession, UsageSessions } from "@/api/claudeUsage";
+import type { HubDay, UsageHub, UsageKind, UsageOverview, UsageQuery, UsageSession, UsageSessions } from "@/api/claudeUsage";
 
 const LIMITS = { context_soft: 200_000, context_hard: 400_000 };
 const HOME = "/home/tharpep/code";
@@ -184,5 +184,63 @@ export function mockOverview({ days }: UsageQuery): UsageOverview {
       { style: "Default", prompts: 52, confusion_rate: 0.058 },
       { style: "custom", prompts: 12, confusion_rate: 0.083 },
     ],
+  };
+}
+
+const HUB_NOW = Date.parse("2026-11-07T20:00:00Z");
+const DAY_MS = 86_400_000;
+
+function hubDay(source: string, machine: string, model: string, kind: UsageKind, day: string, scale: number, usd: number | null): HubDay {
+  return {
+    day,
+    source,
+    machine,
+    model,
+    kind,
+    calls: Math.max(1, Math.round(scale * 40)),
+    input_tokens: Math.round(scale * 90_000),
+    output_tokens: Math.round(scale * 210_000),
+    cache_read_tokens: Math.round(scale * 110_000_000),
+    cache_write_tokens: Math.round(scale * 2_400_000),
+    thinking_tokens: kind === "tokens" ? Math.round(scale * 30_000) : 0,
+    usd,
+  };
+}
+
+export function mockHub(days: number): UsageHub {
+  const out: HubDay[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const day = new Date(HUB_NOW - i * DAY_MS).toISOString().slice(0, 10);
+    const wsl = 20 + 45 * noise(i * 3 + 1);
+    const win = i < 4 ? 100 + 25 * noise(i) : 10 + 60 * noise(i * 5 + 2);
+    if (noise(i * 7) > 0.15) out.push(hubDay("claude_code", "desktop-wsl", "claude-opus-5-5", "api_equivalent", day, wsl / 60, Math.round(wsl * 100) / 100));
+    if (noise(i * 11 + 4) > 0.2) out.push(hubDay("claude_code", "windows", "claude-opus-5-5", "api_equivalent", day, win / 60, Math.round(win * 100) / 100));
+    if (i % 4 === 1) out.push(hubDay("worker_claude", "homelab", "claude-sonnet-5-5", "api_equivalent", day, 0.05, Math.round(900 * noise(i + 9)) / 100));
+    out.push(hubDay("worker_agy", "homelab", "gemini-3.8-flash-high", "tokens", day, 0.08 + 0.2 * noise(i + 3), null));
+    if (noise(i * 13 + 6) > 0.3) out.push(hubDay("sazed_api", "sazed", "claude-haiku-5-5", "billed", day, 0.002, Math.round(30 * noise(i + 1)) / 100));
+  }
+  const ago = (ms: number) => new Date(HUB_NOW - ms).toISOString();
+  const resets = (ms: number) => new Date(HUB_NOW + ms).toISOString();
+  const points = (start: number, end: number) =>
+    Array.from({ length: 6 }, (_, k) => ({ read_at: ago((5 - k) * 18 * 60_000), used_pct: Math.round(start + ((end - start) * k) / 5) }));
+  return {
+    range: { from: ago(days * DAY_MS), to: ago(0) },
+    timezone: "America/New_York",
+    prices_as_of: "2026-11-06",
+    limits: [
+      { window: "five_hour", used_pct: 84, resets_at: resets(112 * 60_000), read_at: ago(14 * 60_000), status: "allowed_warning", source: "job", reset_since: false, projected_pct: 97, points: points(52, 84) },
+      { window: "seven_day", used_pct: 41, resets_at: resets(3.7 * DAY_MS), read_at: ago(14 * 60_000), status: "allowed", source: "job", reset_since: false, projected_pct: 78, points: points(36, 41) },
+    ],
+    billed: { month: "2026-11", usd: 0.59, alert_usd: 25, unpriced: [] },
+    days: out,
+    sources: [
+      { source: "claude_code", machine: "desktop-wsl", last_at: ago(12 * 60_000) },
+      { source: "claude_code", machine: "windows", last_at: ago(3 * 3_600_000) },
+      { source: "claude_code", machine: "macbook", last_at: ago(9 * DAY_MS) },
+      { source: "worker_claude", machine: "homelab", last_at: ago(26 * 3_600_000) },
+      { source: "worker_agy", machine: "homelab", last_at: ago(40 * 60_000) },
+      { source: "sazed_api", machine: "sazed", last_at: ago(5 * 3_600_000) },
+    ],
+    unpriced: [],
   };
 }
