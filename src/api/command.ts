@@ -7,14 +7,19 @@ export interface CardAction {
   takes_text: boolean;
 }
 
-export interface NeedsCard extends Omit<ProjectCard, "actions"> {
+export interface NeedsCard extends Omit<ProjectCard, "actions" | "kind"> {
+  kind: ProjectCard["kind"] | "dispatch";
   actions: CardAction[];
   pr_url: string | null;
   question: string | null;
 }
 
 export interface WorkingJob {
-  job_id: string;
+  kind: "job" | "dispatch";
+  job_id?: string;
+  plan?: string;
+  task?: string;
+  line?: string;
   title: string;
   status: "running" | "queued";
   agent: "agy" | "claude";

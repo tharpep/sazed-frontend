@@ -40,9 +40,10 @@ export function WorkingNow({ jobs, onOpenJob, onChanged }: Props) {
       <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-2.5">
         {jobs.map((job) => (
           <article
-            key={job.job_id}
-            onClick={() => onOpenJob(job.job_id)}
-            className="flex min-w-0 cursor-pointer flex-col gap-1 rounded-lg border border-primary/40 bg-surface px-3 py-2.5 hover:bg-raised/60"
+            key={job.job_id ?? `${job.plan}:${job.task}`}
+            onClick={() => job.job_id && onOpenJob(job.job_id)}
+            data-clickable={Boolean(job.job_id)}
+            className="flex min-w-0 flex-col gap-1 rounded-lg border border-primary/40 bg-surface px-3 py-2.5 data-[clickable=true]:cursor-pointer data-[clickable=true]:hover:bg-raised/60"
           >
             <div className="flex items-center justify-between gap-2">
               <span className="flex min-w-0 items-center gap-2">
@@ -51,19 +52,32 @@ export function WorkingNow({ jobs, onOpenJob, onChanged }: Props) {
                 )}
                 <span className="truncate text-body font-medium text-ink">{job.title}</span>
               </span>
-              <span className="shrink-0 rounded bg-raised px-1.5 font-mono text-caption text-muted">{job.profile}</span>
+              <span className="shrink-0 rounded bg-raised px-1.5 font-mono text-caption text-muted">
+                {job.kind === "dispatch" ? "dispatch" : job.profile}
+              </span>
             </div>
             <div className="truncate text-caption text-muted">
-              {[job.repo, AGENT[job.agent], job.model, job.tools ? `${job.tools} tools` : null].filter(Boolean).join(" · ")}
+              {(job.kind === "dispatch"
+                ? [`plan ${job.plan}`, job.model, job.profile]
+                : [job.repo, AGENT[job.agent], job.model, job.tools ? `${job.tools} tools` : null]
+              )
+                .filter(Boolean)
+                .join(" · ")}
             </div>
             <div className="flex min-h-9 flex-col gap-0.5 py-0.5">
-              {job.steps.map((s, i) => (
-                <StepLine key={i} step={s} />
-              ))}
+              {job.kind === "dispatch" && job.line ? (
+                <p className="truncate text-caption text-muted" title={job.line}>
+                  {job.line}
+                </p>
+              ) : (
+                job.steps.map((s, i) => <StepLine key={i} step={s} />)
+              )}
             </div>
             <div className="flex items-center justify-between gap-2">
               <Meter job={job} />
-              <CardActions cardId={jobCardId(job.job_id)} actions={job.actions} onDone={onChanged} className="min-w-0" />
+              {job.job_id && (
+                <CardActions cardId={jobCardId(job.job_id)} actions={job.actions} onDone={onChanged} className="min-w-0" />
+              )}
             </div>
           </article>
         ))}
