@@ -38,6 +38,7 @@ export function BottomTabBar() {
   const projectsOpen = useUiStore((s) => s.projectsOpen);
   const plansOpen = useUiStore((s) => s.plansOpen);
   const appsOpen = useUiStore((s) => s.appsOpen);
+  const claudeUsageOpen = useUiStore((s) => s.claudeUsageOpen);
   const moreOpen = useUiStore((s) => s.moreOpen);
   const toggleHomelab = useUiStore((s) => s.toggleHomelab);
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
@@ -53,7 +54,7 @@ export function BottomTabBar() {
       ? "automations"
       : kbOpen
         ? "kb"
-        : settingsOpen || auditOpen || historyOpen || gatewayOpen || journalOpen || backlogOpen || projectsOpen || plansOpen || appsOpen || moreOpen
+        : settingsOpen || auditOpen || historyOpen || gatewayOpen || journalOpen || backlogOpen || projectsOpen || plansOpen || appsOpen || claudeUsageOpen || moreOpen
           ? "more"
           : "home";
 

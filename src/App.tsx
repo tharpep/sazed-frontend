@@ -16,6 +16,7 @@ import { BacklogPage } from "./features/backlog/BacklogPage";
 import { PlansPage } from "./features/plans/PlansPage";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { AppsPage } from "./features/apps/AppsPage";
+import { ClaudeUsagePage } from "./features/claude-usage/ClaudeUsagePage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
 import { apiFetch } from "./api/client";
@@ -33,6 +34,7 @@ function App() {
   const projectsOpen = useUiStore((s) => s.projectsOpen);
   const plansOpen = useUiStore((s) => s.plansOpen);
   const appsOpen = useUiStore((s) => s.appsOpen);
+  const claudeUsageOpen = useUiStore((s) => s.claudeUsageOpen);
   const historyOpen = useUiStore((s) => s.historyOpen);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
@@ -46,6 +48,7 @@ function App() {
   const toggleProjects = useUiStore((s) => s.toggleProjects);
   const togglePlans = useUiStore((s) => s.togglePlans);
   const toggleApps = useUiStore((s) => s.toggleApps);
+  const toggleClaudeUsage = useUiStore((s) => s.toggleClaudeUsage);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const setLinkedBacklogItem = useUiStore((s) => s.setLinkedBacklogItem);
@@ -83,6 +86,8 @@ function App() {
             ? "plans"
             : appsOpen
             ? "apps"
+            : claudeUsageOpen
+            ? "claude-usage"
             : kbOpen
               ? "kb"
               : view;
@@ -98,6 +103,7 @@ function App() {
       backlog: ui.toggleBacklog,
       projects: ui.toggleProjects,
       plans: ui.togglePlans,
+      "claude-usage": ui.toggleClaudeUsage,
       automations: ui.toggleAutomations,
       homelab: ui.toggleHomelab,
       apps: ui.toggleApps,
@@ -153,6 +159,7 @@ function App() {
         else if (projectsOpen) toggleProjects();
         else if (plansOpen) togglePlans();
         else if (appsOpen) toggleApps();
+        else if (claudeUsageOpen) toggleClaudeUsage();
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -171,6 +178,7 @@ function App() {
     projectsOpen,
     plansOpen,
     appsOpen,
+    claudeUsageOpen,
     setHistoryOpen,
     toggleKb,
     setSettingsOpen,
@@ -184,6 +192,7 @@ function App() {
     toggleProjects,
     togglePlans,
     toggleApps,
+    toggleClaudeUsage,
   ]);
 
   return (
@@ -238,6 +247,8 @@ function App() {
           <PlansPage />
         ) : appsOpen ? (
           <AppsPage />
+        ) : claudeUsageOpen ? (
+          <ClaudeUsagePage />
         ) : kbOpen ? (
           <KnowledgePage />
         ) : view === "empty" ? (
