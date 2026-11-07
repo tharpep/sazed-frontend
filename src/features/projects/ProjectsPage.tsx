@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState, Page, PageBody, PageHeader } from "@/components/system";
 import { errorText } from "@/api/homelab";
 import { getProject, listProjects, type Project } from "@/api/projects";
+import { ProjectPlans } from "@/features/plans/ProjectPlans";
 import { useUiStore } from "@/store/uiStore";
 import { ProjectWidget } from "@/widgets/ProjectWidget";
 import { ProjectsWidget } from "@/widgets/ProjectsWidget";
@@ -68,7 +69,10 @@ export function ProjectsPage() {
         {error && <p className="text-meta text-err">Couldn't load projects: {error}</p>}
         {slug ? (
           shown ? (
-            <ProjectWidget {...shown} onBack={back} />
+            <>
+              <ProjectWidget {...shown} onBack={back} />
+              <ProjectPlans project={shown.slug} />
+            </>
           ) : (
             !error && <p className="text-meta text-muted">Loading…</p>
           )

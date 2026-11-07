@@ -13,6 +13,7 @@ import { HomelabPage } from "./features/homelab/HomelabPage";
 import { GatewayPage } from "./features/gateway/GatewayPage";
 import { AutomationsPage } from "./features/automations/AutomationsPage";
 import { BacklogPage } from "./features/backlog/BacklogPage";
+import { PlansPage } from "./features/plans/PlansPage";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
@@ -29,6 +30,7 @@ function App() {
   const automationsOpen = useUiStore((s) => s.automationsOpen);
   const backlogOpen = useUiStore((s) => s.backlogOpen);
   const projectsOpen = useUiStore((s) => s.projectsOpen);
+  const plansOpen = useUiStore((s) => s.plansOpen);
   const historyOpen = useUiStore((s) => s.historyOpen);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
@@ -40,10 +42,12 @@ function App() {
   const toggleAutomations = useUiStore((s) => s.toggleAutomations);
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
   const toggleProjects = useUiStore((s) => s.toggleProjects);
+  const togglePlans = useUiStore((s) => s.togglePlans);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const setLinkedBacklogItem = useUiStore((s) => s.setLinkedBacklogItem);
   const setLinkedProject = useUiStore((s) => s.setLinkedProject);
+  const setLinkedPlan = useUiStore((s) => s.setLinkedPlan);
   const hidePrivate = useUiStore((s) => s.hidePrivate);
   const messages = useChatStore((s) => s.messages);
   const send = useChatStore((s) => s.send);
@@ -71,6 +75,8 @@ function App() {
             ? "backlog"
             : projectsOpen
             ? "projects"
+            : plansOpen
+            ? "plans"
             : kbOpen
               ? "kb"
               : view;
@@ -85,6 +91,7 @@ function App() {
     const open: Record<string, () => void> = {
       backlog: ui.toggleBacklog,
       projects: ui.toggleProjects,
+      plans: ui.togglePlans,
       automations: ui.toggleAutomations,
       homelab: ui.toggleHomelab,
       apps: ui.closeAll, // the Apps page is now part of Home
@@ -94,8 +101,13 @@ function App() {
     open[page]?.();
     if (page === "backlog") setLinkedBacklogItem(params.get("item"));
     if (page === "projects") setLinkedProject(params.get("project"));
+    const plan = params.get("plan");
+    if (page === "plans" && plan) {
+      const version = Number(params.get("version"));
+      setLinkedPlan({ slug: plan, version: Number.isInteger(version) && version > 0 ? version : null });
+    }
     window.history.replaceState(null, "", window.location.pathname);
-  }, [setLinkedBacklogItem, setLinkedProject]);
+  }, [setLinkedBacklogItem, setLinkedProject, setLinkedPlan]);
 
   // Private apps never stay revealed once the console leaves the screen.
   useEffect(() => {
@@ -130,6 +142,7 @@ function App() {
         else if (automationsOpen) toggleAutomations();
         else if (backlogOpen) toggleBacklog();
         else if (projectsOpen) toggleProjects();
+        else if (plansOpen) togglePlans();
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -146,6 +159,7 @@ function App() {
     automationsOpen,
     backlogOpen,
     projectsOpen,
+    plansOpen,
     setHistoryOpen,
     toggleKb,
     setSettingsOpen,
@@ -157,6 +171,7 @@ function App() {
     toggleAutomations,
     toggleBacklog,
     toggleProjects,
+    togglePlans,
   ]);
 
   return (
@@ -207,6 +222,8 @@ function App() {
           <BacklogPage />
         ) : projectsOpen ? (
           <ProjectsPage />
+        ) : plansOpen ? (
+          <PlansPage />
         ) : kbOpen ? (
           <KnowledgePage />
         ) : view === "empty" ? (
