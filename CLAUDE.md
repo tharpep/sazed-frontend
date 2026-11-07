@@ -66,7 +66,7 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 - `src/features/backlog/` — the Backlog page (`uiStore.backlogOpen`, desktop rail plus phone More sheet).
   - `BacklogPage`: Open / Approved / Dismissed views, type filter chips, an add form, 30s refresh. The Open view splits into Priority (numbered, by rank) and "Not prioritized yet"; the sheet's Priority row moves items (Top, Up, Down, Remove, Make next, Prioritize).
   - `BacklogSheet`: markdown summary, why, repos, sources. Actions: Approve (repo and an optional note; starts the change job and PR right away), Dismiss, Restore, Mark done. Opens the item's job in `JobSheet`. Merged PRs mark items done on their own (Sazed polls); Mark done is for work done elsewhere.
-  - Deep links: `/?page=<backlog|automations|homelab|kb|journal>[&item=<backlog id>]` (`apps` opens the Apps page), read once on load in `App.tsx` (Pushover buttons use them).
+  - Deep links: `/?page=<backlog|automations|homelab|activity|kb|journal>[&item=<backlog id>]` (`apps` opens the Apps page), read once on load in `App.tsx` (Pushover buttons use them).
   - Phone tab bar: Home (command center plus chat), Homelab, Automate (the Automations page; the short label fits next to Knowledge on a 375px phone), Knowledge, More (Apps, Conversations, Gateway, Journal, Backlog, Settings, Activity).
   - Items are never deleted: dismissed ones stay so the scout won't re-propose them.
   - Data from Sazed `/backlog` via `src/api/backlog.ts`. Scout/triage automations (`pipeline` actions) show read-only in `AutomationSheet`.

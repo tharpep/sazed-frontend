@@ -100,6 +100,7 @@ function App() {
       automations: ui.toggleAutomations,
       homelab: ui.toggleHomelab,
       apps: ui.toggleApps,
+      activity: ui.toggleAudit,
       kb: ui.toggleKb,
       journal: ui.toggleJournal,
     };
