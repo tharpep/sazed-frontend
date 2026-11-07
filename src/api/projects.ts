@@ -99,3 +99,37 @@ export async function getProject(slug: string): Promise<Project> {
     return fixture;
   }
 }
+
+export type ProjectState = Project["state"];
+export type WorkstreamState = Workstream["state"];
+
+export function createProject(input: { slug: string; title: string; summary?: string; repos?: string[] }): Promise<Project> {
+  return apiFetch("/board/projects", { method: "POST", body: JSON.stringify(input) }) as Promise<Project>;
+}
+
+export function updateProject(
+  slug: string,
+  patch: { title?: string; summary?: string; state?: ProjectState; latest_update?: string; repos?: string[] }
+): Promise<Project> {
+  return apiFetch(`/board/projects/${encodeURIComponent(slug)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  }) as Promise<Project>;
+}
+
+export function addWorkstream(slug: string, input: { title: string; summary?: string }): Promise<Workstream> {
+  return apiFetch(`/board/projects/${encodeURIComponent(slug)}/workstreams`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  }) as Promise<Workstream>;
+}
+
+export function updateWorkstream(
+  id: string,
+  patch: { title?: string; summary?: string; state?: WorkstreamState; position?: number }
+): Promise<Workstream> {
+  return apiFetch(`/board/workstreams/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  }) as Promise<Workstream>;
+}
