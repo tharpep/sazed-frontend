@@ -1,5 +1,6 @@
 import type { NeedsCard } from "@/api/command";
 import { cn } from "@/lib/utils";
+import { useUiStore } from "@/store/uiStore";
 
 import { CardActions } from "./CardActions";
 
@@ -15,6 +16,18 @@ function tone(card: NeedsCard): string {
   if (card.job_status === "failed" || card.job_status === "timed_out" || card.ci_state === "failure") return "bg-err";
   if (card.actions.some((a) => a.id === "merge")) return "bg-ok";
   return "bg-accent";
+}
+
+const DISPATCH_ID = /^dispatch:([^:]+):/;
+
+function dispatchPlan(card: NeedsCard): string | null {
+  return card.kind === "dispatch" ? (DISPATCH_ID.exec(card.id)?.[1] ?? null) : null;
+}
+
+function openDispatch(plan: string) {
+  const ui = useUiStore.getState();
+  ui.setLinkedDispatchPlan(plan);
+  ui.togglePlans();
 }
 
 interface Props {
@@ -34,11 +47,12 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
         {cards.map((card) => {
           const asking = card.job_status === "needs_input";
           const dispatchQuestion = card.kind === "dispatch" && card.question;
+          const plan = dispatchPlan(card);
           return (
             <li
               key={card.id}
-              className={cn("px-3.5 py-2.5", card.job_id && "cursor-pointer hover:bg-raised/60")}
-              onClick={() => card.job_id && onOpenJob(card.job_id)}
+              className={cn("px-3.5 py-2.5", (card.job_id || plan) && "cursor-pointer hover:bg-raised/60")}
+              onClick={() => (card.job_id ? onOpenJob(card.job_id) : plan && openDispatch(plan))}
             >
               <div className="flex items-center gap-2.5">
                 <span aria-hidden="true" className={cn("size-2 shrink-0 rounded-full", tone(card))} />

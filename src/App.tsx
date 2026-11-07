@@ -51,6 +51,7 @@ function App() {
   const setLinkedBacklogItem = useUiStore((s) => s.setLinkedBacklogItem);
   const setLinkedProject = useUiStore((s) => s.setLinkedProject);
   const setLinkedPlan = useUiStore((s) => s.setLinkedPlan);
+  const setLinkedDispatchPlan = useUiStore((s) => s.setLinkedDispatchPlan);
   const hidePrivate = useUiStore((s) => s.hidePrivate);
   const messages = useChatStore((s) => s.messages);
   const send = useChatStore((s) => s.send);
@@ -112,8 +113,10 @@ function App() {
       const version = Number(params.get("version"));
       setLinkedPlan({ slug: plan, version: Number.isInteger(version) && version > 0 ? version : null });
     }
+    const dispatch = params.get("dispatch");
+    if (page === "plans" && dispatch) setLinkedDispatchPlan(dispatch);
     window.history.replaceState(null, "", window.location.pathname);
-  }, [setLinkedBacklogItem, setLinkedProject, setLinkedPlan]);
+  }, [setLinkedBacklogItem, setLinkedProject, setLinkedPlan, setLinkedDispatchPlan]);
 
   // Private apps never stay revealed once the console leaves the screen.
   useEffect(() => {

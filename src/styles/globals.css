@@ -301,3 +301,12 @@
   padding-left: 0.9em;
   color: var(--color-muted);
 }
+
+@keyframes plan-flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+.plan-flow {
+  animation: plan-flow 1s linear infinite;
+}
