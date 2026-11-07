@@ -38,6 +38,11 @@ export interface JobEvent {
   event: Record<string, unknown>;
 }
 
+export interface TimelineStep {
+  at: string;
+  text: string;
+}
+
 export interface JobDetail extends Omit<JobSummary, "result_preview"> {
   prompt: string;
   params: Record<string, unknown>;
@@ -62,6 +67,7 @@ export interface JobDetail extends Omit<JobSummary, "result_preview"> {
   events?: JobEvent[];
   /** Set while the job is waiting on Pryce (status needs_input). */
   question?: string | null;
+  timeline?: TimelineStep[];
 }
 
 export async function listJobs(): Promise<JobSummary[]> {

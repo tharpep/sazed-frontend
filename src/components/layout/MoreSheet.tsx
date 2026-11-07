@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Activity, BookOpen, FolderKanban, History as HistoryIcon, Lightbulb, ScrollText, Settings as SettingsIcon, Waypoints } from "lucide-react";
+import { Activity, BookOpen, FolderKanban, History as HistoryIcon, LayoutGrid, Lightbulb, ScrollText, Settings as SettingsIcon, Waypoints } from "lucide-react";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -19,6 +19,7 @@ export function MoreSheet() {
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
   const toggleProjects = useUiStore((s) => s.toggleProjects);
   const togglePlans = useUiStore((s) => s.togglePlans);
+  const toggleApps = useUiStore((s) => s.toggleApps);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const isMobile = useIsMobile();
 
@@ -44,6 +45,14 @@ export function MoreSheet() {
           >
             <HistoryIcon className="size-4 text-muted" aria-hidden="true" />
             Conversations
+          </button>
+          <button
+            type="button"
+            onClick={toggleApps}
+            className="flex items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm text-ink transition-colors hover:bg-surface"
+          >
+            <LayoutGrid className="size-4 text-muted" aria-hidden="true" />
+            Apps
           </button>
           <button
             type="button"

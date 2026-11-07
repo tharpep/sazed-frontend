@@ -13,6 +13,7 @@ interface UiState {
   backlogOpen: boolean;
   projectsOpen: boolean;
   plansOpen: boolean;
+  appsOpen: boolean;
   moreOpen: boolean;
   online: boolean;
   // Private apps (registry `private`) stay hidden until Pryce taps his name on Home. In memory
@@ -44,6 +45,7 @@ interface UiState {
   toggleBacklog: () => void;
   toggleProjects: () => void;
   togglePlans: () => void;
+  toggleApps: () => void;
   toggleMore: () => void;
   setMoreOpen: (v: boolean) => void;
   closeAll: () => void;
@@ -65,6 +67,7 @@ const ALL_CLOSED = {
   backlogOpen: false,
   projectsOpen: false,
   plansOpen: false,
+  appsOpen: false,
   moreOpen: false,
 } as const;
 
@@ -95,6 +98,7 @@ export const useUiStore = create<UiState>((set) => ({
   toggleBacklog: () => set((s) => ({ ...ALL_CLOSED, backlogOpen: !s.backlogOpen })),
   toggleProjects: () => set((s) => ({ ...ALL_CLOSED, projectsOpen: !s.projectsOpen })),
   togglePlans: () => set((s) => ({ ...ALL_CLOSED, plansOpen: !s.plansOpen })),
+  toggleApps: () => set((s) => ({ ...ALL_CLOSED, appsOpen: !s.appsOpen })),
   toggleMore: () => set((s) => ({ ...ALL_CLOSED, moreOpen: !s.moreOpen })),
   setMoreOpen: (v) => set({ ...ALL_CLOSED, moreOpen: v }),
   closeAll: () => set({ ...ALL_CLOSED }),
