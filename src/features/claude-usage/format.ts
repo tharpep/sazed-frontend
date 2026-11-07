@@ -56,6 +56,7 @@ export function dollars(usd: number | null): string {
 export const SOURCE_LABEL: Record<string, string> = {
   main: "Main thread",
   subagents: "Subagents",
+  side_calls: "Side calls",
   sazed_api: "Sazed API",
   sazed_jobs: "Sazed jobs",
 };

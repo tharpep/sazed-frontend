@@ -10,7 +10,7 @@ export function Spend({ spend }: { spend: UsageSpend }) {
   const sazed = spend.sources.filter((s) => s.source.startsWith("sazed")).reduce((n, s) => n + s.usd, 0);
   const tiles = [
     { label: "Spend", value: dollars(spend.total_usd), note: `API list prices of ${spend.prices_as_of}` },
-    { label: "Cost per prompt", value: dollars(spend.cost_per_prompt_usd), note: "Claude Code, subagents included" },
+    { label: "Cost per prompt", value: dollars(spend.cost_per_prompt_usd), note: "Claude Code, subagents and side calls included" },
     { label: "Subagent share", value: percent(share(subagents, spend.total_usd), 0), note: `${dollars(subagents)} of spend` },
     { label: "Saved by caching", value: dollars(spend.cache_savings_usd), note: `Sazed itself: ${dollars(sazed)}` },
   ];

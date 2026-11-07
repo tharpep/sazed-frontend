@@ -39,6 +39,7 @@ function Detail({ session, limits }: { session: UsageSession; limits: UsageLimit
       <dl className="flex flex-wrap gap-x-6 gap-y-2">
         <Fact label="Model" value={session.main_model ? modelName(session.main_model) : "—"} />
         <Fact label="Cost" value={dollars(session.cost_usd)} />
+        <Fact label="Side calls" value={dollars(session.side_cost_usd)} />
         <Fact label="Subagents" value={`${session.subagents} · ${dollars(session.subagent_cost_usd)}`} />
         <Fact label="Compactions" value={String(session.compactions)} />
         <Fact label="Interrupts" value={String(session.interrupts)} />

@@ -55,6 +55,11 @@ export function Tables({ overview }: { overview: UsageOverview }) {
         ])}
       />
       <SmallTable
+        title="Side calls (not in transcripts)"
+        heads={["Call type", "Spend", "Calls", "Output"]}
+        rows={overview.spend.side_calls.map((c) => [c.query_source, dollars(c.usd), String(c.calls), tokens(c.output_tokens)])}
+      />
+      <SmallTable
         title="Spend by source"
         heads={["Source", "Spend", "Calls", "Input", "Cache write"]}
         rows={overview.spend.sources.map((s) => [

@@ -93,6 +93,7 @@ export function Trends({ weekly }: { weekly: UsageWeek[] }) {
         series={[
           { label: "Main thread", fill: "fill-primary", swatch: "bg-primary", values: weekly.map((w) => w.main_cost_usd) },
           { label: "Subagents", fill: "fill-ink-2", swatch: "bg-ink-2", values: weekly.map((w) => w.subagent_cost_usd) },
+          { label: "Side calls", fill: "fill-accent", swatch: "bg-accent", values: weekly.map((w) => w.side_cost_usd) },
           { label: "Sazed", fill: "fill-muted", swatch: "bg-muted", values: weekly.map((w) => w.sazed_cost_usd) },
         ]}
       />

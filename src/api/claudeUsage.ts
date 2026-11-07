@@ -34,6 +34,7 @@ export interface UsageWeek {
   cost_usd: number;
   main_cost_usd: number;
   subagent_cost_usd: number;
+  side_cost_usd: number;
   sazed_cost_usd: number;
   cost_per_prompt_usd: number | null;
 }
@@ -47,7 +48,7 @@ export interface SpendTally {
   cache_write_tokens: number;
 }
 
-export type SpendSource = "main" | "subagents" | "sazed_api" | "sazed_jobs";
+export type SpendSource = "main" | "subagents" | "side_calls" | "sazed_api" | "sazed_jobs";
 
 export interface UsageSpend {
   prices_as_of: string;
@@ -56,6 +57,7 @@ export interface UsageSpend {
   cache_savings_usd: number;
   sources: (SpendTally & { source: SpendSource })[];
   models: (SpendTally & { model: string; share: number | null })[];
+  side_calls: (SpendTally & { query_source: string })[];
   unpriced: { model: string; calls: number }[];
 }
 
@@ -85,6 +87,7 @@ export interface UsageSession {
   main_model: string | null;
   cost_usd: number;
   subagent_cost_usd: number;
+  side_cost_usd: number;
   subagents: number;
   compactions: number;
   interrupts: number;

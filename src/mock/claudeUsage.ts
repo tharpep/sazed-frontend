@@ -85,6 +85,7 @@ function build(spec: Spec): UsageSession {
     main_model: spec.model,
     cost_usd: spec.prompts * 2.1,
     subagent_cost_usd: spec.subagents * 1.4,
+    side_cost_usd: spec.prompts * 0.05,
     subagents: spec.subagents,
     compactions: spec.compactions,
     interrupts: spec.interrupts,
@@ -122,11 +123,11 @@ export function mockOverview({ days }: UsageQuery): UsageOverview {
       skills_used: 7,
     },
     weekly: [
-      { week: "2026-W41", prompts: 9, sessions: 3, confusion_rate: 0, bash_writes: 18, edit_writes: 9, output_tokens: 310_000, cache_read_tokens: 48_000_000, input_tokens: 40_000, cache_write_tokens: 9_000_000, cost_usd: 10.8, main_cost_usd: 9.4, subagent_cost_usd: 1.1, sazed_cost_usd: 0.3, cost_per_prompt_usd: 1.1667 },
-      { week: "2026-W42", prompts: 14, sessions: 3, confusion_rate: 0.071, bash_writes: 36, edit_writes: 14, output_tokens: 520_000, cache_read_tokens: 91_000_000, input_tokens: 40_000, cache_write_tokens: 9_000_000, cost_usd: 25.6, main_cost_usd: 22.8, subagent_cost_usd: 2.4, sazed_cost_usd: 0.4, cost_per_prompt_usd: 1.8 },
-      { week: "2026-W43", prompts: 21, sessions: 3, confusion_rate: 0.048, bash_writes: 112, edit_writes: 17, output_tokens: 1_400_000, cache_read_tokens: 410_000_000, input_tokens: 40_000, cache_write_tokens: 9_000_000, cost_usd: 71.9, main_cost_usd: 61.5, subagent_cost_usd: 9.8, sazed_cost_usd: 0.6, cost_per_prompt_usd: 3.3952 },
-      { week: "2026-W44", prompts: 82, sessions: 5, confusion_rate: 0.037, bash_writes: 441, edit_writes: 61, output_tokens: 3_600_000, cache_read_tokens: 1_020_000_000, input_tokens: 40_000, cache_write_tokens: 9_000_000, cost_usd: 174.1, main_cost_usd: 142.0, subagent_cost_usd: 31.2, sazed_cost_usd: 0.9, cost_per_prompt_usd: 2.1122 },
-      { week: "2026-W45", prompts: 138, sessions: 5, confusion_rate: 0.036, bash_writes: 608, edit_writes: 60, output_tokens: 5_100_000, cache_read_tokens: 1_790_000_000, input_tokens: 40_000, cache_write_tokens: 9_000_000, cost_usd: 260.1, main_cost_usd: 210.3, subagent_cost_usd: 48.6, sazed_cost_usd: 1.2, cost_per_prompt_usd: 1.8761 },
+      { week: "2026-W41", prompts: 9, sessions: 3, confusion_rate: 0, bash_writes: 18, edit_writes: 9, output_tokens: 310_000, cache_read_tokens: 48_000_000, input_tokens: 40_000, cache_write_tokens: 9_000_000, cost_usd: 10.8, main_cost_usd: 9.4, subagent_cost_usd: 1.1, side_cost_usd: 0.2, sazed_cost_usd: 0.3, cost_per_prompt_usd: 1.1667 },
+      { week: "2026-W42", prompts: 14, sessions: 3, confusion_rate: 0.071, bash_writes: 36, edit_writes: 14, output_tokens: 520_000, cache_read_tokens: 91_000_000, input_tokens: 40_000, cache_write_tokens: 9_000_000, cost_usd: 25.6, main_cost_usd: 22.8, subagent_cost_usd: 2.4, side_cost_usd: 0.5, sazed_cost_usd: 0.4, cost_per_prompt_usd: 1.8 },
+      { week: "2026-W43", prompts: 21, sessions: 3, confusion_rate: 0.048, bash_writes: 112, edit_writes: 17, output_tokens: 1_400_000, cache_read_tokens: 410_000_000, input_tokens: 40_000, cache_write_tokens: 9_000_000, cost_usd: 71.9, main_cost_usd: 61.5, subagent_cost_usd: 9.8, side_cost_usd: 1.1, sazed_cost_usd: 0.6, cost_per_prompt_usd: 3.3952 },
+      { week: "2026-W44", prompts: 82, sessions: 5, confusion_rate: 0.037, bash_writes: 441, edit_writes: 61, output_tokens: 3_600_000, cache_read_tokens: 1_020_000_000, input_tokens: 40_000, cache_write_tokens: 9_000_000, cost_usd: 174.1, main_cost_usd: 142.0, subagent_cost_usd: 31.2, side_cost_usd: 2.6, sazed_cost_usd: 0.9, cost_per_prompt_usd: 2.1122 },
+      { week: "2026-W45", prompts: 138, sessions: 5, confusion_rate: 0.036, bash_writes: 608, edit_writes: 60, output_tokens: 5_100_000, cache_read_tokens: 1_790_000_000, input_tokens: 40_000, cache_write_tokens: 9_000_000, cost_usd: 260.1, main_cost_usd: 210.3, subagent_cost_usd: 48.6, side_cost_usd: 3.9, sazed_cost_usd: 1.2, cost_per_prompt_usd: 1.8761 },
     ],
     spend: {
       prices_as_of: "2026-11-06",
@@ -136,12 +137,18 @@ export function mockOverview({ days }: UsageQuery): UsageOverview {
       sources: [
         { source: "main", usd: 446.0, calls: 3681, input_tokens: 120_000, output_tokens: 6_100_000, cache_read_tokens: 2_900_000_000, cache_write_tokens: 41_000_000 },
         { source: "subagents", usd: 93.1, calls: 1958, input_tokens: 60_000, output_tokens: 2_400_000, cache_read_tokens: 410_000_000, cache_write_tokens: 12_000_000 },
+        { source: "side_calls", usd: 8.3, calls: 1240, input_tokens: 900_000, output_tokens: 310_000, cache_read_tokens: 22_000_000, cache_write_tokens: 1_100_000 },
         { source: "sazed_api", usd: 3.4, calls: 410, input_tokens: 2_100_000, output_tokens: 190_000, cache_read_tokens: 6_000_000, cache_write_tokens: 400_000 },
       ],
       models: [
         { model: OPUS, usd: 348.0, share: 0.644, calls: 3132, input_tokens: 90_000, output_tokens: 2_900_000, cache_read_tokens: 1_240_000_000, cache_write_tokens: 30_000_000 },
         { model: FABLE, usd: 144.2, share: 0.267, calls: 600, input_tokens: 20_000, output_tokens: 610_000, cache_read_tokens: 290_000_000, cache_write_tokens: 9_000_000 },
         { model: SONNET, usd: 48.3, share: 0.089, calls: 1907, input_tokens: 2_170_000, output_tokens: 5_180_000, cache_read_tokens: 1_786_000_000, cache_write_tokens: 14_400_000 },
+      ],
+      side_calls: [
+        { query_source: "auto_mode", usd: 5.1, calls: 980, input_tokens: 700_000, output_tokens: 90_000, cache_read_tokens: 15_000_000, cache_write_tokens: 600_000 },
+        { query_source: "compact", usd: 2.4, calls: 14, input_tokens: 150_000, output_tokens: 200_000, cache_read_tokens: 6_000_000, cache_write_tokens: 400_000 },
+        { query_source: "generate_session_title", usd: 0.8, calls: 246, input_tokens: 50_000, output_tokens: 20_000, cache_read_tokens: 1_000_000, cache_write_tokens: 100_000 },
       ],
       unpriced: [{ model: "<synthetic>", calls: 12 }],
     },
