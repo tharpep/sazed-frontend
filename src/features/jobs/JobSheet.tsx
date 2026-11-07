@@ -17,6 +17,9 @@ import {
   type JobDetail,
 } from "@/api/jobs";
 import { errorText } from "@/api/homelab";
+import { jobCardId } from "@/api/command";
+import { CardActions } from "@/features/home/CardActions";
+import { Timeline } from "./Timeline";
 import { KIND_LABEL, PAUSE_REASON, STATUS_LABEL, duration, requesterLabel, statusTone, stepsFromEvents } from "./format";
 
 interface Props {
@@ -156,6 +159,17 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
             </div>
           )}
 
+          {job?.status === "running" && (
+            <CardActions
+              cardId={jobCardId(job.id)}
+              actions={[{ id: "steer", label: "Steer", takes_text: true }]}
+              onDone={() => {
+                load();
+                onChanged();
+              }}
+            />
+          )}
+
           {job?.status === "paused" && (
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-muted">
@@ -246,6 +260,10 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
                 {job.status === "needs_input" ? "Answer" : job.status === "succeeded" ? "Continue" : "Redirect"}
               </Button>
             </section>
+          )}
+
+          {job?.timeline && job.timeline.length > 1 && (
+            <Timeline steps={job.timeline} endAt={job.finished_at} live={job.status === "running"} />
           )}
 
           {steps.length > 0 && (

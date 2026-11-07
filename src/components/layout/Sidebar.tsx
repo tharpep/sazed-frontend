@@ -11,6 +11,7 @@ import {
   CalendarClock,
   Lightbulb,
   FolderKanban,
+  LayoutGrid,
   ScrollText,
   Server,
   Waypoints,
@@ -90,6 +91,7 @@ export function Sidebar() {
   const backlogOpen = useUiStore((s) => s.backlogOpen);
   const projectsOpen = useUiStore((s) => s.projectsOpen);
   const plansOpen = useUiStore((s) => s.plansOpen);
+  const appsOpen = useUiStore((s) => s.appsOpen);
   const auditOpen = useUiStore((s) => s.auditOpen);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const toggleHistory = useUiStore((s) => s.toggleHistory);
@@ -101,6 +103,7 @@ export function Sidebar() {
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
   const toggleProjects = useUiStore((s) => s.toggleProjects);
   const togglePlans = useUiStore((s) => s.togglePlans);
+  const toggleApps = useUiStore((s) => s.toggleApps);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
@@ -116,7 +119,7 @@ export function Sidebar() {
   const online = useUiStore((s) => s.online);
   const waiting = useWaitingCount();
   const onHome =
-    !historyOpen && !journalOpen && !kbOpen && !homelabOpen && !gatewayOpen && !automationsOpen && !backlogOpen && !projectsOpen && !plansOpen && !auditOpen && !settingsOpen;
+    !historyOpen && !journalOpen && !kbOpen && !homelabOpen && !gatewayOpen && !automationsOpen && !backlogOpen && !projectsOpen && !plansOpen && !appsOpen && !auditOpen && !settingsOpen;
 
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -163,13 +166,13 @@ export function Sidebar() {
               </span>
             )}
           </div>
-          {/* Home is the launcher plus a fresh chat (the old Apps page merged in). */}
           <NavGroup>
             <NavItem label="Home" icon={House} active={onHome} onClick={handleNewChat} />
             <NavItem label="Chats" icon={MessagesSquare} active={historyOpen} onClick={toggleHistory} />
           </NavGroup>
           <NavGroup label="Watch">
             <NavItem label="Homelab" icon={Server} active={homelabOpen} onClick={toggleHomelab} />
+            <NavItem label="Apps" icon={LayoutGrid} active={appsOpen} onClick={toggleApps} />
             <NavItem label="Activity" icon={Activity} active={auditOpen} onClick={toggleAudit} count={waiting} />
             <NavItem label="Gateway" icon={Waypoints} active={gatewayOpen} onClick={toggleGateway} />
           </NavGroup>

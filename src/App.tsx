@@ -15,6 +15,7 @@ import { AutomationsPage } from "./features/automations/AutomationsPage";
 import { BacklogPage } from "./features/backlog/BacklogPage";
 import { PlansPage } from "./features/plans/PlansPage";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
+import { AppsPage } from "./features/apps/AppsPage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
 import { apiFetch } from "./api/client";
@@ -31,6 +32,7 @@ function App() {
   const backlogOpen = useUiStore((s) => s.backlogOpen);
   const projectsOpen = useUiStore((s) => s.projectsOpen);
   const plansOpen = useUiStore((s) => s.plansOpen);
+  const appsOpen = useUiStore((s) => s.appsOpen);
   const historyOpen = useUiStore((s) => s.historyOpen);
   const toggleKb = useUiStore((s) => s.toggleKb);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
@@ -43,6 +45,7 @@ function App() {
   const toggleBacklog = useUiStore((s) => s.toggleBacklog);
   const toggleProjects = useUiStore((s) => s.toggleProjects);
   const togglePlans = useUiStore((s) => s.togglePlans);
+  const toggleApps = useUiStore((s) => s.toggleApps);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const setLinkedBacklogItem = useUiStore((s) => s.setLinkedBacklogItem);
@@ -77,6 +80,8 @@ function App() {
             ? "projects"
             : plansOpen
             ? "plans"
+            : appsOpen
+            ? "apps"
             : kbOpen
               ? "kb"
               : view;
@@ -94,7 +99,7 @@ function App() {
       plans: ui.togglePlans,
       automations: ui.toggleAutomations,
       homelab: ui.toggleHomelab,
-      apps: ui.closeAll, // the Apps page is now part of Home
+      apps: ui.toggleApps,
       kb: ui.toggleKb,
       journal: ui.toggleJournal,
     };
@@ -143,6 +148,7 @@ function App() {
         else if (backlogOpen) toggleBacklog();
         else if (projectsOpen) toggleProjects();
         else if (plansOpen) togglePlans();
+        else if (appsOpen) toggleApps();
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -160,6 +166,7 @@ function App() {
     backlogOpen,
     projectsOpen,
     plansOpen,
+    appsOpen,
     setHistoryOpen,
     toggleKb,
     setSettingsOpen,
@@ -172,6 +179,7 @@ function App() {
     toggleBacklog,
     toggleProjects,
     togglePlans,
+    toggleApps,
   ]);
 
   return (
@@ -224,6 +232,8 @@ function App() {
           <ProjectsPage />
         ) : plansOpen ? (
           <PlansPage />
+        ) : appsOpen ? (
+          <AppsPage />
         ) : kbOpen ? (
           <KnowledgePage />
         ) : view === "empty" ? (
