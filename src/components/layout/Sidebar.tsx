@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   ScrollText,
   Server,
+  SlidersHorizontal,
   Waypoints,
   Settings as SettingsIcon,
 } from "lucide-react";
@@ -93,6 +94,7 @@ export function Sidebar() {
   const projectsOpen = useUiStore((s) => s.projectsOpen);
   const plansOpen = useUiStore((s) => s.plansOpen);
   const appsOpen = useUiStore((s) => s.appsOpen);
+  const profilesOpen = useUiStore((s) => s.profilesOpen);
   const claudeUsageOpen = useUiStore((s) => s.claudeUsageOpen);
   const auditOpen = useUiStore((s) => s.auditOpen);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
@@ -106,6 +108,7 @@ export function Sidebar() {
   const toggleProjects = useUiStore((s) => s.toggleProjects);
   const togglePlans = useUiStore((s) => s.togglePlans);
   const toggleApps = useUiStore((s) => s.toggleApps);
+  const toggleProfiles = useUiStore((s) => s.toggleProfiles);
   const toggleClaudeUsage = useUiStore((s) => s.toggleClaudeUsage);
   const toggleAudit = useUiStore((s) => s.toggleAudit);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
@@ -122,7 +125,7 @@ export function Sidebar() {
   const online = useUiStore((s) => s.online);
   const waiting = useWaitingCount();
   const onHome =
-    !historyOpen && !journalOpen && !kbOpen && !homelabOpen && !gatewayOpen && !automationsOpen && !backlogOpen && !projectsOpen && !plansOpen && !appsOpen && !claudeUsageOpen && !auditOpen && !settingsOpen;
+    !historyOpen && !journalOpen && !kbOpen && !homelabOpen && !gatewayOpen && !automationsOpen && !backlogOpen && !projectsOpen && !plansOpen && !appsOpen && !profilesOpen && !claudeUsageOpen && !auditOpen && !settingsOpen;
 
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -184,6 +187,7 @@ export function Sidebar() {
             <NavItem label="Automations" icon={CalendarClock} active={automationsOpen} onClick={toggleAutomations} />
             <NavItem label="Projects" icon={FolderKanban} active={projectsOpen} onClick={toggleProjects} />
             <NavItem label="Plans" icon={ScrollText} active={plansOpen} onClick={togglePlans} />
+            <NavItem label="Profiles" icon={SlidersHorizontal} active={profilesOpen} onClick={toggleProfiles} />
             <NavItem label="Backlog" icon={Lightbulb} active={backlogOpen} onClick={toggleBacklog} />
             <NavItem label="Knowledge" icon={Library} active={kbOpen} onClick={toggleKb} />
             <NavItem label="Journal" icon={BookOpen} active={journalOpen} onClick={toggleJournal} />

@@ -44,6 +44,15 @@ export async function gatewayFetch(path: string, options?: RequestInit): Promise
   return res.text();
 }
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message);
+  }
+}
+
 export async function apiFetch(path: string, options?: RequestInit): Promise<unknown> {
   const base = getBase();
   const key = getKey();
@@ -65,7 +74,7 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<unk
   const res = await fetch(url, { ...options, headers });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    throw new ApiError(text || `HTTP ${res.status}`, res.status);
   }
   if (res.status === 204) return null;
   const contentType = res.headers.get("Content-Type") ?? "";

@@ -8,6 +8,7 @@ import { MiniRow, SystemBox, TaskCard } from "./DispatchCards";
 import { DispatchEdges } from "./DispatchEdges";
 import { DispatchPanel } from "./DispatchPanel";
 import { columnOf, costOf, dollars, isSettled, stateOf, type Column } from "./dispatchRun";
+import { useUiStore } from "@/store/uiStore";
 import { syncServerClock } from "./useNow";
 
 const POLL_MS = 3000;
@@ -50,9 +51,15 @@ function ColumnHead({ label, count }: { label: string; count?: number }) {
   );
 }
 
+function openProject(slug: string) {
+  const ui = useUiStore.getState();
+  ui.setLinkedProject(slug);
+  ui.toggleProjects();
+}
+
 const Empty = ({ children }: { children: string }) => <p className="text-caption text-muted">{children}</p>;
 
-export function DispatchLive({ plan, onBack }: { plan: string; onBack: () => void }) {
+export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBack: () => void; onOpenPlan: (slug: string) => void }) {
   const { data, error } = usePlan(plan);
   const hostRef = useRef<HTMLDivElement>(null);
   const [picked, setPicked] = useState<string | null>(null);
@@ -118,6 +125,22 @@ export function DispatchLive({ plan, onBack }: { plan: string; onBack: () => voi
               {data.repo} · onto <span className="font-mono">integ/{data.plan}</span>
             </span>
             <span className="font-mono">{data.host}</span>
+            {data.project && (
+              <span>
+                Project{" "}
+                <button type="button" onClick={() => openProject(data.project!)} className="font-mono text-primary hover:underline">
+                  {data.project}
+                </button>
+              </span>
+            )}
+            {data.board_plan && (
+              <span>
+                Plan{" "}
+                <button type="button" onClick={() => onOpenPlan(data.board_plan!)} className="font-mono text-primary hover:underline">
+                  {data.board_plan}
+                </button>
+              </span>
+            )}
           </div>
           <div className="grid items-start gap-3.5 xl:grid-cols-[minmax(0,1fr)_20rem]">
             <div ref={hostRef} className="relative min-w-0 overflow-hidden rounded-lg border border-line bg-surface px-3.5 py-3">

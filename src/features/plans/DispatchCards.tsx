@@ -2,6 +2,7 @@ import type { DispatchTask } from "@/api/dispatch";
 import { toneDot, toneText } from "@/components/system";
 import { cn } from "@/lib/utils";
 import { StepLine } from "@/features/home/StepLine";
+import { ProfileLink } from "@/features/profiles/ProfileLink";
 import { at, last, clock, costOf, dollars, runRows, STATE_TONE, stateOf, stepLine, toolSteps, tries, type TaskState } from "./dispatchRun";
 import { useNow } from "./useNow";
 
@@ -60,7 +61,7 @@ export function TaskCard({ task, byId, selected, fresh, onSelect }: CardProps) {
       <button type="button" data-node={`t:${task.id}`} onClick={() => onSelect(task.id)} className={frame}>
         <span className="flex items-center gap-2">
           <span className="min-w-0 truncate font-mono text-meta font-medium text-ink">{task.id}</span>
-          <span className="ml-auto shrink-0 text-caption text-muted">{task.profile}</span>
+          <ProfileLink name={task.profile} className="ml-auto shrink-0 text-caption" />
         </span>
         <span className="mt-0.5 block truncate text-caption text-muted">
           {left.length ? `after ${left.join(", ")}` : <span className="text-primary">ready, starts next</span>}
@@ -77,7 +78,7 @@ export function TaskCard({ task, byId, selected, fresh, onSelect }: CardProps) {
         </span>
       </span>
       <span className="mt-0.5 block truncate text-caption text-muted">
-        {task.profile} · {task.model}
+        <ProfileLink name={task.profile} /> · {task.model}
         {attempts > 1 ? ` · try ${attempts}` : ""}
       </span>
       {state === "running" && toolSteps(task).length > 0 && (

@@ -14,6 +14,7 @@ interface UiState {
   projectsOpen: boolean;
   plansOpen: boolean;
   appsOpen: boolean;
+  profilesOpen: boolean;
   claudeUsageOpen: boolean;
   moreOpen: boolean;
   online: boolean;
@@ -33,6 +34,8 @@ interface UiState {
   setLinkedPlan: (plan: { slug: string; version: number | null } | null) => void;
   linkedDispatchPlan: string | null;
   setLinkedDispatchPlan: (plan: string | null) => void;
+  linkedProfile: string | null;
+  setLinkedProfile: (name: string | null) => void;
   toggleHistory: () => void;
   setHistoryOpen: (v: boolean) => void;
   toggleKb: () => void;
@@ -49,6 +52,7 @@ interface UiState {
   toggleProjects: () => void;
   togglePlans: () => void;
   toggleApps: () => void;
+  toggleProfiles: () => void;
   toggleClaudeUsage: () => void;
   toggleMore: () => void;
   setMoreOpen: (v: boolean) => void;
@@ -72,6 +76,7 @@ const ALL_CLOSED = {
   projectsOpen: false,
   plansOpen: false,
   appsOpen: false,
+  profilesOpen: false,
   claudeUsageOpen: false,
   moreOpen: false,
 } as const;
@@ -90,6 +95,8 @@ export const useUiStore = create<UiState>((set) => ({
   setLinkedPlan: (plan) => set({ linkedPlan: plan }),
   linkedDispatchPlan: null,
   setLinkedDispatchPlan: (plan) => set({ linkedDispatchPlan: plan }),
+  linkedProfile: null,
+  setLinkedProfile: (name) => set({ linkedProfile: name }),
   toggleHistory: () => set((s) => ({ ...ALL_CLOSED, historyOpen: !s.historyOpen })),
   setHistoryOpen: (v) => set({ ...ALL_CLOSED, historyOpen: v }),
   toggleKb: () => set((s) => ({ ...ALL_CLOSED, kbOpen: !s.kbOpen })),
@@ -106,6 +113,7 @@ export const useUiStore = create<UiState>((set) => ({
   toggleProjects: () => set((s) => ({ ...ALL_CLOSED, projectsOpen: !s.projectsOpen })),
   togglePlans: () => set((s) => ({ ...ALL_CLOSED, plansOpen: !s.plansOpen })),
   toggleApps: () => set((s) => ({ ...ALL_CLOSED, appsOpen: !s.appsOpen })),
+  toggleProfiles: () => set((s) => ({ ...ALL_CLOSED, profilesOpen: !s.profilesOpen })),
   toggleClaudeUsage: () => set((s) => ({ ...ALL_CLOSED, claudeUsageOpen: !s.claudeUsageOpen })),
   toggleMore: () => set((s) => ({ ...ALL_CLOSED, moreOpen: !s.moreOpen })),
   setMoreOpen: (v) => set({ ...ALL_CLOSED, moreOpen: v }),

@@ -5,6 +5,7 @@ import { errorText } from "@/api/homelab";
 import { getProject, listProjects, type Project } from "@/api/projects";
 import { ProjectPlans } from "@/features/plans/ProjectPlans";
 import { Button } from "@/components/ui/button";
+import { ProjectDispatchRuns } from "./ProjectDispatchRuns";
 import { NewProjectForm } from "./NewProjectForm";
 import { ProjectEditor } from "./ProjectEditor";
 import { useUiStore } from "@/store/uiStore";
@@ -99,6 +100,7 @@ export function ProjectsPage() {
               <>
                 <ProjectWidget {...shown} onBack={back} />
                 <ProjectPlans project={shown.slug} />
+                <ProjectDispatchRuns runs={shown.dispatch_runs ?? []} />
               </>
             )
           ) : (
