@@ -72,7 +72,7 @@ export function WorkingNow({ jobs, onOpenJob, onChanged }: Props) {
                 .join(" · ")}
             </div>
             <div className="flex min-h-9 flex-col gap-0.5 py-0.5">
-              {job.kind === "dispatch" && job.line ? (
+              {job.kind === "dispatch" && job.line && job.steps.length === 0 ? (
                 <p className="truncate text-caption text-muted" title={job.line}>
                   {job.line}
                 </p>

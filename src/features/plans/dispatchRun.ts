@@ -1,4 +1,4 @@
-import type { DispatchRow, DispatchTask } from "@/api/dispatch";
+import type { DispatchRow, DispatchStep, DispatchTask } from "@/api/dispatch";
 import type { Tone } from "@/components/system";
 
 export type Column = "landed" | "working" | "landing" | "next";
@@ -53,3 +53,7 @@ export function clock(seconds: number): string {
 }
 
 export const dollars = (n: number) => `$${n.toFixed(2)}`;
+
+export const stepLine = (s: DispatchStep): string => (s.tool ? `${s.tool}: ${s.text}` : s.text);
+
+export const toolSteps = (task: DispatchTask): DispatchStep[] => (task.steps ?? []).filter((s) => s.kind === "tool");

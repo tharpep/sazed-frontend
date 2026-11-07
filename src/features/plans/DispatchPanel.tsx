@@ -1,8 +1,10 @@
-import type { DispatchTask } from "@/api/dispatch";
+import type { DispatchStep, DispatchTask } from "@/api/dispatch";
 import { toneDot, toneText } from "@/components/system";
 import { cn } from "@/lib/utils";
+import { StepIcon } from "@/features/home/StepLine";
+import { stepParts } from "@/features/home/steps";
 import { StateLabel } from "./DispatchCards";
-import { at, last, clock, costOf, dollars, runRows, STATE_TONE, stateOf } from "./dispatchRun";
+import { at, last, clock, costOf, dollars, runRows, STATE_TONE, stateOf, stepLine } from "./dispatchRun";
 import { useNow } from "./useNow";
 
 export function DispatchPanel({ task }: { task: DispatchTask }) {
@@ -37,6 +39,7 @@ export function DispatchPanel({ task }: { task: DispatchTask }) {
         <dt className="text-muted">Cost</dt>
         <dd>{dollars(costOf(task))}</dd>
       </dl>
+      <Steps steps={task.steps ?? []} live={open} />
       <div className="px-3.5 py-2.5">
         <h3 className="mb-2 text-caption text-muted">Rows</h3>
         {rows.length === 0 && <p className="text-caption text-muted">No rows yet.</p>}
@@ -66,9 +69,71 @@ export function DispatchPanel({ task }: { task: DispatchTask }) {
           );
         })}
       </div>
-      <p className="mt-auto border-t border-line px-3.5 py-2.5 text-caption text-muted">
-        Agent tool calls aren't mirrored yet, so this shows the task's rows.
-      </p>
+
     </section>
   );
+}
+
+const STEPS_SHOWN = 30;
+
+function Steps({ steps, live }: { steps: DispatchStep[]; live: boolean }) {
+  const now = useNow(live);
+  const shown = steps.slice(-STEPS_SHOWN);
+  if (shown.length === 0) {
+    return <p className="border-b border-line px-3.5 py-2.5 text-caption text-muted">No agent steps yet.</p>;
+  }
+  const tail = shown[shown.length - 1];
+  const end = live ? tail.ts + Math.max(0, (now - Date.parse(tail.received_at)) / 1000) : tail.ts;
+  const start = shown[0].ts;
+  const span = Math.max(end - start, 1);
+  return (
+    <div className="border-b border-line px-3.5 py-2.5">
+      <h3 className="mb-2 text-caption text-muted">
+        Agent steps <span className="font-mono">{steps.filter((s) => s.kind === "tool").length} tools</span>
+      </h3>
+      <ol className="flex flex-col">
+        {shown.map((s, i) => {
+          const to = i + 1 < shown.length ? shown[i + 1].ts : end;
+          const open = live && i === shown.length - 1;
+          return (
+            <li
+              key={`${s.ts}-${s.seq}`}
+              title={stepLine(s)}
+              className="grid grid-cols-[minmax(0,1fr)_5.5rem_2.5rem] items-center gap-2 py-0.5 font-mono text-caption"
+            >
+              <StepText step={s} />
+              <span className="relative h-1.5 rounded-sm bg-raised">
+                <i
+                  className={cn("absolute top-0 h-1.5 rounded-sm", s.error ? "bg-err" : "bg-primary/70", open && "animate-pulse")}
+                  style={{ left: `${(100 * (s.ts - start)) / span}%`, width: `${Math.max(2, (100 * (to - s.ts)) / span)}%` }}
+                />
+              </span>
+              <span className="text-right text-muted">{open ? "now" : clock(to - s.ts)}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function StepText({ step }: { step: DispatchStep }) {
+  if (step.kind === "tool") {
+    const { kind, detail } = stepParts(stepLine(step));
+    return (
+      <span className="flex min-w-0 items-center gap-1.5 text-ink">
+        <StepIcon kind={kind} />
+        <span className="truncate">{detail}</span>
+      </span>
+    );
+  }
+  if (step.kind === "result") {
+    return (
+      <span className={cn("flex min-w-0 items-center gap-1.5 pl-5", step.error ? "text-err" : "text-muted")}>
+        <span aria-hidden="true">{step.error ? "✕" : "✓"}</span>
+        <span className="truncate">{step.text}</span>
+      </span>
+    );
+  }
+  return <span className="truncate pl-5 font-sans text-muted italic">{step.text}</span>;
 }
