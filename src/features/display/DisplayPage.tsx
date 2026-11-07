@@ -242,6 +242,8 @@ export function DisplayPage() {
     !talking &&
     now.getTime() - wokeAt > WAKE_MS;
 
+  // Odd hours put the clock on the right, so its big digits don't sit on the same OLED pixels all day.
+  const clockOnRight = now.getHours() % 2 === 1;
   const compact = mode === "landscape" || mode === "widget" || mode === "tiny";
   const chipList = chips(feed, compact);
   const items = nextUp(feed, now, mode === "widget" ? 2 : 8);
@@ -343,8 +345,13 @@ export function DisplayPage() {
     );
   } else {
     face = (
-      <div className="grid h-full grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] gap-6 p-6">
-        <div className="flex min-w-0 flex-col pt-3">
+      <div
+        className={cn(
+          "grid h-full gap-6 p-6",
+          clockOnRight ? "grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]" : "grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]"
+        )}
+      >
+        <div className={cn("flex min-w-0 flex-col pt-3", clockOnRight && "order-2")}>
           <Clock now={now} px={px} />
           <div className="mt-4 text-[18px] leading-[26px] text-ink-2">
             {dateLine.map((l) => (
