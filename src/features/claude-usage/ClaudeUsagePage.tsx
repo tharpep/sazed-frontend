@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { listUsageSessions, getUsageOverview, type UsageOverview, type UsageSessions } from "@/api/claudeUsage";
 import { errorText } from "@/api/homelab";
 import { Page, PageBody, PageHeader, Segmented, EmptyState } from "@/components/system";
+import { Spend } from "./Spend";
 import { Tables } from "./Tables";
 import { Tiles } from "./Tiles";
 import { Timeline } from "./Timeline";
@@ -84,6 +85,7 @@ export function ClaudeUsagePage() {
         ) : (
           <>
             <Tiles tiles={overview.tiles} limits={overview.limits} />
+            <Spend spend={overview.spend} />
             <Timeline sessions={sessions.sessions} limits={sessions.limits} />
             <Trends weekly={overview.weekly} />
             <Tables overview={overview} />

@@ -44,3 +44,18 @@ export function niceMax(value: number): number {
   const step = 10 ** Math.floor(Math.log10(Math.max(value, 1)));
   return Math.ceil(value / step) * step;
 }
+
+export function dollars(usd: number | null): string {
+  if (usd === null) return "—";
+  if (usd === 0) return "$0";
+  if (usd >= 100) return `$${Math.round(usd).toLocaleString()}`;
+  if (usd >= 1) return `$${usd.toFixed(2)}`;
+  return `$${usd.toFixed(3)}`;
+}
+
+export const SOURCE_LABEL: Record<string, string> = {
+  main: "Main thread",
+  subagents: "Subagents",
+  sazed_api: "Sazed API",
+  sazed_jobs: "Sazed jobs",
+};

@@ -27,8 +27,36 @@ export interface UsageWeek {
   confusion_rate: number | null;
   bash_writes: number;
   edit_writes: number;
+  input_tokens: number;
   output_tokens: number;
   cache_read_tokens: number;
+  cache_write_tokens: number;
+  cost_usd: number;
+  main_cost_usd: number;
+  subagent_cost_usd: number;
+  sazed_cost_usd: number;
+  cost_per_prompt_usd: number | null;
+}
+
+export interface SpendTally {
+  usd: number;
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+}
+
+export type SpendSource = "main" | "subagents" | "sazed_api" | "sazed_jobs";
+
+export interface UsageSpend {
+  prices_as_of: string;
+  total_usd: number;
+  cost_per_prompt_usd: number | null;
+  cache_savings_usd: number;
+  sources: (SpendTally & { source: SpendSource })[];
+  models: (SpendTally & { model: string; share: number | null })[];
+  unpriced: { model: string; calls: number }[];
 }
 
 export interface UsageOverview {
@@ -37,6 +65,7 @@ export interface UsageOverview {
   machines: string[];
   tiles: UsageTiles;
   weekly: UsageWeek[];
+  spend: UsageSpend;
   models: { model: string; responses: number; share: number }[];
   skills: { name: string; count: number }[];
   subagents: { type: string; count: number }[];
@@ -54,6 +83,8 @@ export interface UsageSession {
   prompts: number;
   peak_context: number;
   main_model: string | null;
+  cost_usd: number;
+  subagent_cost_usd: number;
   subagents: number;
   compactions: number;
   interrupts: number;
