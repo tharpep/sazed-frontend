@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 
 import type { UsageLimits, UsageSession } from "@/api/claudeUsage";
 import { cn } from "@/lib/utils";
-import { modelName, projectName, sessionLabel, shortDate, tokens } from "./format";
+import { dollars, modelName, projectName, sessionLabel, shortDate, tokens } from "./format";
 import { SessionChart } from "./SessionChart";
 
 const MIN_PROMPTS = 5;
@@ -38,7 +38,8 @@ function Detail({ session, limits }: { session: UsageSession; limits: UsageLimit
       <SessionChart session={session} limits={limits} />
       <dl className="flex flex-wrap gap-x-6 gap-y-2">
         <Fact label="Model" value={session.main_model ? modelName(session.main_model) : "—"} />
-        <Fact label="Subagents" value={String(session.subagents)} />
+        <Fact label="Cost" value={dollars(session.cost_usd)} />
+        <Fact label="Subagents" value={`${session.subagents} · ${dollars(session.subagent_cost_usd)}`} />
         <Fact label="Compactions" value={String(session.compactions)} />
         <Fact label="Interrupts" value={String(session.interrupts)} />
         <Fact label="Confused prompts" value={String(session.confused_prompts.length)} />

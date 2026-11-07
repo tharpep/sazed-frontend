@@ -1,5 +1,5 @@
 import type { UsageOverview } from "@/api/claudeUsage";
-import { modelName, percent } from "./format";
+import { dollars, modelName, percent, SOURCE_LABEL, tokens } from "./format";
 
 function SmallTable({ title, heads, rows }: { title: string; heads: string[]; rows: string[][] }) {
   return (
@@ -13,7 +13,7 @@ function SmallTable({ title, heads, rows }: { title: string; heads: string[]; ro
             <thead>
               <tr className="border-b border-line text-caption text-muted">
                 {heads.map((h, i) => (
-                  <th key={h} scope="col" className={`px-3.5 py-1.5 font-normal ${i ? "text-right" : "text-left"}`}>
+                  <th key={h} scope="col" className={`px-3.5 py-1.5 font-normal ${i ? "text-right" : "w-[30%] text-left"}`}>
                     {h}
                   </th>
                 ))}
@@ -43,6 +43,28 @@ function SmallTable({ title, heads, rows }: { title: string; heads: string[]; ro
 export function Tables({ overview }: { overview: UsageOverview }) {
   return (
     <div className="grid grid-cols-1 gap-x-2.5 gap-y-4 md:grid-cols-2">
+      <SmallTable
+        title="Spend by model"
+        heads={["Model", "Spend", "Share", "Output", "Cache read"]}
+        rows={overview.spend.models.map((m) => [
+          modelName(m.model),
+          dollars(m.usd),
+          percent(m.share),
+          tokens(m.output_tokens),
+          tokens(m.cache_read_tokens),
+        ])}
+      />
+      <SmallTable
+        title="Spend by source"
+        heads={["Source", "Spend", "Calls", "Input", "Cache write"]}
+        rows={overview.spend.sources.map((s) => [
+          SOURCE_LABEL[s.source] ?? s.source,
+          dollars(s.usd),
+          String(s.calls),
+          tokens(s.input_tokens),
+          tokens(s.cache_write_tokens),
+        ])}
+      />
       <SmallTable
         title="Models"
         heads={["Model", "Responses", "Share"]}
