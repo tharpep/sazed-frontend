@@ -1,7 +1,8 @@
 import type { DispatchTask } from "@/api/dispatch";
 import { toneDot, toneText } from "@/components/system";
 import { cn } from "@/lib/utils";
-import { at, last, clock, costOf, dollars, runRows, STATE_TONE, stateOf, tries, type TaskState } from "./dispatchRun";
+import { StepLine } from "@/features/home/StepLine";
+import { at, last, clock, costOf, dollars, runRows, STATE_TONE, stateOf, stepLine, toolSteps, tries, type TaskState } from "./dispatchRun";
 import { useNow } from "./useNow";
 
 export function StateLabel({ state, since }: { state: TaskState; since?: number }) {
@@ -79,6 +80,16 @@ export function TaskCard({ task, byId, selected, fresh, onSelect }: CardProps) {
         {task.profile} · {task.model}
         {attempts > 1 ? ` · try ${attempts}` : ""}
       </span>
+      {state === "running" && toolSteps(task).length > 0 && (
+        <span className="mt-1.5 flex flex-col gap-0.5">
+          {toolSteps(task)
+            .slice(-2)
+            .reverse()
+            .map((s) => (
+              <StepLine key={`${s.ts}-${s.seq}`} step={stepLine(s)} />
+            ))}
+        </span>
+      )}
       {latest && state !== "running" && (
         <span className="mt-1.5 line-clamp-2 block text-caption text-ink-2">{latest.line}</span>
       )}

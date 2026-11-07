@@ -33,6 +33,16 @@ export interface DispatchPlanSummary {
   states: Record<string, number>;
 }
 
+export interface DispatchStep {
+  ts: number;
+  seq: number;
+  kind: "tool" | "result" | "text";
+  tool: string | null;
+  text: string;
+  error: boolean;
+  received_at: string;
+}
+
 export interface DispatchTask {
   id: string;
   goal: string;
@@ -42,6 +52,8 @@ export interface DispatchTask {
   model: string;
   latest: DispatchRow | null;
   rows: DispatchRow[];
+  steps?: DispatchStep[];
+  tools?: number;
 }
 
 export interface DispatchPlan extends DispatchPlanSummary {
