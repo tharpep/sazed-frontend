@@ -58,6 +58,13 @@ export interface Workstream {
   cards?: ProjectCard[];
 }
 
+export interface ProjectDispatchRun {
+  plan: string;
+  updated_at: string;
+  tasks_total: number;
+  states: Record<string, number>;
+}
+
 export interface Project {
   id: string;
   slug: string;
@@ -77,6 +84,7 @@ export interface Project {
   steps_total: number;
   current: { id: string; title: string; status: WorkstreamStatus } | null;
   workstreams: Workstream[];
+  dispatch_runs?: ProjectDispatchRun[];
 }
 
 // The endpoints are not deployed yet, so a dev build falls back to fixtures when the fetch fails.

@@ -16,6 +16,7 @@ import { BacklogPage } from "./features/backlog/BacklogPage";
 import { PlansPage } from "./features/plans/PlansPage";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { AppsPage } from "./features/apps/AppsPage";
+import { ProfilesPage } from "./features/profiles/ProfilesPage";
 import { ClaudeUsagePage } from "./features/claude-usage/ClaudeUsagePage";
 import { useUiStore } from "./store/uiStore";
 import { useChatStore } from "./store/chatStore";
@@ -34,6 +35,7 @@ function App() {
   const projectsOpen = useUiStore((s) => s.projectsOpen);
   const plansOpen = useUiStore((s) => s.plansOpen);
   const appsOpen = useUiStore((s) => s.appsOpen);
+  const profilesOpen = useUiStore((s) => s.profilesOpen);
   const claudeUsageOpen = useUiStore((s) => s.claudeUsageOpen);
   const historyOpen = useUiStore((s) => s.historyOpen);
   const toggleKb = useUiStore((s) => s.toggleKb);
@@ -48,6 +50,7 @@ function App() {
   const toggleProjects = useUiStore((s) => s.toggleProjects);
   const togglePlans = useUiStore((s) => s.togglePlans);
   const toggleApps = useUiStore((s) => s.toggleApps);
+  const toggleProfiles = useUiStore((s) => s.toggleProfiles);
   const toggleClaudeUsage = useUiStore((s) => s.toggleClaudeUsage);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
@@ -55,6 +58,7 @@ function App() {
   const setLinkedProject = useUiStore((s) => s.setLinkedProject);
   const setLinkedPlan = useUiStore((s) => s.setLinkedPlan);
   const setLinkedDispatchPlan = useUiStore((s) => s.setLinkedDispatchPlan);
+  const setLinkedProfile = useUiStore((s) => s.setLinkedProfile);
   const hidePrivate = useUiStore((s) => s.hidePrivate);
   const messages = useChatStore((s) => s.messages);
   const send = useChatStore((s) => s.send);
@@ -86,6 +90,8 @@ function App() {
             ? "plans"
             : appsOpen
             ? "apps"
+            : profilesOpen
+            ? "profiles"
             : claudeUsageOpen
             ? "claude-usage"
             : kbOpen
@@ -107,6 +113,7 @@ function App() {
       automations: ui.toggleAutomations,
       homelab: ui.toggleHomelab,
       apps: ui.toggleApps,
+      profiles: ui.toggleProfiles,
       activity: ui.toggleAudit,
       kb: ui.toggleKb,
       journal: ui.toggleJournal,
@@ -114,6 +121,7 @@ function App() {
     open[page]?.();
     if (page === "backlog") setLinkedBacklogItem(params.get("item"));
     if (page === "projects") setLinkedProject(params.get("project"));
+    if (page === "profiles") setLinkedProfile(params.get("profile"));
     const plan = params.get("plan");
     if (page === "plans" && plan) {
       const version = Number(params.get("version"));
@@ -122,7 +130,7 @@ function App() {
     const dispatch = params.get("dispatch");
     if (page === "plans" && dispatch) setLinkedDispatchPlan(dispatch);
     window.history.replaceState(null, "", window.location.pathname);
-  }, [setLinkedBacklogItem, setLinkedProject, setLinkedPlan, setLinkedDispatchPlan]);
+  }, [setLinkedBacklogItem, setLinkedProject, setLinkedPlan, setLinkedDispatchPlan, setLinkedProfile]);
 
   // Private apps never stay revealed once the console leaves the screen.
   useEffect(() => {
@@ -159,6 +167,7 @@ function App() {
         else if (projectsOpen) toggleProjects();
         else if (plansOpen) togglePlans();
         else if (appsOpen) toggleApps();
+        else if (profilesOpen) toggleProfiles();
         else if (claudeUsageOpen) toggleClaudeUsage();
       }
     }
@@ -178,6 +187,7 @@ function App() {
     projectsOpen,
     plansOpen,
     appsOpen,
+    profilesOpen,
     claudeUsageOpen,
     setHistoryOpen,
     toggleKb,
@@ -192,6 +202,7 @@ function App() {
     toggleProjects,
     togglePlans,
     toggleApps,
+    toggleProfiles,
     toggleClaudeUsage,
   ]);
 
@@ -247,6 +258,8 @@ function App() {
           <PlansPage />
         ) : appsOpen ? (
           <AppsPage />
+        ) : profilesOpen ? (
+          <ProfilesPage />
         ) : claudeUsageOpen ? (
           <ClaudeUsagePage />
         ) : kbOpen ? (

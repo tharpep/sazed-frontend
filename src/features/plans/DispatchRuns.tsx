@@ -7,7 +7,7 @@ import { ago } from "./planParts";
 
 const ORDER = ["running", "waiting", "failed", "conflict", "blocked", "done", "landed", "cleaned"];
 
-function counts(states: Record<string, number>) {
+export function counts(states: Record<string, number>) {
   return ORDER.filter((s) => states[s]).map((s) => `${states[s]} ${s}`).join(" · ");
 }
 

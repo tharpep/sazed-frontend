@@ -31,6 +31,8 @@ export interface DispatchPlanSummary {
   updated_at: string;
   tasks_total: number;
   states: Record<string, number>;
+  project?: string | null;
+  board_plan?: string | null;
 }
 
 export interface DispatchStep {

@@ -69,7 +69,14 @@ export function PlansPage() {
       <PageHeader title="Plans" />
       <PageBody className={mode === "dispatch" && dispatch ? "max-w-none" : undefined}>
         {mode === "dispatch" && dispatch ? (
-          <DispatchLive plan={dispatch} onBack={() => setDispatch(null)} />
+          <DispatchLive
+            plan={dispatch}
+            onBack={() => setDispatch(null)}
+            onOpenPlan={(slug) => {
+              setOpen({ slug, version: null, compare: null });
+              setMode("plans");
+            }}
+          />
         ) : mode === "dispatch" ? (
           <>
             {modeSwitch}
