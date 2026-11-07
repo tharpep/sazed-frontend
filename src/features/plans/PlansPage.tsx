@@ -7,6 +7,8 @@ import { useUiStore } from "@/store/uiStore";
 import { CompareView } from "./CompareView";
 import { PlanList } from "./PlanList";
 import { PlanView } from "./PlanView";
+import { DispatchLive } from "./DispatchLive";
+import { DispatchRuns } from "./DispatchRuns";
 
 type Filter = PlanState | "all";
 
@@ -17,6 +19,8 @@ const FILTERS = [
   { value: "all", label: "All" },
 ] as const;
 
+type Mode = "plans" | "dispatch";
+
 type Open = { slug: string; version: number | null; compare: [number, number] | null };
 
 export function PlansPage() {
@@ -24,16 +28,19 @@ export function PlansPage() {
     const linked = useUiStore.getState().linkedPlan;
     return linked ? { ...linked, compare: null } : null;
   });
+  const [dispatch, setDispatch] = useState<string | null>(() => useUiStore.getState().linkedDispatchPlan);
+  const [mode, setMode] = useState<Mode>(() => (useUiStore.getState().linkedDispatchPlan ? "dispatch" : "plans"));
   const [filter, setFilter] = useState<Filter>("active");
   const [plans, setPlans] = useState<PlanSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     useUiStore.getState().setLinkedPlan(null);
+    useUiStore.getState().setLinkedDispatchPlan(null);
   }, []);
 
   useEffect(() => {
-    if (open) return;
+    if (open || mode !== "plans") return;
     let live = true;
     setPlans(null);
     listPlans(filter === "all" ? {} : { state: filter })
@@ -42,13 +49,33 @@ export function PlansPage() {
     return () => {
       live = false;
     };
-  }, [filter, open]);
+  }, [filter, open, mode]);
+
+  const modeSwitch = (
+    <Segmented
+      label="Plans view"
+      options={[
+        { value: "plans", label: "Plans" },
+        { value: "dispatch", label: "Dispatch runs" },
+      ]}
+      value={mode}
+      onChange={setMode}
+      className="self-start"
+    />
+  );
 
   return (
     <Page>
       <PageHeader title="Plans" />
-      <PageBody>
-        {open?.compare ? (
+      <PageBody className={mode === "dispatch" && dispatch ? "max-w-none" : undefined}>
+        {mode === "dispatch" && dispatch ? (
+          <DispatchLive plan={dispatch} onBack={() => setDispatch(null)} />
+        ) : mode === "dispatch" ? (
+          <>
+            {modeSwitch}
+            <DispatchRuns onOpen={setDispatch} />
+          </>
+        ) : open?.compare ? (
           <CompareView
             slug={open.slug}
             a={open.compare[0]}
@@ -65,6 +92,7 @@ export function PlansPage() {
           />
         ) : (
           <>
+            {modeSwitch}
             <Segmented
               label="Plan state"
               options={[...FILTERS]}

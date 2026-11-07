@@ -30,6 +30,8 @@ interface UiState {
   // Plan to open, from a ?page=plans&plan=<slug>&version=<n> link or a project's Plans list
   linkedPlan: { slug: string; version: number | null } | null;
   setLinkedPlan: (plan: { slug: string; version: number | null } | null) => void;
+  linkedDispatchPlan: string | null;
+  setLinkedDispatchPlan: (plan: string | null) => void;
   toggleHistory: () => void;
   setHistoryOpen: (v: boolean) => void;
   toggleKb: () => void;
@@ -83,6 +85,8 @@ export const useUiStore = create<UiState>((set) => ({
   setLinkedProject: (slug) => set({ linkedProject: slug }),
   linkedPlan: null,
   setLinkedPlan: (plan) => set({ linkedPlan: plan }),
+  linkedDispatchPlan: null,
+  setLinkedDispatchPlan: (plan) => set({ linkedDispatchPlan: plan }),
   toggleHistory: () => set((s) => ({ ...ALL_CLOSED, historyOpen: !s.historyOpen })),
   setHistoryOpen: (v) => set({ ...ALL_CLOSED, historyOpen: v }),
   toggleKb: () => set((s) => ({ ...ALL_CLOSED, kbOpen: !s.kbOpen })),

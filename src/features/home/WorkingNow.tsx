@@ -1,3 +1,4 @@
+import { useUiStore } from "@/store/uiStore";
 import { jobCardId, type WorkingJob } from "@/api/command";
 
 import { CardActions } from "./CardActions";
@@ -28,6 +29,12 @@ interface Props {
   onChanged: () => void;
 }
 
+function openDispatch(plan: string) {
+  const ui = useUiStore.getState();
+  ui.setLinkedDispatchPlan(plan);
+  ui.togglePlans();
+}
+
 export function WorkingNow({ jobs, onOpenJob, onChanged }: Props) {
   return (
     <section aria-label="Working now" className="flex flex-col gap-2">
@@ -41,8 +48,8 @@ export function WorkingNow({ jobs, onOpenJob, onChanged }: Props) {
         {jobs.map((job) => (
           <article
             key={job.job_id ?? `${job.plan}:${job.task}`}
-            onClick={() => job.job_id && onOpenJob(job.job_id)}
-            data-clickable={Boolean(job.job_id)}
+            onClick={() => (job.job_id ? onOpenJob(job.job_id) : job.plan && openDispatch(job.plan))}
+            data-clickable={Boolean(job.job_id || job.plan)}
             className="flex min-w-0 flex-col gap-1 rounded-lg border border-primary/40 bg-surface px-3 py-2.5 data-[clickable=true]:cursor-pointer data-[clickable=true]:hover:bg-raised/60"
           >
             <div className="flex items-center justify-between gap-2">
