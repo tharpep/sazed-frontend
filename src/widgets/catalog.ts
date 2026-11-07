@@ -161,6 +161,16 @@ const project = z.object({
   steps_total: z.number(),
   current: z.object({ id: z.string(), title: z.string(), status: workstreamStatus }).nullable(),
   workstreams: z.array(workstream),
+  dispatch_runs: z
+    .array(
+      z.object({
+        plan: z.string(),
+        updated_at: z.string(),
+        tasks_total: z.number(),
+        states: z.record(z.string(), z.number()),
+      })
+    )
+    .optional(),
 });
 
 // Compile-time drift check: each schema must match its API type exactly, both ways.
