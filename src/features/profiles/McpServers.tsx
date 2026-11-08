@@ -3,28 +3,17 @@ import type { McpServer } from "@/api/mcpServers";
 import type { Profile } from "@/api/profiles";
 import { Author, ago } from "@/features/plans/planParts";
 
-function Tag({ children }: { children: string }) {
-  return <span className="rounded border border-line px-1.5 font-mono text-caption text-ink-2">{children}</span>;
-}
-
 function Row({ server, grantedTo, onOpen }: { server: McpServer; grantedTo: string[]; onOpen: () => void }) {
-  const target = server.transport === "http" ? server.url : [server.command, ...server.args].join(" ");
   return (
     <ListRow
       onClick={onOpen}
       title={<span className="font-mono">{server.name}</span>}
       description={
         <>
-          {server.description}
-          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="min-w-0 font-mono text-caption text-muted [overflow-wrap:anywhere]">
-              {server.transport} · {target}
-            </span>
-            {server.agent_safe && <Tag>agent-safe</Tag>}
-          </span>
-          <span className="mt-1 block text-caption text-muted">
+          <span className="block">
             {grantedTo.length ? `Granted to ${grantedTo.join(", ")}` : "Not granted to any profile"}
           </span>
+          <span className="block text-muted">{server.description}</span>
         </>
       }
       meta={
