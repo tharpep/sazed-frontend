@@ -1,4 +1,4 @@
-import type { HubDay, UsageHub, UsageKind, UsageOverview, UsageQuery, UsageSession, UsageSessions } from "@/api/claudeUsage";
+import type { HubDay, PlanPeriod, UsageHub, UsageKind, UsageOverview, UsageQuery, UsageSession, UsageSessions } from "@/api/claudeUsage";
 
 const LIMITS = { context_soft: 200_000, context_hard: 400_000 };
 const HOME = "/home/tharpep/code";
@@ -228,10 +228,13 @@ export function mockHub(days: number): UsageHub {
     timezone: "America/New_York",
     prices_as_of: "2026-11-06",
     limits: [
-      { window: "five_hour", used_pct: 84, resets_at: resets(112 * 60_000), read_at: ago(14 * 60_000), status: "allowed_warning", source: "job", reset_since: false, projected_pct: 97, points: points(52, 84) },
-      { window: "seven_day", used_pct: 41, resets_at: resets(3.7 * DAY_MS), read_at: ago(14 * 60_000), status: "allowed", source: "job", reset_since: false, projected_pct: 78, points: points(36, 41) },
+      { window: "five_hour", used_pct: 56, resets_at: resets(166 * 60_000), read_at: ago(2 * 60_000), status: "allowed", source: "probe", machine: "homelab", reset_since: false, even_pct: 44.7, projected_pct: 100, full_at: resets(101 * 60_000), allowance_per_day: null, points: points(20, 56) },
+      { window: "seven_day", used_pct: 91, resets_at: resets(2.53 * DAY_MS), read_at: ago(2 * 60_000), status: "allowed_warning", source: "dispatch", machine: "PryceSurface", reset_since: false, even_pct: 63.9, projected_pct: 100, full_at: resets(5 * 3_600_000), allowance_per_day: 3.6, points: points(80, 91) },
     ],
     billed: { month: "2026-11", usd: 0.59, alert_usd: 25, unpriced: [] },
+    value: plans.length
+      ? { plan: plans[plans.length - 1].plan, monthly_usd: plans[plans.length - 1].monthly_usd, since: ago(days * DAY_MS).slice(0, 10), plan_usd: 97, api_equivalent_usd: 2052, multiple: 21.2 }
+      : null,
     days: out,
     sources: [
       { source: "claude_code", machine: "desktop-wsl", last_at: ago(12 * 60_000) },
@@ -243,4 +246,11 @@ export function mockHub(days: number): UsageHub {
     ],
     unpriced: [],
   };
+}
+
+const plans: PlanPeriod[] = [{ starts_on: "2026-10-05", plan: "Max", monthly_usd: 100 }];
+
+export function mockSavePlan(period: PlanPeriod): { periods: PlanPeriod[] } {
+  plans.push(period);
+  return { periods: plans };
 }

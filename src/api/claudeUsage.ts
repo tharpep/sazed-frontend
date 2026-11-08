@@ -149,9 +149,28 @@ export interface HubLimit {
   read_at: string;
   status: string | null;
   source: string;
+  machine: string | null;
   reset_since: boolean;
+  even_pct: number | null;
   projected_pct: number | null;
+  full_at: string | null;
+  allowance_per_day: number | null;
   points: { read_at: string; used_pct: number }[];
+}
+
+export interface HubValue {
+  plan: string;
+  monthly_usd: number;
+  since: string;
+  plan_usd: number;
+  api_equivalent_usd: number;
+  multiple: number | null;
+}
+
+export interface PlanPeriod {
+  starts_on: string;
+  plan: string;
+  monthly_usd: number;
 }
 
 export interface HubSource {
@@ -166,6 +185,7 @@ export interface UsageHub {
   prices_as_of: string;
   limits: HubLimit[];
   billed: { month: string; usd: number; alert_usd: number | null; unpriced: string[] };
+  value: HubValue | null;
   days: HubDay[];
   sources: HubSource[];
   unpriced: { model: string; calls: number }[];
@@ -176,4 +196,11 @@ export async function getUsageHub(days: number): Promise<UsageHub> {
     return (await import("@/mock/claudeUsage")).mockHub(days);
   }
   return apiFetch(`/claude-usage/hub?days=${days}`) as Promise<UsageHub>;
+}
+
+export async function savePlanPeriod(period: PlanPeriod): Promise<{ periods: PlanPeriod[] }> {
+  if (import.meta.env.VITE_CLAUDE_USAGE_MOCK) {
+    return (await import("@/mock/claudeUsage")).mockSavePlan(period);
+  }
+  return apiFetch("/claude-usage/plans", { method: "POST", body: JSON.stringify(period) }) as Promise<{ periods: PlanPeriod[] }>;
 }

@@ -1,17 +1,21 @@
 import { useState } from "react";
 
-import type { HubDay, HubLimit, HubSource, UsageHub } from "@/api/claudeUsage";
+import { savePlanPeriod, type HubDay, type HubLimit, type HubSource, type HubValue, type UsageHub } from "@/api/claudeUsage";
 import { Segmented, toneDot, toneText, type Tone } from "@/components/system";
 import { cn } from "@/lib/utils";
 import { Card, stateText } from "./Card";
 import { CostChart } from "./CostChart";
-import { dollars, shortTime, tokens } from "./format";
+import { dollars, shortDate, tokens } from "./format";
 import {
   ago,
+  clock,
   feedTone,
   feedVerb,
   freshTokens,
+  paceSentence,
+  paceTone,
   rangeDays,
+  READING_SOURCE,
   SOURCE_METHOD,
   SOURCE_TAB,
   sourceLabel,
@@ -35,14 +39,17 @@ const GROUPS: { value: GroupBy; label: string }[] = [
 const FILL: Record<Tone, string> = { neutral: "bg-ink-2", accent: "bg-primary", ok: "bg-ink-2", warn: "bg-warn", err: "bg-err" };
 const ROW = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-4 py-2.5 md:grid-cols-[minmax(150px,1.3fr)_minmax(80px,1fr)_96px_170px]";
 
-function Meter({ pct, tone, mark }: { pct: number; tone: Tone; mark?: number | null }) {
+function Meter({ pct, tone, mark, even }: { pct: number; tone: Tone; mark?: number | null; even?: number | null }) {
   return (
     <div className="relative h-2 rounded-full bg-raised">
       <div className={cn("absolute inset-y-0 left-0 rounded-full", FILL[tone])} style={{ width: `${Math.min(pct, 100)}%` }} />
+      {even != null && (
+        <div className="absolute -inset-y-0.5 w-0.5 rounded-full bg-ink opacity-55" style={{ left: `${Math.min(even, 100)}%` }} aria-hidden="true" />
+      )}
       {mark != null && mark > pct && (
         <div
           className="absolute -inset-y-0.5 border-l-2 border-dashed border-ink-2"
-          style={{ left: `${Math.min(mark, 100)}%` }}
+          style={{ left: `calc(${Math.min(mark, 100)}% - 2px)` }}
           aria-hidden="true"
         />
       )}
@@ -50,78 +57,182 @@ function Meter({ pct, tone, mark }: { pct: number; tone: Tone; mark?: number | n
   );
 }
 
-function Cell({ label, aside, value, valueClass, meter, note }: {
+function Cell({ label, aside, value, valueClass, meter, note, foot }: {
   label: string;
   aside?: string;
-  value: string;
+  value: React.ReactNode;
   valueClass: string;
   meter: React.ReactNode;
-  note: string;
+  note: React.ReactNode;
+  foot?: React.ReactNode;
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5 px-4 py-3">
       <div className="flex justify-between gap-2 text-caption text-muted">
         <span>{label}</span>
-        {aside && <span>{aside}</span>}
+        {aside && <span className="text-right">{aside}</span>}
       </div>
       <span className={cn("font-mono text-[18px] leading-6 font-medium tabular-nums", valueClass)}>{value}</span>
       {meter}
-      <span className="text-caption text-ink-2">{note}</span>
+      {note && <span className="text-caption text-ink-2">{note}</span>}
+      {foot && <span className="text-caption text-muted">{foot}</span>}
     </div>
   );
 }
 
-function resetLabel(iso: string): string {
-  const soon = Date.parse(iso) - Date.now() < 86_400_000;
-  const day = soon ? "" : `${new Date(iso).toLocaleDateString(undefined, { weekday: "short" })} `;
-  return `${day}${shortTime(iso)}`;
-}
-
 function LimitCell({ limit }: { limit: HubLimit }) {
   const tone = windowTone(limit);
-  const note = limit.reset_since
-    ? `reset since the last reading ${ago(limit.read_at)}`
-    : [
-        limit.projected_pct != null ? `${Math.round(limit.projected_pct)}% by reset at this pace` : null,
-        `reading ${ago(limit.read_at)}`,
-      ]
-        .filter(Boolean)
-        .join(" · ");
+  const dot = paceTone(limit);
+  const pace = paceSentence(limit);
+  const from = READING_SOURCE[limit.source] ?? limit.source;
   return (
     <Cell
       label={WINDOW_NAME[limit.window]}
-      aside={limit.resets_at && !limit.reset_since ? `resets ${resetLabel(limit.resets_at)}` : undefined}
-      value={`${Math.round(limit.used_pct)}%`}
+      aside={limit.resets_at ? `${limit.reset_since ? "reset" : "resets"} ${clock(limit.resets_at)}` : undefined}
+      value={limit.reset_since ? "0%" : `${Math.round(limit.used_pct)}%`}
       valueClass={limit.reset_since ? "text-muted" : stateText(tone)}
-      meter={<Meter pct={limit.reset_since ? 0 : limit.used_pct} tone={tone} mark={limit.reset_since ? null : limit.projected_pct} />}
-      note={note}
+      meter={
+        <Meter
+          pct={limit.reset_since ? 0 : limit.used_pct}
+          tone={tone}
+          even={limit.reset_since ? null : limit.even_pct}
+          mark={limit.reset_since ? null : limit.projected_pct}
+        />
+      }
+      note={
+        pace && (
+          <>
+            {dot !== "neutral" && <span className={cn("mr-1.5 inline-block size-1.5 rounded-full align-[1px]", toneDot[dot])} aria-hidden="true" />}
+            {pace}
+          </>
+        )
+      }
+      foot={`${limit.reset_since ? "Last read" : "Read"} ${ago(limit.read_at)} from ${from}`}
     />
   );
 }
 
-function LimitsStrip({ hub, apiEquivalent }: { hub: UsageHub; apiEquivalent: number }) {
+const FIELD = "w-full min-w-0 rounded-md border border-border bg-surface px-2 py-1 text-caption text-ink outline-none focus-visible:border-primary";
+
+function PlanForm({ value, onSaved, onCancel }: { value: HubValue | null; onSaved: () => void; onCancel?: () => void }) {
+  const [plan, setPlan] = useState(value?.plan ?? "Max");
+  const [price, setPrice] = useState(String(value?.monthly_usd ?? 100));
+  const [since, setSince] = useState(new Date().toLocaleDateString("en-CA"));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const save = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    savePlanPeriod({ plan: plan.trim(), monthly_usd: Number(price), starts_on: since })
+      .then(onSaved)
+      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
+      .finally(() => setSaving(false));
+  };
+  return (
+    <form onSubmit={save} className="grid grid-cols-[1fr_72px_1.2fr] gap-1.5" aria-label="Claude plan">
+      <input value={plan} onChange={(e) => setPlan(e.target.value)} aria-label="Plan name" required className={FIELD} />
+      <input value={price} onChange={(e) => setPrice(e.target.value)} aria-label="Dollars a month" type="number" min="0" step="any" required className={cn(FIELD, "font-mono")} />
+      <input value={since} onChange={(e) => setSince(e.target.value)} aria-label="Since" type="date" required className={FIELD} />
+      <div className="col-span-3 flex items-center gap-3">
+        <button type="submit" disabled={saving} className="text-caption font-medium text-primary hover:underline disabled:opacity-50">
+          {saving ? "Saving…" : "Save plan"}
+        </button>
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="text-caption text-muted hover:text-ink">
+            Cancel
+          </button>
+        )}
+        {error && <span role="alert" className="truncate text-caption text-err">{error}</span>}
+      </div>
+    </form>
+  );
+}
+
+function rangeLabel(hub: UsageHub, since: string): string {
+  if (since > hub.range.from.slice(0, 10)) return `since ${shortDate(`${since}T12:00:00`)}`;
+  return `last ${Math.round((Date.parse(hub.range.to) - Date.parse(hub.range.from)) / 86_400_000)} days`;
+}
+
+function ValueCell({ hub, onPlanSaved }: { hub: UsageHub; onPlanSaved: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const { value } = hub;
   const { usd, alert_usd } = hub.billed;
+  const billed = `Sazed API billed $${usd.toFixed(2)} this month, ${alert_usd ? `of the ${dollars(alert_usd)} spend alert` : "no spend alert set"}`;
+  const saved = () => {
+    setEditing(false);
+    onPlanSaved();
+  };
+  if (!value || editing) {
+    return (
+      <Cell
+        label="Subscription value"
+        aside={value ? `${value.plan}, ${dollars(value.monthly_usd)} a month` : undefined}
+        value={value ? dollars(value.api_equivalent_usd) : "No plan set"}
+        valueClass={value ? "text-ink" : "text-muted"}
+        meter={<PlanForm value={value} onSaved={saved} onCancel={value ? () => setEditing(false) : undefined} />}
+        note="A plan applies from the date you give; earlier days keep their own price."
+        foot={billed}
+      />
+    );
+  }
+  const apiShare = value.api_equivalent_usd >= value.plan_usd ? 100 : (value.api_equivalent_usd / value.plan_usd) * 100;
+  const planShare = value.plan_usd >= value.api_equivalent_usd ? 100 : (value.plan_usd / value.api_equivalent_usd) * 100;
+  const fee = value.plan_usd >= 10 ? `$${Math.round(value.plan_usd).toLocaleString()}` : dollars(value.plan_usd);
+  return (
+    <Cell
+      label={`Subscription value, ${rangeLabel(hub, value.since)}`}
+      aside={`${value.plan}, ${dollars(value.monthly_usd)} a month`}
+      value={
+        <>
+          {dollars(value.api_equivalent_usd)}
+          <span className="ml-1.5 font-sans text-caption font-normal text-muted">at API list prices</span>
+        </>
+      }
+      valueClass="text-ink"
+      meter={
+        <div className="flex flex-col gap-1">
+          <div className="grid grid-cols-[64px_1fr] items-center gap-2">
+            <span className="text-caption text-muted">API value</span>
+            <div className="h-2 rounded-full bg-ink-2" style={{ width: `${Math.max(apiShare, 2)}%` }} />
+          </div>
+          <div className="grid grid-cols-[64px_1fr] items-center gap-2">
+            <span className="text-caption text-muted">Plan fees</span>
+            <div className="h-2 rounded-full bg-ink opacity-35" style={{ width: `${Math.max(planShare, 2)}%` }} />
+          </div>
+        </div>
+      }
+      note={
+        value.multiple != null
+          ? `Plans cost ${fee} over the same days, so the usage was worth ${value.multiple} times the fee.`
+          : `Plans cost ${fee} over the same days.`
+      }
+      foot={
+        <>
+          {billed} ·{" "}
+          <button type="button" onClick={() => setEditing(true)} className="text-primary hover:underline">
+            Change plan
+          </button>
+        </>
+      }
+    />
+  );
+}
+
+function LimitsStrip({ hub, onPlanSaved }: { hub: UsageHub; onPlanSaved: () => void }) {
   const windows = (["five_hour", "seven_day"] as const)
     .map((w) => hub.limits.find((l) => l.window === w))
     .filter((l): l is HubLimit => Boolean(l));
   return (
     <section
-      aria-label="Plan limits and billed spend"
+      aria-label="Plan limits and subscription value"
       className="grid grid-cols-1 divide-y divide-line rounded-[10px] border border-line bg-surface md:grid-cols-3 md:divide-x md:divide-y-0"
     >
       {windows.length === 0 ? (
-        <div className="px-4 py-3 text-meta text-muted md:col-span-2">No plan readings yet. They arrive with the next Claude worker job.</div>
+        <div className="px-4 py-3 text-meta text-muted md:col-span-2">No plan readings yet. They arrive once Claude is used on any machine.</div>
       ) : (
         windows.map((l) => <LimitCell key={l.window} limit={l} />)
       )}
-      <Cell
-        label="Billed this month"
-        aside="Sazed API"
-        value={`$${usd.toFixed(2)}`}
-        valueClass="text-ink"
-        meter={<Meter pct={alert_usd ? (usd / alert_usd) * 100 : 0} tone="neutral" />}
-        note={`${alert_usd ? `of the ${dollars(alert_usd)} spend alert` : "no spend alert set"} · API-equivalent ${dollars(apiEquivalent)}`}
-      />
+      <ValueCell hub={hub} onPlanSaved={onPlanSaved} />
     </section>
   );
 }
@@ -218,7 +329,7 @@ function Sources({ sources, limits, days, rows, onOpen }: {
           <li className={ROW}>
             <RowBody
               name="Plan limits"
-              method="readings from Claude jobs"
+              method="worker jobs, dispatch, homelab probe"
               values={limits[0].points.map((p) => p.used_pct)}
               total={limits.map((l) => `${Math.round(l.used_pct)}%`).join(" / ")}
               tone="neutral"
@@ -235,19 +346,19 @@ interface OverviewProps {
   hub: UsageHub;
   machine: string | null;
   onOpen: (tab: Tab) => void;
+  onPlanSaved: () => void;
 }
 
-export function Overview({ hub, machine, onOpen }: OverviewProps) {
+export function Overview({ hub, machine, onOpen, onPlanSaved }: OverviewProps) {
   const [metric, setMetric] = useState<Metric>("api_equivalent");
   const [groupBy, setGroupBy] = useState<GroupBy>("source");
   const days = rangeDays(hub);
   const rows = machine ? hub.days.filter((d) => d.machine === machine) : hub.days;
   const sources = machine ? hub.sources.filter((s) => s.machine === machine) : hub.sources;
-  const apiEquivalent = hub.days.reduce((n, d) => n + (d.kind === "api_equivalent" ? (d.usd ?? 0) : 0), 0);
 
   return (
     <>
-      <LimitsStrip hub={hub} apiEquivalent={apiEquivalent} />
+      <LimitsStrip hub={hub} onPlanSaved={onPlanSaved} />
       <Card
         title={metric === "tokens" ? "Tokens per day" : "Cost per day"}
         actions={

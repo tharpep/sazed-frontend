@@ -82,6 +82,7 @@ export function ClaudeUsagePage() {
   const [machine, setMachine] = useState<string | null>(null);
   const [hub, setHub] = useState<UsageHub | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let current = true;
@@ -95,7 +96,7 @@ export function ClaudeUsagePage() {
     return () => {
       current = false;
     };
-  }, [range]);
+  }, [range, reload]);
 
   const machines = [...new Set((hub?.sources ?? []).filter((s) => s.source === "claude_code").map((s) => s.machine))].sort();
   const showMachine = tab === "overview" || tab === "claude_code";
@@ -137,7 +138,7 @@ export function ClaudeUsagePage() {
         ) : !hub ? (
           <p className="text-meta text-muted">Loading…</p>
         ) : tab === "overview" ? (
-          <Overview hub={hub} machine={machine} onOpen={setTab} />
+          <Overview hub={hub} machine={machine} onOpen={setTab} onPlanSaved={() => setReload((n) => n + 1)} />
         ) : tab === "worker" ? (
           <SourceTab
             key="worker"
