@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { AudioLines, Check, Keyboard, Loader2, Mic, Repeat, Volume2, VolumeX, X } from "lucide-react";
+import { Check, Keyboard, Loader2, Mic, Repeat, Square, Volume2, VolumeX, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { WidgetRenderer } from "@/widgets/WidgetRenderer";
@@ -178,6 +178,17 @@ export function AnswerCard({ exchange, phase, onDone }: { exchange: Exchange; ph
   const waiting = phase === "thinking" && !exchange.answer;
   return (
     <section aria-label="Sazed's answer" className="relative flex h-full min-h-0 flex-col rounded-[14px] border border-line bg-surface">
+      {phase === "speaking" && (
+        <button
+          type="button"
+          onClick={onDone}
+          aria-label="Stop speaking"
+          className="absolute right-2 top-2 flex items-center gap-1.5 rounded-full border border-primary/40 bg-surface px-3 py-1.5 text-[14px] text-primary hover:bg-raised"
+        >
+          <Square className="size-3.5 fill-current" />
+          <span>Stop</span>
+        </button>
+      )}
       {phase === "idle" && (
         <button
           type="button"
@@ -319,21 +330,22 @@ export function AskBar({ voice }: { voice: ReturnType<typeof useVoice> }) {
       )}
       <button
         type="button"
-        onClick={voice.canListen ? voice.tapMic : () => setTyping(true)}
+        onClick={voice.phase === "speaking" ? voice.stopSpeaking : (voice.canListen ? voice.tapMic : () => setTyping(true))}
         disabled={voice.phase === "thinking"}
         className={cn(
           "flex h-14 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-full border border-line bg-surface px-5 text-[17px] text-ink-2 transition-colors",
-          live && "border-primary bg-[color-mix(in_oklab,var(--color-primary)_22%,var(--color-surface))] text-ink"
+          live && "border-primary bg-[color-mix(in_oklab,var(--color-primary)_22%,var(--color-surface))] text-ink",
+          voice.phase === "speaking" && "border-primary bg-[color-mix(in_oklab,var(--color-primary)_18%,var(--color-surface))] text-ink cursor-pointer"
         )}
       >
         {voice.phase === "speaking" ? (
-          <AudioLines className="size-6 text-primary" />
+          <Square className="size-5 fill-current text-primary" />
         ) : voice.phase === "thinking" ? (
           <Loader2 className="size-6 animate-spin text-primary" />
         ) : (
           <Mic className={cn("size-6 text-primary", voice.phase === "listening" && "animate-pulse")} />
         )}
-        <span className="truncate">{voice.canListen ? PHASE_LABEL[voice.phase] : "Type to ask Sazed"}</span>
+        <span className="truncate">{voice.phase === "speaking" ? "Speaking · tap to stop" : (voice.canListen ? PHASE_LABEL[voice.phase] : "Type to ask Sazed")}</span>
       </button>
       <RoundButton label={voice.muted ? "Unmute spoken answers" : "Mute spoken answers"} onClick={voice.toggleMute} active={voice.muted}>
         {voice.muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}

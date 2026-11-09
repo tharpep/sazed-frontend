@@ -391,11 +391,15 @@ export function useVoice() {
 
   const canListen = typeof window !== "undefined" && Boolean(recognitionCtor());
 
+  function stopSpeaking() {
+    stopAudio();
+    finalizedRef.current = true;
+    setPhase("idle");
+  }
+
   function tapMic() {
     if (phase === "speaking") {
-      stopAudio();
-      finalizedRef.current = true;
-      setPhase("idle");
+      stopSpeaking();
       return;
     }
     if (phase === "listening") {
@@ -407,6 +411,16 @@ export function useVoice() {
     if (phase !== "idle" || !canListen) return;
     listen();
   }
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && phase === "speaking") {
+        stopSpeaking();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [phase]);
 
   function ask(text: string) {
     if (text.trim() && phase === "idle") void send(text.trim());
@@ -443,6 +457,7 @@ export function useVoice() {
     voiceUri,
     canListen,
     tapMic,
+    stopSpeaking,
     ask,
     dismiss,
     toggleConversation,
