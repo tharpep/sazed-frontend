@@ -36,6 +36,7 @@ interface ISpeechRecognition {
 
 const VOICE_KEY = "sazed-voice-uri";
 const MUTE_KEY = "sazed-mute";
+const CONVERSATION_KEY = "sazed-conversation";
 const DEFAULT_VOICE_URI = "kokoro:am_adam";
 
 function recognitionCtor(): (new () => ISpeechRecognition) | undefined {
@@ -63,7 +64,7 @@ function stripMarkdownForTts(text: string): string {
 export function useVoice() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [exchange, setExchange] = useState<Exchange | null>(null);
-  const [conversation, setConversation] = useState(false);
+  const [conversation, setConversation] = useState(() => localStorage.getItem(CONVERSATION_KEY) === "true");
   const [muted, setMuted] = useState(() => localStorage.getItem(MUTE_KEY) === "true");
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [voiceUri, setVoiceUri] = useState(() => localStorage.getItem(VOICE_KEY) ?? DEFAULT_VOICE_URI);
@@ -78,12 +79,15 @@ export function useVoice() {
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const vadRef = useRef<MicVAD | null>(null);
   const cancelledRef = useRef(false);
-  const conversationRef = useRef(false);
+  const conversationRef = useRef(conversation);
   const mutedRef = useRef(muted);
   const voiceUriRef = useRef(voiceUri);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const nextPlayTimeRef = useRef(0);
   const scheduledSourcesRef = useRef<AudioBufferSourceNode[]>([]);
+  const sentenceIndexRef = useRef(0);
+  const nextPlayIndexRef = useRef(0);
+  const decodedBuffersRef = useRef<Map<number, AudioBuffer>>(new Map());
   const abortCtrlRef = useRef<AbortController | null>(null);
   const lastExchangeAtRef = useRef(0);
 
@@ -165,6 +169,9 @@ export function useVoice() {
     abortCtrlRef.current?.abort();
     abortCtrlRef.current = null;
     nextPlayTimeRef.current = 0;
+    sentenceIndexRef.current = 0;
+    nextPlayIndexRef.current = 0;
+    decodedBuffersRef.current.clear();
     for (const source of scheduledSourcesRef.current) {
       try {
         source.stop();
@@ -195,7 +202,36 @@ export function useVoice() {
     }
   }
 
-  async function enqueueSentence(sentence: string, signal: AbortSignal) {
+  function schedulePendingSentences() {
+    const ctx = getAudioContext();
+    while (decodedBuffersRef.current.has(nextPlayIndexRef.current)) {
+      const idx = nextPlayIndexRef.current;
+      const audioBuffer = decodedBuffersRef.current.get(idx)!;
+      decodedBuffersRef.current.delete(idx);
+      nextPlayIndexRef.current++;
+
+      const now = ctx.currentTime;
+      const startAt = Math.max(now, nextPlayTimeRef.current);
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      source.start(startAt);
+
+      setPhaseTracked("speaking");
+      scheduledSourcesRef.current.push(source);
+      nextPlayTimeRef.current = startAt + audioBuffer.duration + 0.08;
+
+      source.onended = () => {
+        finishedRef.current++;
+        scheduledSourcesRef.current = scheduledSourcesRef.current.filter((s) => s !== source);
+        if (streamDoneRef.current && finishedRef.current >= spokenRef.current) {
+          finalize();
+        }
+      };
+    }
+  }
+
+  async function enqueueSentence(sentence: string, index: number, signal: AbortSignal) {
     const raw = stripMarkdownForTts(sentence);
     if (!raw) return;
 
@@ -235,29 +271,17 @@ export function useVoice() {
 
     try {
       const buf = await fetchSpeechAudio({ text: raw, voice: voiceId, engine, format: "mp3" }, signal);
+      if (signal.aborted) return;
+
       const ctx = getAudioContext();
       if (ctx.state === "suspended") {
         await ctx.resume();
       }
       const audioBuffer = await ctx.decodeAudioData(buf.slice(0));
-      const now = ctx.currentTime;
-      const startAt = Math.max(now, nextPlayTimeRef.current);
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      source.start(startAt);
+      if (signal.aborted) return;
 
-      setPhaseTracked("speaking");
-      scheduledSourcesRef.current.push(source);
-      nextPlayTimeRef.current = startAt + audioBuffer.duration + 0.08;
-
-      source.onended = () => {
-        finishedRef.current++;
-        scheduledSourcesRef.current = scheduledSourcesRef.current.filter((s) => s !== source);
-        if (streamDoneRef.current && finishedRef.current >= spokenRef.current) {
-          finalize();
-        }
-      };
+      decodedBuffersRef.current.set(index, audioBuffer);
+      schedulePendingSentences();
     } catch {
       if (typeof speechSynthesis !== "undefined") {
         const u = new SpeechSynthesisUtterance(raw);
@@ -302,7 +326,8 @@ export function useVoice() {
 
     for (const sentence of sentences) {
       spokenRef.current++;
-      void enqueueSentence(sentence, signal);
+      const idx = sentenceIndexRef.current++;
+      void enqueueSentence(sentence, idx, signal);
     }
   }
 
@@ -318,6 +343,9 @@ export function useVoice() {
     finishedRef.current = 0;
     streamDoneRef.current = false;
     finalizedRef.current = false;
+    sentenceIndexRef.current = 0;
+    nextPlayIndexRef.current = 0;
+    decodedBuffersRef.current.clear();
     stopAudio();
 
     await postMessageStream(
@@ -389,7 +417,7 @@ export function useVoice() {
       }
 
       const isFollowUp = Date.now() - lastExchangeAtRef.current < 30_000;
-      const wakeMatch = clean.match(/^(?:hey\s+)?sazed[\s,.:!?]*(.*)$/i);
+      const wakeMatch = clean.match(/^(?:hey[\s,]+)?(?:sazed|says\s*it|sized|say\s*zed)\b[\s,.:!?]*(.*)$/i);
 
       let prompt = clean;
       if (conversationRef.current && !isFollowUp) {
@@ -452,6 +480,9 @@ export function useVoice() {
         }
 
         vadRef.current = vad;
+        if (conversationRef.current && !vad.listening) {
+          void vad.start();
+        }
       } catch {
         vadRef.current = null;
       }
@@ -556,6 +587,7 @@ export function useVoice() {
 
   function toggleConversation() {
     conversationRef.current = !conversationRef.current;
+    localStorage.setItem(CONVERSATION_KEY, String(conversationRef.current));
     setConversation(conversationRef.current);
     if (conversationRef.current) {
       if (vadRef.current && !vadRef.current.listening && phase === "idle") {
