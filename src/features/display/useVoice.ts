@@ -23,6 +23,13 @@ export interface VoiceOption {
   engine: "kokoro" | "fish" | "browser";
 }
 
+export interface CustomVoiceProfile {
+  id: string;
+  name: string;
+  referenceId: string;
+  engine: "fish";
+}
+
 interface ISpeechRecognition {
   continuous: boolean;
   interimResults: boolean;
@@ -37,7 +44,23 @@ interface ISpeechRecognition {
 const VOICE_KEY = "sazed-voice-uri";
 const MUTE_KEY = "sazed-mute";
 const CONVERSATION_KEY = "sazed-conversation";
+const CUSTOM_VOICES_KEY = "sazed-custom-voices";
 const DEFAULT_VOICE_URI = "kokoro:am_adam";
+
+function loadCustomProfiles(): CustomVoiceProfile[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_VOICES_KEY);
+    return raw ? (JSON.parse(raw) as CustomVoiceProfile[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomProfiles(profiles: CustomVoiceProfile[]) {
+  try {
+    localStorage.setItem(CUSTOM_VOICES_KEY, JSON.stringify(profiles));
+  } catch {}
+}
 
 function recognitionCtor(): (new () => ISpeechRecognition) | undefined {
   const w = window as unknown as Record<string, unknown>;
@@ -66,8 +89,18 @@ export function useVoice() {
   const [exchange, setExchange] = useState<Exchange | null>(null);
   const [conversation, setConversation] = useState(() => localStorage.getItem(CONVERSATION_KEY) === "true");
   const [muted, setMuted] = useState(() => localStorage.getItem(MUTE_KEY) === "true");
-  const [voices, setVoices] = useState<VoiceOption[]>([]);
+  const [customVoices, setCustomVoices] = useState<CustomVoiceProfile[]>(loadCustomProfiles);
+  const [builtinVoices, setBuiltinVoices] = useState<VoiceOption[]>([]);
   const [voiceUri, setVoiceUri] = useState(() => localStorage.getItem(VOICE_KEY) ?? DEFAULT_VOICE_URI);
+
+  const voices: VoiceOption[] = [
+    ...customVoices.map((cv) => ({
+      voiceURI: `fish:${cv.referenceId}`,
+      name: `${cv.name} (Fish)`,
+      engine: "fish" as const,
+    })),
+    ...builtinVoices,
+  ];
 
   const phaseRef = useRef<Phase>("idle");
   const sessionIdRef = useRef<string | null>(null);
@@ -140,7 +173,7 @@ export function useVoice() {
       }
 
       if (!active) return;
-      setVoices(options);
+      setBuiltinVoices(options);
 
       const saved = localStorage.getItem(VOICE_KEY);
       if (!saved && options.length > 0) {
@@ -613,6 +646,32 @@ export function useVoice() {
     localStorage.setItem(VOICE_KEY, uri);
   }
 
+  function addCustomVoice(name: string, referenceId: string) {
+    const trimmedName = name.trim();
+    const trimmedId = referenceId.trim();
+    if (!trimmedName || !trimmedId) return;
+    const profile: CustomVoiceProfile = {
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+      name: trimmedName,
+      referenceId: trimmedId,
+      engine: "fish",
+    };
+    const next = [...customVoices.filter((v) => v.referenceId !== trimmedId), profile];
+    setCustomVoices(next);
+    saveCustomProfiles(next);
+    chooseVoice(`fish:${trimmedId}`);
+  }
+
+  function removeCustomVoice(id: string) {
+    const target = customVoices.find((v) => v.id === id);
+    const next = customVoices.filter((v) => v.id !== id);
+    setCustomVoices(next);
+    saveCustomProfiles(next);
+    if (target && voiceUriRef.current === `fish:${target.referenceId}`) {
+      chooseVoice(DEFAULT_VOICE_URI);
+    }
+  }
+
   function dismiss() {
     if (phase === "idle") setExchange(null);
   }
@@ -624,6 +683,7 @@ export function useVoice() {
     muted,
     voices,
     voiceUri,
+    customVoices,
     canListen,
     tapMic,
     stopSpeaking,
@@ -632,5 +692,7 @@ export function useVoice() {
     toggleConversation,
     toggleMute,
     chooseVoice,
+    addCustomVoice,
+    removeCustomVoice,
   };
 }

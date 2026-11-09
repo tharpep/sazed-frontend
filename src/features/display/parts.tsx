@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, Keyboard, Loader2, Mic, Repeat, Square, Volume2, VolumeX, X } from "lucide-react";
+import { Check, Keyboard, Loader2, Mic, Plus, Repeat, SlidersHorizontal, Square, Trash2, Volume2, VolumeX, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { WidgetRenderer } from "@/widgets/WidgetRenderer";
@@ -271,10 +271,182 @@ function RoundButton({
   );
 }
 
+export function VoiceModal({
+  voice,
+  onClose,
+}: {
+  voice: ReturnType<typeof useVoice>;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [refId, setRefId] = useState("");
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  function handleAdd(e: FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !refId.trim()) return;
+    voice.addCustomVoice(name, refId);
+    setName("");
+    setRefId("");
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Voice settings"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative flex max-h-[85vh] w-full max-w-md flex-col gap-5 overflow-y-auto rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <SlidersHorizontal className="size-5 text-primary" />
+            <h3 className="text-[18px] font-medium text-ink">Voice Profiles</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close voice settings"
+            className="grid size-8 place-items-center rounded-full text-muted hover:text-ink transition-colors"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-[13px] font-medium text-ink-2">Active Voice</label>
+          <select
+            value={voice.voiceUri}
+            onChange={(e) => voice.chooseVoice(e.target.value)}
+            aria-label="Active voice"
+            className="h-11 w-full rounded-xl border border-line bg-black/40 px-3 text-[15px] text-ink outline-none focus:border-primary"
+          >
+            {voice.customVoices.length > 0 && (
+              <optgroup label="Custom Profiles (Fish Audio)">
+                {voice.customVoices.map((cv) => (
+                  <option key={cv.id} value={`fish:${cv.referenceId}`}>
+                    {cv.name} (Fish Audio)
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            <optgroup label="Kokoro TTS (Local Neural)">
+              {voice.voices
+                .filter((v) => v.engine === "kokoro")
+                .map((v) => (
+                  <option key={v.voiceURI} value={v.voiceURI}>
+                    {v.name}
+                  </option>
+                ))}
+            </optgroup>
+            {voice.voices.some((v) => v.engine === "browser") && (
+              <optgroup label="Browser Voices">
+                {voice.voices
+                  .filter((v) => v.engine === "browser")
+                  .map((v) => (
+                    <option key={v.voiceURI} value={v.voiceURI}>
+                      {v.name}
+                    </option>
+                  ))}
+              </optgroup>
+            )}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-medium text-ink-2">Custom Fish Voices</span>
+            <span className="text-[12px] text-muted">Stored locally</span>
+          </div>
+          {voice.customVoices.length === 0 ? (
+            <p className="rounded-xl border border-line/60 bg-black/20 p-3 text-center text-[13px] text-muted">
+              No custom voices added yet. Add one below with a Fish Audio Voice ID.
+            </p>
+          ) : (
+            <div className="flex max-h-48 flex-col gap-2 overflow-y-auto">
+              {voice.customVoices.map((cv) => {
+                const isActive = voice.voiceUri === `fish:${cv.referenceId}`;
+                return (
+                  <div
+                    key={cv.id}
+                    className={cn(
+                      "flex items-center justify-between gap-3 rounded-xl border border-line bg-black/30 p-3 transition-colors",
+                      isActive && "border-primary/80 bg-primary/10"
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => voice.chooseVoice(`fish:${cv.referenceId}`)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-[15px] font-medium text-ink">{cv.name}</span>
+                        {isActive && <Check className="size-4 shrink-0 text-primary" />}
+                      </div>
+                      <div className="truncate font-mono text-[11px] text-muted">{cv.referenceId}</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => voice.removeCustomVoice(cv.id)}
+                      aria-label={`Delete ${cv.name}`}
+                      className="grid size-8 shrink-0 place-items-center rounded-lg text-muted hover:text-err transition-colors"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={handleAdd} className="flex flex-col gap-3 border-t border-line pt-4">
+          <span className="text-[13px] font-medium text-ink-2">Add Fish Audio Voice</span>
+          <div className="flex flex-col gap-2">
+            <input
+              type="text"
+              placeholder="Voice Name (e.g. Sazed Drama, Glados, Gojo)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="h-10 rounded-lg border border-line bg-black/40 px-3 text-[14px] text-ink outline-none placeholder:text-muted focus:border-primary"
+            />
+            <input
+              type="text"
+              placeholder="Fish Audio Reference ID (e.g. 7f92f8af...)"
+              value={refId}
+              onChange={(e) => setRefId(e.target.value)}
+              className="h-10 rounded-lg border border-line bg-black/40 px-3 font-mono text-[13px] text-ink outline-none placeholder:text-muted focus:border-primary"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={!name.trim() || !refId.trim()}
+            className="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-[14px] font-medium text-primary-foreground transition-opacity disabled:opacity-40"
+          >
+            <Plus className="size-4" />
+            <span>Add Voice Profile</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 /** Mic first: the kiosk is spoken to. Typing, mute and conversation mode sit beside it. */
 export function AskBar({ voice }: { voice: ReturnType<typeof useVoice> }) {
   const [typing, setTyping] = useState(false);
   const [text, setText] = useState("");
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const live = voice.phase !== "idle";
 
   function submit(e: FormEvent) {
@@ -301,7 +473,7 @@ export function AskBar({ voice }: { voice: ReturnType<typeof useVoice> }) {
             value={voice.voiceUri}
             onChange={(e) => voice.chooseVoice(e.target.value)}
             aria-label="Voice"
-            className="h-12 max-w-32 rounded-full border border-line bg-surface px-3 text-[14px] text-ink-2"
+            className="h-12 max-w-36 rounded-full border border-line bg-surface px-3 text-[14px] text-ink-2"
           >
             {voice.voices.map((v) => (
               <option key={v.voiceURI} value={v.voiceURI}>
@@ -310,9 +482,13 @@ export function AskBar({ voice }: { voice: ReturnType<typeof useVoice> }) {
             ))}
           </select>
         )}
+        <RoundButton label="Voice settings" onClick={() => setVoiceModalOpen(true)}>
+          <SlidersHorizontal className="size-5" />
+        </RoundButton>
         <RoundButton label="Cancel typing" onClick={() => setTyping(false)}>
           <X className="size-5" />
         </RoundButton>
+        {voiceModalOpen && <VoiceModal voice={voice} onClose={() => setVoiceModalOpen(false)} />}
       </form>
     );
   }
@@ -347,9 +523,13 @@ export function AskBar({ voice }: { voice: ReturnType<typeof useVoice> }) {
         )}
         <span className="truncate">{voice.phase === "speaking" ? "Speaking · tap to stop" : (voice.canListen ? PHASE_LABEL[voice.phase] : "Type to ask Sazed")}</span>
       </button>
+      <RoundButton label="Voice settings" onClick={() => setVoiceModalOpen(true)}>
+        <SlidersHorizontal className="size-5" />
+      </RoundButton>
       <RoundButton label={voice.muted ? "Unmute spoken answers" : "Mute spoken answers"} onClick={voice.toggleMute} active={voice.muted}>
         {voice.muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
       </RoundButton>
+      {voiceModalOpen && <VoiceModal voice={voice} onClose={() => setVoiceModalOpen(false)} />}
     </div>
   );
 }
