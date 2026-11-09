@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { fetchSpeechAudio, fetchVoices, type VoiceListResponse } from "@/api/audio";
 import { postMessageStream } from "@/api/chat";
 import { toolCallPending } from "@/lib/toolMap";
 import type { ToolCall, UIBlock } from "@/mock/data";
@@ -12,6 +13,12 @@ export interface Exchange {
   tools: ToolCall[];
   uiBlocks: UIBlock[];
   error: string | null;
+}
+
+export interface VoiceOption {
+  voiceURI: string;
+  name: string;
+  engine: "kokoro" | "fish" | "browser";
 }
 
 interface ISpeechRecognition {
@@ -27,6 +34,7 @@ interface ISpeechRecognition {
 
 const VOICE_KEY = "sazed-voice-uri";
 const MUTE_KEY = "sazed-mute";
+const DEFAULT_VOICE_URI = "kokoro:am_adam";
 
 function recognitionCtor(): (new () => ISpeechRecognition) | undefined {
   const w = window as unknown as Record<string, unknown>;
@@ -50,16 +58,13 @@ function stripMarkdownForTts(text: string): string {
     .trim();
 }
 
-/** Talk to Sazed: speech in (Web Speech recognition), the streamed answer, and speech out sentence
- * by sentence as it streams. Conversation mode listens again after each answer. One session per
- * page load, so follow-ups have context. */
 export function useVoice() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [exchange, setExchange] = useState<Exchange | null>(null);
   const [conversation, setConversation] = useState(false);
   const [muted, setMuted] = useState(() => localStorage.getItem(MUTE_KEY) === "true");
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voiceUri, setVoiceUri] = useState(() => localStorage.getItem(VOICE_KEY) ?? "");
+  const [voices, setVoices] = useState<VoiceOption[]>([]);
+  const [voiceUri, setVoiceUri] = useState(() => localStorage.getItem(VOICE_KEY) ?? DEFAULT_VOICE_URI);
 
   const sessionIdRef = useRef<string | null>(null);
   const ttsBufferRef = useRef("");
@@ -67,48 +72,198 @@ export function useVoice() {
   const finishedRef = useRef(0);
   const streamDoneRef = useRef(false);
   const finalizedRef = useRef(false);
-  const pollRef = useRef<number | null>(null);
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const cancelledRef = useRef(false);
   const conversationRef = useRef(false);
   const mutedRef = useRef(muted);
   const voiceUriRef = useRef(voiceUri);
-  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioQueueRef = useRef<HTMLAudioElement[]>([]);
+  const abortCtrlRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (typeof speechSynthesis === "undefined") return;
-    function load() {
-      const en = speechSynthesis
-        .getVoices()
-        .filter((v) => v.lang.startsWith("en"))
-        .sort((a, b) => Number(a.localService) - Number(b.localService));
-      if (!en.length) return;
-      setVoices(en);
-      voicesRef.current = en;
-      if (!localStorage.getItem(VOICE_KEY)) {
-        voiceUriRef.current = en[0].voiceURI;
-        setVoiceUri(en[0].voiceURI);
-        localStorage.setItem(VOICE_KEY, en[0].voiceURI);
+    let active = true;
+
+    async function loadVoices() {
+      const options: VoiceOption[] = [];
+
+      try {
+        const res: VoiceListResponse = await fetchVoices();
+        for (const kv of res.kokoro_voices) {
+          options.push({
+            voiceURI: `kokoro:${kv.id}`,
+            name: `${kv.name} (Kokoro)`,
+            engine: "kokoro",
+          });
+        }
+      } catch {
+        options.push(
+          { voiceURI: "kokoro:am_adam", name: "Adam (Kokoro Butler)", engine: "kokoro" },
+          { voiceURI: "kokoro:af_bella", name: "Bella (Kokoro Warm)", engine: "kokoro" }
+        );
+      }
+
+      if (typeof speechSynthesis !== "undefined") {
+        const sys = speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en"));
+        for (const sv of sys) {
+          options.push({
+            voiceURI: `browser:${sv.voiceURI}`,
+            name: `${sv.name} (Browser)`,
+            engine: "browser",
+          });
+        }
+      }
+
+      if (!active) return;
+      setVoices(options);
+
+      const saved = localStorage.getItem(VOICE_KEY);
+      if (!saved && options.length > 0) {
+        const initial = options[0].voiceURI;
+        voiceUriRef.current = initial;
+        setVoiceUri(initial);
+        localStorage.setItem(VOICE_KEY, initial);
       }
     }
-    load();
-    speechSynthesis.addEventListener("voiceschanged", load);
-    return () => speechSynthesis.removeEventListener("voiceschanged", load);
+
+    void loadVoices();
+
+    if (typeof speechSynthesis !== "undefined") {
+      speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    }
+
+    return () => {
+      active = false;
+      if (typeof speechSynthesis !== "undefined") {
+        speechSynthesis.removeEventListener("voiceschanged", loadVoices);
+      }
+    };
   }, []);
 
-  function stopPoll() {
-    if (pollRef.current !== null) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+  function stopAudio() {
+    abortCtrlRef.current?.abort();
+    abortCtrlRef.current = null;
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.src = "";
+      currentAudioRef.current = null;
+    }
+    for (const a of audioQueueRef.current) {
+      a.pause();
+      a.src = "";
+    }
+    audioQueueRef.current = [];
+    if (typeof speechSynthesis !== "undefined") {
+      speechSynthesis.cancel();
     }
   }
 
   function finalize() {
     if (finalizedRef.current) return;
     finalizedRef.current = true;
-    stopPoll();
+    stopAudio();
     if (conversationRef.current) setTimeout(listen, 600);
     else setPhase("idle");
+  }
+
+  function playNextAudio() {
+    if (currentAudioRef.current || audioQueueRef.current.length === 0) {
+      if (!currentAudioRef.current && audioQueueRef.current.length === 0) {
+        if (streamDoneRef.current && finishedRef.current >= spokenRef.current) {
+          finalize();
+        }
+      }
+      return;
+    }
+
+    const next = audioQueueRef.current.shift();
+    if (!next) return;
+
+    currentAudioRef.current = next;
+    setPhase("speaking");
+
+    next.onended = () => {
+      finishedRef.current++;
+      currentAudioRef.current = null;
+      if (audioQueueRef.current.length > 0) {
+        playNextAudio();
+      } else if (streamDoneRef.current && finishedRef.current >= spokenRef.current) {
+        finalize();
+      }
+    };
+
+    next.onerror = () => {
+      finishedRef.current++;
+      currentAudioRef.current = null;
+      playNextAudio();
+    };
+
+    void next.play().catch(() => {
+      finishedRef.current++;
+      currentAudioRef.current = null;
+      playNextAudio();
+    });
+  }
+
+  async function enqueueSentence(sentence: string, signal: AbortSignal) {
+    const raw = stripMarkdownForTts(sentence);
+    if (!raw) return;
+
+    const uri = voiceUriRef.current;
+    let engine: "kokoro" | "fish" | "browser" = "kokoro";
+    let voiceId = "am_adam";
+
+    if (uri.startsWith("kokoro:")) {
+      engine = "kokoro";
+      voiceId = uri.slice(7);
+    } else if (uri.startsWith("fish:")) {
+      engine = "fish";
+      voiceId = uri.slice(5);
+    } else if (uri.startsWith("browser:")) {
+      engine = "browser";
+      voiceId = uri.slice(8);
+    }
+
+    if (engine === "browser") {
+      if (typeof speechSynthesis !== "undefined") {
+        const u = new SpeechSynthesisUtterance(raw);
+        const all = speechSynthesis.getVoices();
+        const match = all.find((v) => v.voiceURI === voiceId);
+        if (match) u.voice = match;
+        u.onstart = () => setPhase("speaking");
+        u.onend = () => {
+          finishedRef.current++;
+          if (streamDoneRef.current && finishedRef.current >= spokenRef.current) finalize();
+        };
+        speechSynthesis.speak(u);
+      } else {
+        finishedRef.current++;
+        if (streamDoneRef.current && finishedRef.current >= spokenRef.current) finalize();
+      }
+      return;
+    }
+
+    try {
+      const buf = await fetchSpeechAudio({ text: raw, voice: voiceId, engine, format: "mp3" }, signal);
+      const blob = new Blob([buf], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioQueueRef.current.push(audio);
+      playNextAudio();
+    } catch {
+      if (typeof speechSynthesis !== "undefined") {
+        const u = new SpeechSynthesisUtterance(raw);
+        u.onstart = () => setPhase("speaking");
+        u.onend = () => {
+          finishedRef.current++;
+          if (streamDoneRef.current && finishedRef.current >= spokenRef.current) finalize();
+        };
+        speechSynthesis.speak(u);
+      } else {
+        finishedRef.current++;
+        if (streamDoneRef.current && finishedRef.current >= spokenRef.current) finalize();
+      }
+    }
   }
 
   function speak(isFinal: boolean) {
@@ -116,12 +271,14 @@ export function useVoice() {
     const boundary = /[.!?]+[\s\n]+/g;
     const sentences: string[] = [];
     let last = 0;
-    let match;
+    let match: RegExpExecArray | null;
+
     while ((match = boundary.exec(buffer)) !== null) {
       const sentence = buffer.slice(last, match.index + match[0].length).trim();
       if (sentence) sentences.push(sentence);
       last = match.index + match[0].length;
     }
+
     if (isFinal) {
       const rest = buffer.slice(last).trim();
       if (rest) sentences.push(rest);
@@ -129,17 +286,15 @@ export function useVoice() {
     } else {
       ttsBufferRef.current = buffer.slice(last);
     }
-    const voice = voicesRef.current.find((v) => v.voiceURI === voiceUriRef.current) ?? null;
+
+    if (!abortCtrlRef.current) {
+      abortCtrlRef.current = new AbortController();
+    }
+    const signal = abortCtrlRef.current.signal;
+
     for (const sentence of sentences) {
       spokenRef.current++;
-      const u = new SpeechSynthesisUtterance(stripMarkdownForTts(sentence));
-      if (voice) u.voice = voice;
-      u.onstart = () => setPhase("speaking");
-      u.onend = () => {
-        finishedRef.current++;
-        if (streamDoneRef.current && finishedRef.current >= spokenRef.current) finalize();
-      };
-      speechSynthesis.speak(u);
+      void enqueueSentence(sentence, signal);
     }
   }
 
@@ -155,7 +310,7 @@ export function useVoice() {
     finishedRef.current = 0;
     streamDoneRef.current = false;
     finalizedRef.current = false;
-    stopPoll();
+    stopAudio();
 
     await postMessageStream(
       {
@@ -195,11 +350,7 @@ export function useVoice() {
           if (!mutedRef.current) speak(true);
           if (spokenRef.current === 0) {
             finalize();
-            return;
           }
-          pollRef.current = window.setInterval(() => {
-            if (!speechSynthesis.speaking && !speechSynthesis.pending) finalize();
-          }, 250);
         },
         onError: (err) => {
           update((e) => ({ ...e, error: err.message }));
@@ -242,9 +393,8 @@ export function useVoice() {
 
   function tapMic() {
     if (phase === "speaking") {
-      speechSynthesis.cancel();
+      stopAudio();
       finalizedRef.current = true;
-      stopPoll();
       setPhase("idle");
       return;
     }
@@ -255,12 +405,6 @@ export function useVoice() {
       return;
     }
     if (phase !== "idle" || !canListen) return;
-    if (!mutedRef.current) {
-      // Chrome only lets speech play after a user gesture; an empty utterance here unlocks it.
-      const unlock = new SpeechSynthesisUtterance("");
-      unlock.volume = 0;
-      speechSynthesis.speak(unlock);
-    }
     listen();
   }
 
@@ -277,7 +421,7 @@ export function useVoice() {
     mutedRef.current = !mutedRef.current;
     localStorage.setItem(MUTE_KEY, String(mutedRef.current));
     setMuted(mutedRef.current);
-    if (mutedRef.current) speechSynthesis.cancel();
+    if (mutedRef.current) stopAudio();
   }
 
   function chooseVoice(uri: string) {
