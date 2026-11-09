@@ -64,3 +64,25 @@ export async function fetchVoices(): Promise<VoiceListResponse> {
   }
   return res.json() as Promise<VoiceListResponse>;
 }
+
+export async function transcribeAudio(audioBlob: Blob, signal?: AbortSignal): Promise<string> {
+  const base = getBase();
+  const key = getKey();
+  const headers: Record<string, string> = { "Content-Type": audioBlob.type || "audio/wav" };
+  if (key) headers["X-API-Key"] = key;
+
+  const res = await fetch(`${base.replace(/\/$/, "")}/audio/transcribe`, {
+    method: "POST",
+    headers,
+    body: audioBlob,
+    signal,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+
+  const data = (await res.json()) as { text: string };
+  return data.text;
+}

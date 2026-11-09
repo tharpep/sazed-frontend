@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { MicVAD } from "@ricky0123/vad-web";
 
-import { fetchSpeechAudio, fetchVoices, type VoiceListResponse } from "@/api/audio";
+import { fetchSpeechAudio, fetchVoices, transcribeAudio, type VoiceListResponse } from "@/api/audio";
 import { postMessageStream } from "@/api/chat";
+import { encodeWav } from "@/lib/audioWav";
 import { toolCallPending } from "@/lib/toolMap";
 import type { ToolCall, UIBlock } from "@/mock/data";
 
@@ -66,6 +68,7 @@ export function useVoice() {
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [voiceUri, setVoiceUri] = useState(() => localStorage.getItem(VOICE_KEY) ?? DEFAULT_VOICE_URI);
 
+  const phaseRef = useRef<Phase>("idle");
   const sessionIdRef = useRef<string | null>(null);
   const ttsBufferRef = useRef("");
   const spokenRef = useRef(0);
@@ -73,13 +76,31 @@ export function useVoice() {
   const streamDoneRef = useRef(false);
   const finalizedRef = useRef(false);
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
+  const vadRef = useRef<MicVAD | null>(null);
   const cancelledRef = useRef(false);
   const conversationRef = useRef(false);
   const mutedRef = useRef(muted);
   const voiceUriRef = useRef(voiceUri);
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-  const audioQueueRef = useRef<HTMLAudioElement[]>([]);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const nextPlayTimeRef = useRef(0);
+  const scheduledSourcesRef = useRef<AudioBufferSourceNode[]>([]);
   const abortCtrlRef = useRef<AbortController | null>(null);
+  const lastExchangeAtRef = useRef(0);
+
+  function setPhaseTracked(p: Phase) {
+    phaseRef.current = p;
+    setPhase(p);
+  }
+
+  function getAudioContext(): AudioContext {
+    if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+      const Ctx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      audioCtxRef.current = new Ctx();
+    }
+    return audioCtxRef.current;
+  }
 
   useEffect(() => {
     let active = true;
@@ -143,16 +164,14 @@ export function useVoice() {
   function stopAudio() {
     abortCtrlRef.current?.abort();
     abortCtrlRef.current = null;
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.src = "";
-      currentAudioRef.current = null;
+    nextPlayTimeRef.current = 0;
+    for (const source of scheduledSourcesRef.current) {
+      try {
+        source.stop();
+        source.disconnect();
+      } catch {}
     }
-    for (const a of audioQueueRef.current) {
-      a.pause();
-      a.src = "";
-    }
-    audioQueueRef.current = [];
+    scheduledSourcesRef.current = [];
     if (typeof speechSynthesis !== "undefined") {
       speechSynthesis.cancel();
     }
@@ -161,48 +180,19 @@ export function useVoice() {
   function finalize() {
     if (finalizedRef.current) return;
     finalizedRef.current = true;
+    lastExchangeAtRef.current = Date.now();
     stopAudio();
-    if (conversationRef.current) setTimeout(listen, 600);
-    else setPhase("idle");
-  }
-
-  function playNextAudio() {
-    if (currentAudioRef.current || audioQueueRef.current.length === 0) {
-      if (!currentAudioRef.current && audioQueueRef.current.length === 0) {
-        if (streamDoneRef.current && finishedRef.current >= spokenRef.current) {
-          finalize();
+    if (conversationRef.current) {
+      setTimeout(() => {
+        if (vadRef.current) {
+          void vadRef.current.start();
+        } else {
+          listen();
         }
-      }
-      return;
+      }, 500);
+    } else {
+      setPhaseTracked("idle");
     }
-
-    const next = audioQueueRef.current.shift();
-    if (!next) return;
-
-    currentAudioRef.current = next;
-    setPhase("speaking");
-
-    next.onended = () => {
-      finishedRef.current++;
-      currentAudioRef.current = null;
-      if (audioQueueRef.current.length > 0) {
-        playNextAudio();
-      } else if (streamDoneRef.current && finishedRef.current >= spokenRef.current) {
-        finalize();
-      }
-    };
-
-    next.onerror = () => {
-      finishedRef.current++;
-      currentAudioRef.current = null;
-      playNextAudio();
-    };
-
-    void next.play().catch(() => {
-      finishedRef.current++;
-      currentAudioRef.current = null;
-      playNextAudio();
-    });
   }
 
   async function enqueueSentence(sentence: string, signal: AbortSignal) {
@@ -230,7 +220,7 @@ export function useVoice() {
         const all = speechSynthesis.getVoices();
         const match = all.find((v) => v.voiceURI === voiceId);
         if (match) u.voice = match;
-        u.onstart = () => setPhase("speaking");
+        u.onstart = () => setPhaseTracked("speaking");
         u.onend = () => {
           finishedRef.current++;
           if (streamDoneRef.current && finishedRef.current >= spokenRef.current) finalize();
@@ -245,15 +235,33 @@ export function useVoice() {
 
     try {
       const buf = await fetchSpeechAudio({ text: raw, voice: voiceId, engine, format: "mp3" }, signal);
-      const blob = new Blob([buf], { type: "audio/mpeg" });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioQueueRef.current.push(audio);
-      playNextAudio();
+      const ctx = getAudioContext();
+      if (ctx.state === "suspended") {
+        await ctx.resume();
+      }
+      const audioBuffer = await ctx.decodeAudioData(buf.slice(0));
+      const now = ctx.currentTime;
+      const startAt = Math.max(now, nextPlayTimeRef.current);
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      source.start(startAt);
+
+      setPhaseTracked("speaking");
+      scheduledSourcesRef.current.push(source);
+      nextPlayTimeRef.current = startAt + audioBuffer.duration + 0.08;
+
+      source.onended = () => {
+        finishedRef.current++;
+        scheduledSourcesRef.current = scheduledSourcesRef.current.filter((s) => s !== source);
+        if (streamDoneRef.current && finishedRef.current >= spokenRef.current) {
+          finalize();
+        }
+      };
     } catch {
       if (typeof speechSynthesis !== "undefined") {
         const u = new SpeechSynthesisUtterance(raw);
-        u.onstart = () => setPhase("speaking");
+        u.onstart = () => setPhaseTracked("speaking");
         u.onend = () => {
           finishedRef.current++;
           if (streamDoneRef.current && finishedRef.current >= spokenRef.current) finalize();
@@ -303,7 +311,7 @@ export function useVoice() {
   }
 
   async function send(text: string) {
-    setPhase("thinking");
+    setPhaseTracked("thinking");
     setExchange({ question: text, answer: "", tools: [], uiBlocks: [], error: null });
     ttsBufferRef.current = "";
     spokenRef.current = 0;
@@ -354,11 +362,111 @@ export function useVoice() {
         },
         onError: (err) => {
           update((e) => ({ ...e, error: err.message }));
-          setPhase("idle");
+          setPhaseTracked("idle");
         },
       }
     );
   }
+
+  async function handleSpeechEnd(audio: Float32Array) {
+    if (!conversationRef.current && phaseRef.current !== "listening") {
+      return;
+    }
+
+    setPhaseTracked("thinking");
+
+    try {
+      const wavBlob = encodeWav(audio, 16000);
+      const text = await transcribeAudio(wavBlob);
+      const clean = text.trim();
+
+      if (!clean) {
+        setPhaseTracked("idle");
+        if (conversationRef.current && vadRef.current && !vadRef.current.listening) {
+          void vadRef.current.start();
+        }
+        return;
+      }
+
+      const isFollowUp = Date.now() - lastExchangeAtRef.current < 30_000;
+      const wakeMatch = clean.match(/^(?:hey\s+)?sazed[\s,.:!?]*(.*)$/i);
+
+      let prompt = clean;
+      if (conversationRef.current && !isFollowUp) {
+        if (!wakeMatch) {
+          setPhaseTracked("idle");
+          if (vadRef.current && !vadRef.current.listening) {
+            void vadRef.current.start();
+          }
+          return;
+        }
+        prompt = wakeMatch[1].trim() || "Hey Sazed";
+      } else if (wakeMatch && wakeMatch[1].trim()) {
+        prompt = wakeMatch[1].trim();
+      }
+
+      if (vadRef.current?.listening) {
+        await vadRef.current.pause();
+      }
+
+      await send(prompt);
+    } catch {
+      setPhaseTracked("idle");
+      if (conversationRef.current && vadRef.current && !vadRef.current.listening) {
+        void vadRef.current.start();
+      }
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    async function initVad() {
+      try {
+        const vad = await MicVAD.new({
+          baseAssetPath: "/vad/",
+          onnxWASMBasePath: "/vad/",
+          startOnLoad: false,
+          onSpeechStart: () => {
+            if (!active) return;
+            if (phaseRef.current === "speaking") {
+              stopSpeaking();
+            }
+            setPhaseTracked("listening");
+          },
+          onVADMisfire: () => {
+            if (!active) return;
+            if (phaseRef.current === "listening") {
+              setPhaseTracked("idle");
+            }
+          },
+          onSpeechEnd: (audio) => {
+            if (!active) return;
+            void handleSpeechEnd(audio);
+          },
+        });
+
+        if (!active) {
+          void vad.destroy();
+          return;
+        }
+
+        vadRef.current = vad;
+      } catch {
+        vadRef.current = null;
+      }
+    }
+
+    void initVad();
+
+    return () => {
+      active = false;
+      if (vadRef.current) {
+        void vadRef.current.destroy();
+        vadRef.current = null;
+      }
+    };
+  }, []);
 
   function listen() {
     const SR = recognitionCtor();
@@ -374,27 +482,37 @@ export function useVoice() {
     recognition.onend = () => {
       recognitionRef.current = null;
       if (cancelledRef.current || !transcript.trim()) {
-        setPhase("idle");
+        setPhaseTracked("idle");
         return;
       }
       void send(transcript.trim());
     };
     recognition.onerror = () => {
       recognitionRef.current = null;
-      setPhase("idle");
+      setPhaseTracked("idle");
     };
     cancelledRef.current = false;
     recognitionRef.current = recognition;
-    setPhase("listening");
+    setPhaseTracked("listening");
     recognition.start();
   }
 
-  const canListen = typeof window !== "undefined" && Boolean(recognitionCtor());
+  const canListen =
+    typeof window !== "undefined" &&
+    Boolean(
+      (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) ||
+        recognitionCtor()
+    );
 
   function stopSpeaking() {
     stopAudio();
     finalizedRef.current = true;
-    setPhase("idle");
+    lastExchangeAtRef.current = Date.now();
+    if (conversationRef.current && vadRef.current) {
+      void vadRef.current.start();
+    } else {
+      setPhaseTracked("idle");
+    }
   }
 
   function tapMic() {
@@ -404,12 +522,22 @@ export function useVoice() {
     }
     if (phase === "listening") {
       cancelledRef.current = true;
+      if (vadRef.current?.listening) {
+        void vadRef.current.pause();
+      }
       recognitionRef.current?.stop();
-      setPhase("idle");
+      setPhaseTracked("idle");
       return;
     }
-    if (phase !== "idle" || !canListen) return;
-    listen();
+    if (phase !== "idle") return;
+
+    if (vadRef.current) {
+      cancelledRef.current = false;
+      setPhaseTracked("listening");
+      void vadRef.current.start();
+    } else if (canListen) {
+      listen();
+    }
   }
 
   useEffect(() => {
@@ -429,6 +557,15 @@ export function useVoice() {
   function toggleConversation() {
     conversationRef.current = !conversationRef.current;
     setConversation(conversationRef.current);
+    if (conversationRef.current) {
+      if (vadRef.current && !vadRef.current.listening && phase === "idle") {
+        void vadRef.current.start();
+      }
+    } else {
+      if (vadRef.current?.listening && phase !== "speaking") {
+        void vadRef.current.pause();
+      }
+    }
   }
 
   function toggleMute() {

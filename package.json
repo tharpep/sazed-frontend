@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:homelab": "vite --mode homelab",
-    "build": "tsc && vite build && vite build -c vite.cards.config.ts",
+    "dev": "node scripts/copy-vad-assets.mjs && vite",
+    "dev:homelab": "node scripts/copy-vad-assets.mjs && vite --mode homelab",
+    "build": "node scripts/copy-vad-assets.mjs && tsc && vite build && vite build -c vite.cards.config.ts",
     "preview": "vite preview",
     "tauri": "tauri"
   },
@@ -17,6 +17,7 @@
     "@fontsource-variable/geist": "^5.2.9",
     "@fontsource-variable/geist-mono": "^5.2.8",
     "@react-oauth/google": "^0.13.4",
+    "@ricky0123/vad-web": "^0.0.31",
     "@tailwindcss/vite": "^4.3.2",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
@@ -25,6 +26,7 @@
     "highlight.js": "^11.11.1",
     "lucide-react": "^1.24.0",
     "motion": "^12.42.2",
+    "onnxruntime-web": "^1.31.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",
