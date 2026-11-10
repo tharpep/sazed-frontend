@@ -93,7 +93,7 @@ function stripMarkdownForTts(text: string): string {
     .trim();
 }
 
-export function useVoice() {
+export function useVoice({ quiet = false }: { quiet?: boolean } = {}) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [exchange, setExchange] = useState<Exchange | null>(null);
   const [conversation, setConversation] = useState(() => localStorage.getItem(CONVERSATION_KEY) === "true");
@@ -123,6 +123,7 @@ export function useVoice() {
   const vadRef = useRef<MicVAD | null>(null);
   const cancelledRef = useRef(false);
   const conversationRef = useRef(conversation);
+  const quietRef = useRef(quiet);
   const interruptsRef = useRef(interrupts);
   const mutedRef = useRef(muted);
   const voiceUriRef = useRef(voiceUri);
@@ -245,7 +246,7 @@ export function useVoice() {
     const vad = vadRef.current;
     vad?.setOptions({ minSpeechMs: DEFAULT_MIN_SPEECH_MS });
     setPhaseTracked("idle");
-    if (conversationRef.current) {
+    if (conversationRef.current && !quietRef.current) {
       setTimeout(() => {
         if (phaseRef.current !== "idle") return;
         if (vadRef.current) {
@@ -509,7 +510,7 @@ export function useVoice() {
       const wakeMatch = clean.match(/^(?:hey[\s,]+)?(?:sazed|says\s*it|sized|say\s*zed)\b[\s,.:!?]*(.*)$/i);
 
       let prompt = clean;
-      if (conversationRef.current && !isFollowUp) {
+      if (conversationRef.current && !quietRef.current && !isFollowUp) {
         if (!wakeMatch) {
           endTurn();
           return;
@@ -582,7 +583,7 @@ export function useVoice() {
         }
 
         vadRef.current = vad;
-        if (conversationRef.current && !vad.listening) {
+        if (conversationRef.current && !quietRef.current && !vad.listening) {
           void vad.start();
         }
       } catch {
@@ -663,7 +664,7 @@ export function useVoice() {
       cancelledRef.current = false;
       setPhaseTracked("listening");
       void vadRef.current.start();
-      if (!conversationRef.current) {
+      if (!conversationRef.current || quietRef.current) {
         clearNoSpeechTimer();
         noSpeechTimerRef.current = setTimeout(() => {
           if (phaseRef.current === "listening" && !speechActiveRef.current) endTurn();
@@ -684,6 +685,14 @@ export function useVoice() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [phase]);
 
+  useEffect(() => {
+    quietRef.current = quiet;
+    const vad = vadRef.current;
+    if (!vad || phaseRef.current !== "idle") return;
+    if (quiet && vad.listening) void vad.pause();
+    else if (!quiet && conversationRef.current && !vad.listening) void vad.start();
+  }, [quiet]);
+
   function ask(text: string) {
     if (text.trim() && phase === "idle") void send(text.trim());
   }
@@ -693,7 +702,7 @@ export function useVoice() {
     localStorage.setItem(CONVERSATION_KEY, String(conversationRef.current));
     setConversation(conversationRef.current);
     if (conversationRef.current) {
-      if (vadRef.current && !vadRef.current.listening && phase === "idle") {
+      if (vadRef.current && !vadRef.current.listening && phase === "idle" && !quietRef.current) {
         void vadRef.current.start();
       }
     } else {
