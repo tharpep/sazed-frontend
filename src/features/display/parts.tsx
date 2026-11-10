@@ -240,7 +240,7 @@ export function AnswerCard({ exchange, phase, onDone }: { exchange: Exchange; ph
 const PHASE_LABEL: Record<Phase, string> = {
   idle: "Ask Sazed",
   listening: "Listening…",
-  thinking: "Thinking…",
+  thinking: "Thinking · tap to stop",
   speaking: "Speaking · tap to stop",
 };
 
@@ -361,6 +361,31 @@ export function VoiceModal({
               </optgroup>
             )}
           </select>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col">
+            <span className="text-[13px] font-medium text-ink-2">Voice interrupts</span>
+            <span className="text-[12px] text-muted">Speaking over Sazed stops the answer</span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={voice.interrupts}
+            aria-label="Voice interrupts"
+            onClick={voice.toggleInterrupts}
+            className={cn(
+              "relative h-7 w-12 shrink-0 rounded-full border border-line transition-colors",
+              voice.interrupts ? "border-primary bg-primary/30" : "bg-black/40"
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 size-5 rounded-full bg-ink transition-all",
+                voice.interrupts ? "left-6" : "left-0.5"
+              )}
+            />
+          </button>
         </div>
 
         <div className="flex flex-col gap-2.5">
@@ -495,19 +520,17 @@ export function AskBar({ voice }: { voice: ReturnType<typeof useVoice> }) {
 
   return (
     <div className="flex items-center gap-2.5">
-      {voice.exchange ? (
-        <RoundButton label="Conversation mode" onClick={voice.toggleConversation} active={voice.conversation}>
-          <Repeat className="size-5" />
-        </RoundButton>
-      ) : (
+      <RoundButton label="Conversation mode" onClick={voice.toggleConversation} active={voice.conversation}>
+        <Repeat className="size-5" />
+      </RoundButton>
+      {!voice.exchange && (
         <RoundButton label="Type a question" onClick={() => setTyping(true)}>
           <Keyboard className="size-5" />
         </RoundButton>
       )}
       <button
         type="button"
-        onClick={voice.phase === "speaking" ? voice.stopSpeaking : (voice.canListen ? voice.tapMic : () => setTyping(true))}
-        disabled={voice.phase === "thinking"}
+        onClick={voice.canListen || voice.phase !== "idle" ? voice.tapMic : () => setTyping(true)}
         className={cn(
           "flex h-14 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-full border border-line bg-surface px-5 text-[17px] text-ink-2 transition-colors",
           live && "border-primary bg-[color-mix(in_oklab,var(--color-primary)_22%,var(--color-surface))] text-ink",
@@ -521,7 +544,7 @@ export function AskBar({ voice }: { voice: ReturnType<typeof useVoice> }) {
         ) : (
           <Mic className={cn("size-6 text-primary", voice.phase === "listening" && "animate-pulse")} />
         )}
-        <span className="truncate">{voice.phase === "speaking" ? "Speaking · tap to stop" : (voice.canListen ? PHASE_LABEL[voice.phase] : "Type to ask Sazed")}</span>
+        <span className="truncate">{voice.canListen || voice.phase !== "idle" ? PHASE_LABEL[voice.phase] : "Type to ask Sazed"}</span>
       </button>
       <RoundButton label="Voice settings" onClick={() => setVoiceModalOpen(true)}>
         <SlidersHorizontal className="size-5" />
