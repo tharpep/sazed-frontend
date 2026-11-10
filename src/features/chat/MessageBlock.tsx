@@ -129,6 +129,7 @@ export const MessageBlock = memo(function MessageBlock({ message, index, isLastS
   const hasBlocks = !isUser && message.blocks && message.blocks.length > 0;
   const isStreaming = useChatStore((s) => s.isStreaming);
   const editMessage = useChatStore((s) => s.editMessage);
+  const send = useChatStore((s) => s.send);
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
   const isMobile = useIsMobile();
@@ -187,7 +188,7 @@ export const MessageBlock = memo(function MessageBlock({ message, index, isLastS
       {visibleBlocks.length > 0 ? (
         visibleBlocks.map((block, i) =>
           block.type === "ui" ? (
-            <WidgetRenderer key={i} name={block.component} props={block.props} />
+            <WidgetRenderer key={i} name={block.component} props={block.props} onSend={isStreaming ? undefined : send} />
           ) : (
             <div key={i} className="text-[0.9375rem] leading-[1.55] text-ink">
               <MessageMarkdown

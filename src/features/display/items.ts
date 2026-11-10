@@ -1,5 +1,5 @@
 import type { CalendarEvent, EmailMessage } from "@/api/display";
-import { statusOf } from "@/features/homelab/format";
+import { gib, statusOf } from "@/features/homelab/format";
 import type { DisplayFeed } from "./useDisplayFeed";
 
 export type Tone = "normal" | "attention" | "problem";
@@ -194,4 +194,38 @@ export function firstThing(feed: DisplayFeed, now: Date): string | null {
   const offset = dayOffset(d, now);
   const day = offset === 0 ? "" : offset === 1 ? " tomorrow" : ` ${d.toLocaleDateString("en-US", { weekday: "long" })}`;
   return `${eventTitle(e).split(",")[0]} at ${shortTime(d)}${day}`;
+}
+
+export function mailRows(feed: DisplayFeed): Item[] {
+  return (feed.mail?.messages ?? [])
+    .slice(0, 5)
+    .map((m) => ({ key: m.id, when: senderName(m.sender), title: subjectLine(m), tone: "normal" as const }));
+}
+
+export function homelabRows(feed: DisplayFeed): Item[] {
+  const services = feed.services ?? [];
+  const down = services.filter((s) => statusOf(s) === "down");
+  const maintenance = services.filter((s) => statusOf(s) === "maintenance");
+  const up = services.filter((s) => statusOf(s) === "up").length;
+  const rows: Item[] = [
+    ...down.map((s) => ({ key: `d-${s.id}`, when: "Down", title: s.name, tone: "problem" as const })),
+    ...maintenance.map((s) => ({ key: `m-${s.id}`, when: "Upkeep", title: s.name, tone: "attention" as const })),
+    {
+      key: "up",
+      when: "Services",
+      title: down.length || maintenance.length ? `${up} of ${services.length} up` : `All ${up} up`,
+      tone: "normal",
+    },
+  ];
+  if (feed.mediaFree != null) rows.push({ key: "media", when: "Media", title: `${gib(feed.mediaFree)} GB free`, tone: "normal" });
+  return rows;
+}
+
+export interface ScreenLine {
+  key: string;
+  text: string;
+}
+
+export function screenLines(card: string, rows: Item[]): ScreenLine[] {
+  return rows.map((r) => ({ key: r.key, text: `${card}: ${r.when} ${r.title}` }));
 }

@@ -7,6 +7,7 @@ import { FallbackCard } from "./FallbackCard";
 interface WidgetRendererProps {
   name: string;
   props: Record<string, unknown>;
+  onSend?: (text: string) => void;
 }
 
 function resolveProps(name: string, props: Record<string, unknown>) {
@@ -18,7 +19,7 @@ function resolveProps(name: string, props: Record<string, unknown>) {
   return { entry, data: parsed.data };
 }
 
-export function WidgetRenderer({ name, props }: WidgetRendererProps) {
+export function WidgetRenderer({ name, props, onSend }: WidgetRendererProps) {
   const resolved = useMemo(() => resolveProps(name, props), [name, props]);
   const { entry, data, error } = resolved;
 
@@ -28,5 +29,5 @@ export function WidgetRenderer({ name, props }: WidgetRendererProps) {
 
   if (!entry) return <FallbackCard name={name} reason={error ?? ""} data={props} />;
   const Component = entry.component;
-  return <Component {...data} />;
+  return <Component {...data} onSend={onSend} />;
 }

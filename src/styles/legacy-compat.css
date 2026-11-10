@@ -10,7 +10,8 @@
  * do not use any of these — they're pure Tailwind against globals.css.
  */
 
-:root {
+:root,
+.dark {
   --bg: var(--color-bg);
   --bg-outer: var(--color-bg);
   --success: var(--pastel-green);

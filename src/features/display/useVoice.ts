@@ -93,7 +93,7 @@ function stripMarkdownForTts(text: string): string {
     .trim();
 }
 
-export function useVoice({ quiet = false }: { quiet?: boolean } = {}) {
+export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: () => string[] } = {}) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [exchange, setExchange] = useState<Exchange | null>(null);
   const [conversation, setConversation] = useState(() => localStorage.getItem(CONVERSATION_KEY) === "true");
@@ -124,6 +124,8 @@ export function useVoice({ quiet = false }: { quiet?: boolean } = {}) {
   const cancelledRef = useRef(false);
   const conversationRef = useRef(conversation);
   const quietRef = useRef(quiet);
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
   const interruptsRef = useRef(interrupts);
   const mutedRef = useRef(muted);
   const voiceUriRef = useRef(voiceUri);
@@ -438,6 +440,7 @@ export function useVoice({ quiet = false }: { quiet?: boolean } = {}) {
         message: text,
         mode: "voice",
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        screen: screenRef.current?.(),
       },
       {
         onSession: (id) => {
