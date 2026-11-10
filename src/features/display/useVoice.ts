@@ -45,6 +45,15 @@ const VOICE_KEY = "sazed-voice-uri";
 const MUTE_KEY = "sazed-mute";
 const CONVERSATION_KEY = "sazed-conversation";
 const CUSTOM_VOICES_KEY = "sazed-custom-voices";
+const INTERRUPTS_KEY = "sazed-voice-interrupts";
+const DEFAULT_MIN_SPEECH_MS = 400;
+// Speaker bleed is short; a real interruption lasts longer than this.
+const BARGE_IN_MIN_SPEECH_MS = 500;
+const NO_SPEECH_TIMEOUT_MS = 8_000;
+const SESSION_IDLE_MS = 10 * 60_000;
+const MIC_CONSTRAINTS: MediaStreamConstraints = {
+  audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+};
 const DEFAULT_VOICE_URI = "kokoro:am_adam";
 
 function loadCustomProfiles(): CustomVoiceProfile[] {
@@ -88,6 +97,7 @@ export function useVoice() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [exchange, setExchange] = useState<Exchange | null>(null);
   const [conversation, setConversation] = useState(() => localStorage.getItem(CONVERSATION_KEY) === "true");
+  const [interrupts, setInterrupts] = useState(() => localStorage.getItem(INTERRUPTS_KEY) !== "false");
   const [muted, setMuted] = useState(() => localStorage.getItem(MUTE_KEY) === "true");
   const [customVoices, setCustomVoices] = useState<CustomVoiceProfile[]>(loadCustomProfiles);
   const [builtinVoices, setBuiltinVoices] = useState<VoiceOption[]>([]);
@@ -113,6 +123,7 @@ export function useVoice() {
   const vadRef = useRef<MicVAD | null>(null);
   const cancelledRef = useRef(false);
   const conversationRef = useRef(conversation);
+  const interruptsRef = useRef(interrupts);
   const mutedRef = useRef(muted);
   const voiceUriRef = useRef(voiceUri);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -123,6 +134,10 @@ export function useVoice() {
   const decodedBuffersRef = useRef<Map<number, AudioBuffer>>(new Map());
   const abortCtrlRef = useRef<AbortController | null>(null);
   const lastExchangeAtRef = useRef(0);
+  const exchangeRef = useRef<AbortController | null>(null);
+  const epochRef = useRef(0);
+  const speechActiveRef = useRef(false);
+  const noSpeechTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function setPhaseTracked(p: Phase) {
     phaseRef.current = p;
@@ -206,6 +221,7 @@ export function useVoice() {
     nextPlayIndexRef.current = 0;
     decodedBuffersRef.current.clear();
     for (const source of scheduledSourcesRef.current) {
+      source.onended = null;
       try {
         source.stop();
         source.disconnect();
@@ -217,22 +233,47 @@ export function useVoice() {
     }
   }
 
-  function finalize() {
-    if (finalizedRef.current) return;
-    finalizedRef.current = true;
+  function clearNoSpeechTimer() {
+    if (noSpeechTimerRef.current) clearTimeout(noSpeechTimerRef.current);
+    noSpeechTimerRef.current = null;
+  }
+
+  function endTurn() {
     lastExchangeAtRef.current = Date.now();
-    stopAudio();
+    clearNoSpeechTimer();
+    speechActiveRef.current = false;
+    const vad = vadRef.current;
+    vad?.setOptions({ minSpeechMs: DEFAULT_MIN_SPEECH_MS });
+    setPhaseTracked("idle");
     if (conversationRef.current) {
       setTimeout(() => {
+        if (phaseRef.current !== "idle") return;
         if (vadRef.current) {
-          void vadRef.current.start();
+          if (!vadRef.current.listening) void vadRef.current.start();
         } else {
           listen();
         }
       }, 500);
-    } else {
-      setPhaseTracked("idle");
+    } else if (vad?.listening) {
+      void vad.pause();
     }
+  }
+
+  function abortExchange() {
+    exchangeRef.current?.abort();
+    stopAudio();
+    ttsBufferRef.current = "";
+    spokenRef.current = 0;
+    finishedRef.current = 0;
+    finalizedRef.current = true;
+    epochRef.current++;
+  }
+
+  function finalize() {
+    if (finalizedRef.current) return;
+    finalizedRef.current = true;
+    stopAudio();
+    endTurn();
   }
 
   function schedulePendingSentences() {
@@ -352,6 +393,7 @@ export function useVoice() {
       ttsBufferRef.current = buffer.slice(last);
     }
 
+    if (exchangeRef.current?.signal.aborted) return;
     if (!abortCtrlRef.current) {
       abortCtrlRef.current = new AbortController();
     }
@@ -369,6 +411,14 @@ export function useVoice() {
   }
 
   async function send(text: string) {
+    if (lastExchangeAtRef.current && Date.now() - lastExchangeAtRef.current > SESSION_IDLE_MS) {
+      sessionIdRef.current = null;
+    }
+    exchangeRef.current?.abort();
+    const ctrl = new AbortController();
+    exchangeRef.current = ctrl;
+    const { signal } = ctrl;
+    clearNoSpeechTimer();
     setPhaseTracked("thinking");
     setExchange({ question: text, answer: "", tools: [], uiBlocks: [], error: null });
     ttsBufferRef.current = "";
@@ -392,8 +442,9 @@ export function useVoice() {
         onSession: (id) => {
           sessionIdRef.current = id;
         },
-        onToolStart: (name) => update((e) => ({ ...e, tools: [...e.tools, toolCallPending(name)] })),
+        onToolStart: (name) => !signal.aborted && update((e) => ({ ...e, tools: [...e.tools, toolCallPending(name)] })),
         onToolDone: (name, status) =>
+          !signal.aborted &&
           update((e) => {
             let marked = false;
             return {
@@ -406,6 +457,7 @@ export function useVoice() {
             };
           }),
         onText: (delta) => {
+          if (signal.aborted) return;
           update((e) => ({ ...e, answer: e.answer + delta }));
           if (!mutedRef.current) {
             ttsBufferRef.current += delta;
@@ -413,8 +465,10 @@ export function useVoice() {
           }
         },
         onUiBlock: ({ component, props }) =>
+          !signal.aborted &&
           update((e) => ({ ...e, uiBlocks: [...e.uiBlocks, { type: "ui", component, props }] })),
         onDone: () => {
+          if (signal.aborted) return;
           streamDoneRef.current = true;
           if (!mutedRef.current) speak(true);
           if (spokenRef.current === 0) {
@@ -422,30 +476,32 @@ export function useVoice() {
           }
         },
         onError: (err) => {
+          if (signal.aborted) return;
           update((e) => ({ ...e, error: err.message }));
-          setPhaseTracked("idle");
+          endTurn();
         },
-      }
+      },
+      signal
     );
   }
 
   async function handleSpeechEnd(audio: Float32Array) {
+    if (phaseRef.current === "speaking") return;
     if (!conversationRef.current && phaseRef.current !== "listening") {
       return;
     }
 
+    const epoch = epochRef.current;
     setPhaseTracked("thinking");
 
     try {
       const wavBlob = encodeWav(audio, 16000);
       const text = await transcribeAudio(wavBlob);
+      if (epoch !== epochRef.current) return;
       const clean = text.trim();
 
       if (!clean) {
-        setPhaseTracked("idle");
-        if (conversationRef.current && vadRef.current && !vadRef.current.listening) {
-          void vadRef.current.start();
-        }
+        endTurn();
         return;
       }
 
@@ -455,10 +511,7 @@ export function useVoice() {
       let prompt = clean;
       if (conversationRef.current && !isFollowUp) {
         if (!wakeMatch) {
-          setPhaseTracked("idle");
-          if (vadRef.current && !vadRef.current.listening) {
-            void vadRef.current.start();
-          }
+          endTurn();
           return;
         }
         prompt = wakeMatch[1].trim() || "Hey Sazed";
@@ -466,17 +519,26 @@ export function useVoice() {
         prompt = wakeMatch[1].trim();
       }
 
-      if (vadRef.current?.listening) {
-        await vadRef.current.pause();
+      const vad = vadRef.current;
+      if (vad?.listening) {
+        if (interruptsRef.current) {
+          vad.setOptions({ minSpeechMs: BARGE_IN_MIN_SPEECH_MS });
+        } else {
+          await vad.pause();
+        }
       }
 
       await send(prompt);
     } catch {
-      setPhaseTracked("idle");
-      if (conversationRef.current && vadRef.current && !vadRef.current.listening) {
-        void vadRef.current.start();
-      }
+      if (epoch === epochRef.current) endTurn();
     }
+  }
+
+  function interrupt() {
+    abortExchange();
+    lastExchangeAtRef.current = Date.now();
+    vadRef.current?.setOptions({ minSpeechMs: DEFAULT_MIN_SPEECH_MS });
+    setPhaseTracked("listening");
   }
 
   useEffect(() => {
@@ -488,21 +550,28 @@ export function useVoice() {
           baseAssetPath: "/vad/",
           onnxWASMBasePath: "/vad/",
           startOnLoad: false,
+          getStream: () => navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS),
+          resumeStream: () => navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS),
+          minSpeechMs: DEFAULT_MIN_SPEECH_MS,
           onSpeechStart: () => {
             if (!active) return;
-            if (phaseRef.current === "speaking") {
-              stopSpeaking();
-            }
-            setPhaseTracked("listening");
+            speechActiveRef.current = true;
+            clearNoSpeechTimer();
+            if (phaseRef.current === "idle") setPhaseTracked("listening");
+          },
+          onSpeechRealStart: () => {
+            if (!active) return;
+            const p = phaseRef.current;
+            if ((p === "speaking" || p === "thinking") && interruptsRef.current) interrupt();
           },
           onVADMisfire: () => {
             if (!active) return;
-            if (phaseRef.current === "listening") {
-              setPhaseTracked("idle");
-            }
+            speechActiveRef.current = false;
+            if (phaseRef.current === "listening") endTurn();
           },
           onSpeechEnd: (audio) => {
             if (!active) return;
+            speechActiveRef.current = false;
             void handleSpeechEnd(audio);
           },
         });
@@ -569,23 +638,18 @@ export function useVoice() {
     );
 
   function stopSpeaking() {
-    stopAudio();
-    finalizedRef.current = true;
-    lastExchangeAtRef.current = Date.now();
-    if (conversationRef.current && vadRef.current) {
-      void vadRef.current.start();
-    } else {
-      setPhaseTracked("idle");
-    }
+    abortExchange();
+    endTurn();
   }
 
   function tapMic() {
-    if (phase === "speaking") {
+    if (phase === "speaking" || phase === "thinking") {
       stopSpeaking();
       return;
     }
     if (phase === "listening") {
       cancelledRef.current = true;
+      clearNoSpeechTimer();
       if (vadRef.current?.listening) {
         void vadRef.current.pause();
       }
@@ -599,6 +663,12 @@ export function useVoice() {
       cancelledRef.current = false;
       setPhaseTracked("listening");
       void vadRef.current.start();
+      if (!conversationRef.current) {
+        clearNoSpeechTimer();
+        noSpeechTimerRef.current = setTimeout(() => {
+          if (phaseRef.current === "listening" && !speechActiveRef.current) endTurn();
+        }, NO_SPEECH_TIMEOUT_MS);
+      }
     } else if (canListen) {
       listen();
     }
@@ -606,7 +676,7 @@ export function useVoice() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && phase === "speaking") {
+      if (e.key === "Escape" && (phase === "speaking" || phase === "thinking")) {
         stopSpeaking();
       }
     }
@@ -630,6 +700,16 @@ export function useVoice() {
       if (vadRef.current?.listening && phase !== "speaking") {
         void vadRef.current.pause();
       }
+    }
+  }
+
+  function toggleInterrupts() {
+    interruptsRef.current = !interruptsRef.current;
+    localStorage.setItem(INTERRUPTS_KEY, String(interruptsRef.current));
+    setInterrupts(interruptsRef.current);
+    const p = phaseRef.current;
+    if (!interruptsRef.current && (p === "speaking" || p === "thinking") && vadRef.current?.listening) {
+      void vadRef.current.pause();
     }
   }
 
@@ -680,6 +760,7 @@ export function useVoice() {
     phase,
     exchange,
     conversation,
+    interrupts,
     muted,
     voices,
     voiceUri,
@@ -690,6 +771,7 @@ export function useVoice() {
     ask,
     dismiss,
     toggleConversation,
+    toggleInterrupts,
     toggleMute,
     chooseVoice,
     addCustomVoice,
