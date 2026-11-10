@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Check, Keyboard, Loader2, Mic, Plus, Repeat, SlidersHorizontal, Square, Trash2, Volume2, VolumeX, X } from "lucide-react";
@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { WidgetRenderer } from "@/widgets/WidgetRenderer";
 import type { Chip, Item, Tone } from "./items";
 import type { Exchange, Phase, useVoice } from "./useVoice";
+
+export const RowTapContext = createContext<((key: string) => void) | null>(null);
 
 const TONE_TEXT: Record<Tone, string> = { normal: "", attention: "text-warn", problem: "text-err" };
 
@@ -76,12 +78,16 @@ export function Card({ title, children, className }: { title: string; children: 
 }
 
 export function Row({ item, size = "md" }: { item: Item; size?: "sm" | "md" }) {
+  const onTap = useContext(RowTapContext);
   const timeLike = /\d/.test(item.when);
+  const tappable = size === "md" && onTap !== null;
+  const Tag = tappable ? "button" : "div";
   return (
-    <div
+    <Tag
       data-fit
+      {...(tappable ? { type: "button" as const, onClick: () => onTap(item.key) } : {})}
       className={cn(
-        "grid items-baseline gap-3 border-t border-line first:border-t-0",
+        "grid w-full items-baseline gap-3 border-t border-line text-left first:border-t-0",
         size === "md" ? "grid-cols-[6.25rem_minmax(0,1fr)_auto] py-2.5" : "grid-cols-[3.5rem_minmax(0,1fr)] gap-2 py-1.5"
       )}
     >
@@ -99,7 +105,7 @@ export function Row({ item, size = "md" }: { item: Item; size?: "sm" | "md" }) {
         {item.title}
       </span>
       {size === "md" && item.meta && <span className="text-[14px] text-muted">{item.meta}</span>}
-    </div>
+    </Tag>
   );
 }
 
@@ -120,10 +126,15 @@ const RETURN_MS = 60_000;
 
 /** One card at a time with dots, swiped sideways. It rests on the first card and slides back
  * there a minute after the last touch, so what you glance for is where you left it. */
-export function Carousel({ cards }: { cards: { key: string; node: ReactNode }[] }) {
+export function Carousel({ cards, onVisible }: { cards: { key: string; node: ReactNode }[]; onVisible: (key: string) => void }) {
   const [index, setIndex] = useState(0);
   const startX = useRef<number | null>(null);
   const current = Math.min(index, cards.length - 1);
+  const visibleKey = cards[current].key;
+
+  useEffect(() => {
+    onVisible(visibleKey);
+  }, [visibleKey, onVisible]);
 
   useEffect(() => {
     if (current === 0) return;
@@ -178,7 +189,7 @@ const md = {
   code: ({ children }: { children?: ReactNode }) => <code className="font-mono text-[0.9em]">{children}</code>,
 };
 
-export function AnswerCard({ exchange, phase, onDone }: { exchange: Exchange; phase: Phase; onDone: () => void }) {
+export function AnswerCard({ exchange, phase, onDone, onSend }: { exchange: Exchange; phase: Phase; onDone: () => void; onSend?: (text: string) => void }) {
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
@@ -216,7 +227,7 @@ export function AnswerCard({ exchange, phase, onDone }: { exchange: Exchange; ph
         )}
         {exchange.uiBlocks.map((b, i) => (
           <div key={i} className="mb-3">
-            <WidgetRenderer name={b.component} props={b.props} />
+            <WidgetRenderer name={b.component} props={b.props} onSend={onSend} />
           </div>
         ))}
         {waiting && <p className="animate-pulse text-[18px] text-muted">Thinking…</p>}

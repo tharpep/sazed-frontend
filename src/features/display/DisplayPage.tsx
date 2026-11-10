@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
-import { gib, statusOf } from "@/features/homelab/format";
-import { AnswerCard, AskBar, Card, Carousel, Chips, Empty, ExchangeSide, FarRow, Row, VoiceRing } from "./parts";
-import { chips, firstThing, mailFrom, nextUp, senderName, subjectLine, week, type Item } from "./items";
+import { describeWidget } from "@/widgets/catalog";
+import { AnswerCard, AskBar, Card, Carousel, Chips, Empty, ExchangeSide, FarRow, Row, RowTapContext, VoiceRing } from "./parts";
+import { chips, firstThing, homelabRows, mailFrom, mailRows, nextUp, screenLines, week, type Item, type ScreenLine } from "./items";
 import { useDisplayFeed, type DisplayFeed } from "./useDisplayFeed";
 import { usePresence } from "./usePresence";
 import { useVoice } from "./useVoice";
@@ -162,9 +162,7 @@ function MailCard({ feed }: { feed: DisplayFeed }) {
   return (
     <Card title={title}>
       {messages.length ? (
-        messages.slice(0, 5).map((m) => (
-          <Row key={m.id} item={{ key: m.id, when: senderName(m.sender), title: subjectLine(m), tone: "normal" }} />
-        ))
+        mailRows(feed).map((i) => <Row key={i.key} item={i} />)
       ) : (
         <Empty>{feed.mail ? "Inbox clear." : "Loading…"}</Empty>
       )}
@@ -173,22 +171,7 @@ function MailCard({ feed }: { feed: DisplayFeed }) {
 }
 
 function HomelabCard({ feed }: { feed: DisplayFeed }) {
-  const services = feed.services ?? [];
-  const down = services.filter((s) => statusOf(s) === "down");
-  const maintenance = services.filter((s) => statusOf(s) === "maintenance");
-  const up = services.filter((s) => statusOf(s) === "up").length;
-  const rows: Item[] = [
-    ...down.map((s) => ({ key: `d-${s.id}`, when: "Down", title: s.name, tone: "problem" as const })),
-    ...maintenance.map((s) => ({ key: `m-${s.id}`, when: "Upkeep", title: s.name, tone: "attention" as const })),
-    {
-      key: "up",
-      when: "Services",
-      title: down.length || maintenance.length ? `${up} of ${services.length} up` : `All ${up} up`,
-      tone: "normal",
-    },
-  ];
-  if (feed.mediaFree != null) rows.push({ key: "media", when: "Media", title: `${gib(feed.mediaFree)} GB free`, tone: "normal" });
-  return <Card title="Homelab">{feed.services ? rows.map((i) => <Row key={i.key} item={i} />) : <Empty>Loading…</Empty>}</Card>;
+  return <Card title="Homelab">{feed.services ? homelabRows(feed).map((i) => <Row key={i.key} item={i} />) : <Empty>Loading…</Empty>}</Card>;
 }
 
 function Clock({ now, px, className }: { now: Date; px: number; className?: string }) {
@@ -259,7 +242,7 @@ function TalkingFace({ voice, status, layout, onDone }: { voice: ReturnType<type
       </div>
     );
   }
-  const card = <AnswerCard exchange={exchange} phase={phase} onDone={onDone} />;
+  const card = <AnswerCard exchange={exchange} phase={phase} onDone={onDone} onSend={phase === "idle" ? voice.ask : undefined} />;
   if (layout === "portrait") {
     return (
       <div className="flex h-full flex-col px-5 pb-4 pt-6" data-face="talking">
@@ -298,7 +281,19 @@ export function DisplayPage() {
   const feed = useDisplayFeed();
   const touchKiosk = useRef(window.matchMedia("(pointer: coarse)").matches).current;
   const kiosk = touchKiosk && (mode === "landscape" || mode === "portrait");
-  const voice = useVoice({ quiet: kiosk && isNight(now) });
+  const markedRef = useRef<string | null>(null);
+  const screenRef = useRef<{ lines: ScreenLine[]; blocks: string[] }>({ lines: [], blocks: [] });
+  const getScreen = useCallback(() => {
+    const { lines, blocks } = screenRef.current;
+    const marked = markedRef.current;
+    const kept = [...lines];
+    for (let i = kept.length - 1; i >= 0 && kept.length + blocks.length > 12; i--) {
+      if (kept[i].key !== marked) kept.splice(i, 1);
+    }
+    return [...kept.map((l) => (l.key === marked ? `* ${l.text}` : l.text)), ...blocks];
+  }, []);
+  const voice = useVoice({ quiet: kiosk && isNight(now), screen: getScreen });
+  const [visibleCard, setVisibleCard] = useState("Next up");
   const presence = usePresence(now);
   const drift = useDrift();
   const [wokeAt, setWokeAt] = useState(0);
@@ -308,6 +303,19 @@ export function DisplayPage() {
   useDisplayManifest();
 
   const { exchange, phase, conversation, dismiss } = voice;
+  const prevPhase = useRef(phase);
+  useEffect(() => {
+    if (phase === "idle" && prevPhase.current !== "idle") markedRef.current = null;
+    prevPhase.current = phase;
+  }, [phase]);
+  const tapRow = useCallback(
+    (key: string) => {
+      if (phase !== "idle" || !voice.canListen) return;
+      markedRef.current = key;
+      voice.tapMic();
+    },
+    [phase, voice]
+  );
   useEffect(() => {
     if (!exchange || phase !== "idle" || conversation) return;
     const id = setTimeout(dismiss, ANSWER_LINGER_MS);
@@ -341,7 +349,20 @@ export function DisplayPage() {
     { key: "Mail", node: <MailCard feed={feed} /> },
     { key: "Homelab", node: <HomelabCard feed={feed} /> },
   ];
-  const cardArea = <Carousel cards={cards} />;
+  const cardArea = <Carousel cards={cards} onVisible={setVisibleCard} />;
+  const cardRows: Record<string, Item[]> = {
+    "Next up": items,
+    "This week": week(feed, now).flatMap((g) => g.items.map((i) => ({ ...i, when: `${g.label} ${i.when}` }))),
+    Mail: mailRows(feed),
+    Homelab: homelabRows(feed),
+  };
+  const shownCards = night || tier === "idle" ? [] : tier === "far" || mode === "widget" || mode === "tiny" ? ["Next up"] : mode === "wide" ? Object.keys(cardRows) : [visibleCard];
+  useEffect(() => {
+    screenRef.current = {
+      lines: exchange ? [] : talking ? screenRef.current.lines : shownCards.flatMap((c) => screenLines(c, cardRows[c])),
+      blocks: exchange ? exchange.uiBlocks.map((b) => describeWidget(b.component, b.props)) : [],
+    };
+  });
   const dateLine = [dateText(now), weatherText(feed)].filter(Boolean);
   const status = [clockText(now), ...chips(feed, true).map((c) => c.label)].join(" · ");
 
@@ -458,6 +479,7 @@ export function DisplayPage() {
   }
 
   return (
+    <RowTapContext.Provider value={tapRow}>
     <div
       ref={rootRef}
       className="dark fixed inset-0 select-none overflow-hidden bg-black font-sans text-ink"
@@ -482,5 +504,6 @@ export function DisplayPage() {
         {face}
       </div>
     </div>
+    </RowTapContext.Provider>
   );
 }

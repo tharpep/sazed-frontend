@@ -1,10 +1,14 @@
 
+const MAX_SCREEN_LINES = 12;
+const MAX_SCREEN_CHARS = 200;
+
 export interface PostMessageBody {
   session_id?: string;
   message: string;
   mode?: string;
   timezone?: string;
   location?: { latitude: number; longitude: number; accuracy?: number };
+  screen?: string[];
 }
 
 export interface EditMessageBody {
@@ -161,7 +165,9 @@ export async function postMessageStream(
   callbacks: StreamCallbacks,
   signal?: AbortSignal
 ): Promise<void> {
-  return streamRequest("/chat/stream", body, callbacks, signal);
+  const { screen, ...rest } = body;
+  const lines = screen?.slice(0, MAX_SCREEN_LINES).map((l) => l.slice(0, MAX_SCREEN_CHARS));
+  return streamRequest("/chat/stream", lines?.length ? { ...rest, screen: lines } : rest, callbacks, signal);
 }
 
 export async function postEditMessageStream(

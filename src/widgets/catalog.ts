@@ -12,6 +12,7 @@ import type {
 import type { Project } from "../api/projects";
 import { CalendarWidget } from "./CalendarWidget";
 import { ClockWidget } from "./ClockWidget";
+import { ConfirmCard } from "./ConfirmCard";
 import { ContainerWidget } from "./ContainerWidget";
 import { EmailBadge } from "./EmailBadge";
 import { FinanceWidget } from "./FinanceWidget";
@@ -188,17 +189,19 @@ export interface WidgetDef {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: React.ComponentType<any>;
   props: z.ZodObject;
-  ownership: "locked" | "ambient" | "agent";
+  ownership: "locked" | "ambient" | "agent" | "system";
   description: string;
+  describe: (props: never) => string;
   /** Given no props, the component fetches its own data from the gateway and keeps it fresh. */
   live: boolean;
 }
 
 /** Ties a component to its schema: it won't compile unless the component accepts the schema's output. */
 function widget<S extends z.ZodObject>(
-  def: Omit<WidgetDef, "component" | "props"> & {
+  def: Omit<WidgetDef, "component" | "props" | "describe"> & {
     component: React.ComponentType<z.output<S>>;
     props: S;
+    describe: (props: z.output<S>) => string;
   }
 ): WidgetDef {
   return def;
@@ -208,6 +211,7 @@ export const WIDGET_CATALOG = {
   ClockWidget: widget({
     component: ClockWidget,
     props: z.object({}),
+    describe: () => "Clock",
     ownership: "locked",
     description: "Live clock, always visible, never delegated to the agent.",
     live: false,
@@ -215,6 +219,7 @@ export const WIDGET_CATALOG = {
   CalendarWidget: widget({
     component: CalendarWidget,
     props: z.object({ events: z.array(calendarEvent) }),
+    describe: (p) => `Calendar: ${p.events.length} events today${p.events[0] ? `, first ${p.events[0].title}` : ""}`,
     ownership: "ambient",
     description: "Today's calendar events.",
     live: true,
@@ -222,6 +227,7 @@ export const WIDGET_CATALOG = {
   UpcomingWidget: widget({
     component: UpcomingWidget,
     props: z.object({ events: z.array(calendarEvent) }),
+    describe: (p) => `Upcoming: ${p.events.length} events${p.events[0] ? `, first ${p.events[0].title}` : ""}`,
     ownership: "ambient",
     description: "Calendar events over the coming weeks.",
     live: true,
@@ -229,6 +235,7 @@ export const WIDGET_CATALOG = {
   TaskWidget: widget({
     component: TaskWidget,
     props: z.object({ tasks: z.array(task), count: z.int() }),
+    describe: (p) => `Tasks: ${p.count} due${p.tasks[0] ? `, first ${p.tasks[0].title}` : ""}`,
     ownership: "ambient",
     description: "Tasks due today.",
     live: true,
@@ -236,6 +243,7 @@ export const WIDGET_CATALOG = {
   EmailBadge: widget({
     component: EmailBadge,
     props: z.object({ count: z.int(), messages: z.array(emailMessage).optional() }),
+    describe: (p) => `Mail: ${p.count} unread`,
     ownership: "ambient",
     description: "Unread email count and previews.",
     live: true,
@@ -243,6 +251,7 @@ export const WIDGET_CATALOG = {
   FinanceWidget: widget({
     component: FinanceWidget,
     props: z.object({ upcoming: z.array(upcomingPayment) }),
+    describe: (p) => `Payments: ${p.upcoming.length} upcoming${p.upcoming[0] ? `, first ${p.upcoming[0].name}` : ""}`,
     ownership: "ambient",
     description: "Upcoming payments.",
     live: true,
@@ -250,6 +259,7 @@ export const WIDGET_CATALOG = {
   WeatherWidget: widget({
     component: WeatherWidget,
     props: z.object({ data: weatherData.nullable() }),
+    describe: (p) => (p.data ? `Weather: ${p.data.temp}° ${p.data.condition}, high ${p.data.high}, low ${p.data.low}` : "Weather: unavailable"),
     ownership: "ambient",
     description: "Current weather and today's high, low and rain chance.",
     live: false,
@@ -260,6 +270,7 @@ export const WIDGET_CATALOG = {
       summary: z.object({ up: z.int(), down: z.int(), unknown: z.int() }),
       services: z.array(homelabService),
     }),
+    describe: (p) => `Homelab: ${p.summary.up} up, ${p.summary.down} down${p.services.filter((s) => s.up === false).map((s) => ` ${s.name}`).join(",")}`,
     ownership: "agent",
     description: "How many homelab services are up, and which are down.",
     live: false,
@@ -275,6 +286,7 @@ export const WIDGET_CATALOG = {
       question: z.string().nullish(),
       error: z.string().nullish(),
     }),
+    describe: (p) => `Job: ${p.title ?? p.kind}, ${p.status}`,
     ownership: "agent",
     description: "One worker job: its status, and any question, error or pull request.",
     live: false,
@@ -286,6 +298,7 @@ export const WIDGET_CATALOG = {
         z.object({ job_id: z.string(), status: z.string(), title: z.string().nullish() })
       ),
     }),
+    describe: (p) => `Jobs: ${p.jobs.length}${p.jobs[0] ? `, latest ${p.jobs[0].title ?? p.jobs[0].job_id} ${p.jobs[0].status}` : ""}`,
     ownership: "agent",
     description: "Recent worker jobs and their status.",
     live: false,
@@ -301,6 +314,7 @@ export const WIDGET_CATALOG = {
         downloads: z.object({ not_imported: z.object({ count: z.int() }) }).nullish(),
       }),
     }),
+    describe: (p) => `Storage: ${p.pools.length} pools, ${p.media.downloads?.not_imported.count ?? 0} stuck downloads`,
     ownership: "agent",
     description: "Free space for media and per storage pool, and stuck downloads.",
     live: false,
@@ -317,6 +331,7 @@ export const WIDGET_CATALOG = {
       disk_used_bytes: z.number().nullish(),
       disk_total_bytes: z.number().nullish(),
     }),
+    describe: (p) => `Container ${p.name}: ${p.status}`,
     ownership: "agent",
     description: "One homelab container: status, CPU, memory and disk.",
     live: false,
@@ -336,6 +351,7 @@ export const WIDGET_CATALOG = {
         .describe("Up to 6 rows"),
       note: z.string().nullish(),
     }),
+    describe: (p) => [p.title, ...(p.stats ?? []).map((x) => `${x.label} ${x.value}`)].join(", "),
     ownership: "agent",
     description: "A short general summary: a title, a few numbers and a few rows.",
     live: false,
@@ -343,13 +359,28 @@ export const WIDGET_CATALOG = {
   GitHubWidget: widget({
     component: GitHubWidget,
     props: z.object({ issues: z.array(gitHubIssue) }),
+    describe: (p) => `GitHub: ${p.issues.length} issues${p.issues[0] ? `, top #${p.issues[0].number} ${p.issues[0].title}` : ""}`,
     ownership: "agent",
     description: "Top GitHub issues to work on.",
+    live: false,
+  }),
+  ConfirmCard: widget({
+    component: ConfirmCard,
+    props: z.object({
+      tool: z.string(),
+      title: z.string(),
+      details: z.array(z.object({ label: z.string(), value: z.string() })),
+      expires_at: z.string().nullish(),
+    }),
+    describe: (p) => `Waiting for yes or no: ${p.title}`,
+    ownership: "system",
+    description: "Asks the user to approve a sensitive tool call; the backend emits it, never the model.",
     live: false,
   }),
   ProjectsWidget: widget({
     component: ProjectsWidget,
     props: z.object({ projects: z.array(project) }),
+    describe: (p) => `Projects: ${p.projects.length}${p.projects[0] ? `, first ${p.projects[0].title}` : ""}`,
     ownership: "agent",
     description: "Every project as a row: a plain sentence, a progress bar, and its workstreams when opened.",
     live: false,
@@ -357,6 +388,7 @@ export const WIDGET_CATALOG = {
   ProjectWidget: widget({
     component: ProjectWidget,
     props: project,
+    describe: (p) => `Project ${p.title}: ${p.headline}`,
     ownership: "agent",
     description: "One project as an ordered ladder of workstreams with their cards, then what is in flight, needs the user, and is next.",
     live: false,
@@ -372,11 +404,18 @@ export function getWidget(name: string): WidgetDef | undefined {
 /** Generates a catalog string for injection into the Sazed system prompt. */
 export function getWidgetCatalogPrompt(): string {
   const entries = Object.entries(WIDGET_CATALOG)
-    .filter(([, def]) => def.ownership !== "locked")
+    .filter(([, def]) => def.ownership !== "locked" && def.ownership !== "system")
     .map(([name, def]) => `- ${name}: ${def.description} Props: ${JSON.stringify(toStrictJsonSchema(def.props))}`)
     .join("\n");
   return (
     `Available UI widgets you may emit as ui_block SSE events:\n${entries}\n\n` +
     `To emit a widget: event: ui_block\\ndata: {"component":"WidgetName","props":{...}}`
   );
+}
+
+export function describeWidget(name: string, props: Record<string, unknown>): string {
+  const entry = getWidget(name);
+  if (!entry) return name;
+  const parsed = entry.props.safeParse(props);
+  return parsed.success ? entry.describe(parsed.data as never) : name;
 }
