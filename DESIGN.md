@@ -111,8 +111,8 @@ Activity (`src/features/activity/`) is the reference page: `DayChart` (totals pl
 
 `/display` (`src/features/display/`) is read from a metre away and stays on all day on an OLED, so it bends three rules on purpose.
 - Pure black behind everything, not `bg`: black pixels are off on an OLED. Cards and chips keep `surface` and `line`.
-- A distance scale instead of the five steps: 14 (labels), 18 (rows, date), 22 (wide date), 20 for answers, plus the clock sized to its box.
-- A night face: from 22:00 to 07:00 on touch screens, only the clock and the first thing tomorrow, in a dim gray. Everything drifts a few pixels each minute, and in landscape the clock and card swap sides every hour.
+- A distance scale instead of the five steps: 14 (labels), 18 (rows, date), 22 (wide date and far-tier lines), 20 for answers, plus the clock sized to its box. The screen shows less the farther you are: a dim gray clock when nobody is near, a big clock and three lines from across the room, and the full layout once touched.
+- A night face: from 22:00 to 07:00 on touch screens, only the clock and the first thing tomorrow, in red on black. Everything drifts a few pixels each minute, and in landscape the clock and card swap sides every hour.
 
 Everything else holds: D's colours, Geist, sentence case, `warn`/`err` only for state, rows like `ListRow`.
 

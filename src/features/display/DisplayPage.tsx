@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { gib, statusOf } from "@/features/homelab/format";
-import { AnswerCard, AskBar, Card, Carousel, Chips, Empty, Row } from "./parts";
+import { AnswerCard, AskBar, Card, Carousel, Chips, Empty, ExchangeSide, FarRow, Row, VoiceRing } from "./parts";
 import { chips, firstThing, mailFrom, nextUp, senderName, subjectLine, week, type Item } from "./items";
 import { useDisplayFeed, type DisplayFeed } from "./useDisplayFeed";
+import { usePresence } from "./usePresence";
 import { useVoice } from "./useVoice";
 
 type Mode = "landscape" | "portrait" | "wide" | "widget" | "tiny";
@@ -202,11 +203,89 @@ function Clock({ now, px, className }: { now: Date; px: number; className?: stri
   );
 }
 
-function NightFace({ now, px, line }: { now: Date; px: number; line: string | null }) {
+const DIM_TONES = {
+  gray: { clock: "text-[oklch(0.42_0.006_265)]", line: "text-[oklch(0.34_0.006_265)]" },
+  red: { clock: "text-[oklch(0.43_0.15_27)]", line: "text-[oklch(0.33_0.12_27)]" },
+};
+
+function DimFace({ now, px, line, tone }: { now: Date; px: number; line: string | null; tone: keyof typeof DIM_TONES }) {
   return (
-    <div className="flex h-full flex-col items-start justify-center px-[12%]">
-      <Clock now={now} px={px} className="text-[oklch(0.42_0.006_265)]" />
-      {line && <div className="mt-4 text-[18px] text-[oklch(0.34_0.006_265)]">{line}</div>}
+    <div className="flex h-full flex-col items-start justify-center px-[12%]" data-face={tone === "red" ? "night" : "idle"}>
+      <Clock now={now} px={px} className={DIM_TONES[tone].clock} />
+      {line && <div className={cn("mt-4 text-[18px]", DIM_TONES[tone].line)}>{line}</div>}
+    </div>
+  );
+}
+
+function FarFace({ now, feed, portrait, clockOnRight, w, h }: { now: Date; feed: DisplayFeed; portrait: boolean; clockOnRight: boolean; w: number; h: number }) {
+  const items = nextUp(feed, now, 3);
+  const day = [now.toLocaleDateString("en-US", { weekday: "long" }), feed.weather && `${feed.weather.temp}° ${feed.weather.condition.toLowerCase()}`]
+    .filter(Boolean)
+    .join(" · ");
+  const lines = (
+    <div className="flex min-w-0 flex-col gap-[18px]">
+      {items.length ? items.map((i) => <FarRow key={i.key} item={i} />) : <div className="text-[22px] leading-7 text-ink-2">Nothing coming up.</div>}
+    </div>
+  );
+  const clock = (
+    <div className={cn(!portrait && clockOnRight && "order-2")}>
+      <Clock now={now} px={Math.round(portrait ? Math.min(w * 0.32, h * 0.16) : Math.min(h * 0.33, w * 0.16))} />
+      <div className="mt-3 text-[18px] text-ink-2">{day}</div>
+    </div>
+  );
+  return portrait ? (
+    <div className="flex h-full flex-col gap-12 px-6 pt-[12vh]" data-face="far">
+      {clock}
+      {lines}
+    </div>
+  ) : (
+    <div className="grid h-full grid-cols-[auto_minmax(0,1fr)] items-center gap-12 px-11" data-face="far">
+      {clock}
+      {lines}
+    </div>
+  );
+}
+
+function TalkingFace({ voice, status, layout, onDone }: { voice: ReturnType<typeof useVoice>; status: string; layout: "portrait" | "landscape" | "wide"; onDone: () => void }) {
+  const { exchange, phase } = voice;
+  const strip = <div className="truncate font-mono text-[14px] tabular-nums text-muted">{status}</div>;
+  if (phase === "listening" || !exchange) {
+    return (
+      <div className="flex h-full flex-col p-6" data-face="listening">
+        {strip}
+        <div className="min-h-0 flex-1">
+          <VoiceRing phase={phase} onCancel={voice.tapMic} />
+        </div>
+      </div>
+    );
+  }
+  const card = <AnswerCard exchange={exchange} phase={phase} onDone={onDone} />;
+  if (layout === "portrait") {
+    return (
+      <div className="flex h-full flex-col px-5 pb-4 pt-6" data-face="talking">
+        {strip}
+        <div className="mt-6">
+          <ExchangeSide exchange={exchange} voice={voice} />
+        </div>
+        <div className="mt-5 min-h-0 flex-1">{card}</div>
+        <div className="mt-4">
+          <AskBar voice={voice} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={cn("grid h-full grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-8", layout === "wide" ? "p-12" : "p-6")} data-face="talking">
+      <div className="flex min-w-0 flex-col">
+        {strip}
+        <div className="mt-8">
+          <ExchangeSide exchange={exchange} voice={voice} />
+        </div>
+        <div className="mt-auto pt-3">
+          <AskBar voice={voice} />
+        </div>
+      </div>
+      <div className="min-h-0 pt-7">{card}</div>
     </div>
   );
 }
@@ -217,11 +296,13 @@ export function DisplayPage() {
   const mode = modeFor(w, h);
   const now = useNow(10_000);
   const feed = useDisplayFeed();
-  const voice = useVoice();
+  const touchKiosk = useRef(window.matchMedia("(pointer: coarse)").matches).current;
+  const kiosk = touchKiosk && (mode === "landscape" || mode === "portrait");
+  const voice = useVoice({ quiet: kiosk && isNight(now) });
+  const presence = usePresence(now);
   const drift = useDrift();
   const [wokeAt, setWokeAt] = useState(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
-  const touchKiosk = useRef(window.matchMedia("(pointer: coarse)").matches).current;
 
   useWakeLock();
   useDisplayManifest();
@@ -233,14 +314,20 @@ export function DisplayPage() {
     return () => clearTimeout(id);
   }, [exchange, phase, conversation, dismiss]);
 
+  const { seen } = presence;
+  useEffect(() => {
+    if (phase !== "idle") seen("far");
+  }, [phase, seen]);
+  useEffect(() => {
+    const onKey = () => seen("near");
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [seen]);
+
   const px = clockPx(mode, w, h);
   const talking = Boolean(exchange) || phase !== "idle";
-  const night =
-    touchKiosk &&
-    (mode === "landscape" || mode === "portrait") &&
-    isNight(now) &&
-    !talking &&
-    now.getTime() - wokeAt > WAKE_MS;
+  const night = kiosk && isNight(now) && !talking && now.getTime() - wokeAt > WAKE_MS;
+  const tier = kiosk ? presence.tier : "near";
 
   // Odd hours put the clock on the right, so its big digits don't sit on the same OLED pixels all day.
   const clockOnRight = now.getHours() % 2 === 1;
@@ -254,12 +341,19 @@ export function DisplayPage() {
     { key: "Mail", node: <MailCard feed={feed} /> },
     { key: "Homelab", node: <HomelabCard feed={feed} /> },
   ];
-  const cardArea = exchange ? <AnswerCard exchange={exchange} phase={phase} onDone={dismiss} /> : <Carousel cards={cards} />;
+  const cardArea = <Carousel cards={cards} />;
   const dateLine = [dateText(now), weatherText(feed)].filter(Boolean);
+  const status = [clockText(now), ...chips(feed, true).map((c) => c.label)].join(" · ");
 
   let face: ReactNode;
   if (night) {
-    face = <NightFace now={now} px={px} line={firstThing(feed, now)} />;
+    face = <DimFace now={now} px={px} line={firstThing(feed, now)} tone="red" />;
+  } else if (talking && (mode === "landscape" || mode === "portrait" || mode === "wide")) {
+    face = <TalkingFace voice={voice} status={status} layout={mode} onDone={dismiss} />;
+  } else if (tier === "idle") {
+    face = <DimFace now={now} px={px} line={null} tone="gray" />;
+  } else if (tier === "far") {
+    face = <FarFace now={now} feed={feed} portrait={mode === "portrait"} clockOnRight={clockOnRight} w={w} h={h} />;
   } else if (mode === "tiny") {
     const waiting = chipList.find((c) => c.key === "waiting");
     const next = items.find((i) => i.tone === "normal");
@@ -297,14 +391,12 @@ export function DisplayPage() {
     );
   } else if (mode === "portrait") {
     face = (
-      <div className="flex h-full flex-col px-5 pb-4 pt-[6vh]">
-        <Clock now={now} px={talking ? Math.round(px * 0.55) : px} className={cn(talking && "text-ink-2")} />
+      <div className="flex h-full flex-col px-5 pb-4 pt-[6vh]" data-face="near">
+        <Clock now={now} px={px} />
         <div className="mt-3 text-[18px] text-ink-2">{dateLine.join(" · ")}</div>
-        {!talking && (
-          <div className="mt-4">
-            <Chips chips={chipList} />
-          </div>
-        )}
+        <div className="mt-4">
+          <Chips chips={chipList} />
+        </div>
         <div className="mt-5 min-h-0 flex-1">{cardArea}</div>
         <div className="mt-4">
           <AskBar voice={voice} />
@@ -326,18 +418,12 @@ export function DisplayPage() {
           </div>
         </div>
         <div className="flex min-h-0 flex-col gap-4">
-          <div className="min-h-0 flex-1">
-            {exchange ? (
-              cardArea
-            ) : (
-              <div className="grid h-full grid-cols-2 grid-rows-2 gap-4">
-                {cards.map((c) => (
-                  <div key={c.key} className="min-h-0 [&>*]:h-full">
-                    {c.node}
-                  </div>
-                ))}
+          <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-4">
+            {cards.map((c) => (
+              <div key={c.key} className="min-h-0 [&>*]:h-full">
+                {c.node}
               </div>
-            )}
+            ))}
           </div>
           <AskBar voice={voice} />
         </div>
@@ -346,6 +432,7 @@ export function DisplayPage() {
   } else {
     face = (
       <div
+        data-face="near"
         className={cn(
           "grid h-full gap-6 p-6",
           clockOnRight ? "grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]" : "grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]"
@@ -375,6 +462,7 @@ export function DisplayPage() {
       ref={rootRef}
       className="dark fixed inset-0 select-none overflow-hidden bg-black font-sans text-ink"
       onClick={() => night && setWokeAt(Date.now())}
+      onPointerDown={() => seen("near")}
       onTouchStart={(e) => {
         touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }}

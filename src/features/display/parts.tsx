@@ -103,6 +103,15 @@ export function Row({ item, size = "md" }: { item: Item; size?: "sm" | "md" }) {
   );
 }
 
+export function FarRow({ item }: { item: Item }) {
+  return (
+    <div className="line-clamp-2 text-[22px] leading-7 text-ink">
+      <span className={cn("mr-2.5 text-ink-2", /\d/.test(item.when) && "font-mono tabular-nums", TONE_TEXT[item.tone])}>{item.when}</span>
+      {item.title}
+    </div>
+  );
+}
+
 export function Empty({ children }: { children: ReactNode }) {
   return <p data-fit className="py-2.5 text-[18px] leading-6 text-ink-2">{children}</p>;
 }
@@ -178,17 +187,6 @@ export function AnswerCard({ exchange, phase, onDone }: { exchange: Exchange; ph
   const waiting = phase === "thinking" && !exchange.answer;
   return (
     <section aria-label="Sazed's answer" className="relative flex h-full min-h-0 flex-col rounded-[14px] border border-line bg-surface">
-      {phase === "speaking" && (
-        <button
-          type="button"
-          onClick={onDone}
-          aria-label="Stop speaking"
-          className="absolute right-2 top-2 flex items-center gap-1.5 rounded-full border border-primary/40 bg-surface px-3 py-1.5 text-[14px] text-primary hover:bg-raised"
-        >
-          <Square className="size-3.5 fill-current" />
-          <span>Stop</span>
-        </button>
-      )}
       {phase === "idle" && (
         <button
           type="button"
@@ -199,8 +197,7 @@ export function AnswerCard({ exchange, phase, onDone }: { exchange: Exchange; ph
           <X className="size-5" />
         </button>
       )}
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-        <p className="mb-3 pr-8 text-[18px] leading-6 text-ink-2">“{exchange.question}”</p>
+      <div className="min-h-0 flex-1 overflow-y-auto py-4 pl-5 pr-12">
         {exchange.tools.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-1.5">
             {exchange.tools.map((t, i) => (
@@ -234,6 +231,54 @@ export function AnswerCard({ exchange, phase, onDone }: { exchange: Exchange; ph
         <div ref={end} />
       </div>
     </section>
+  );
+}
+
+const WAVE_BARS = [10, 18, 12, 16, 8];
+
+function Wave() {
+  return (
+    <span className="inline-flex h-[18px] items-center gap-[3px]" aria-hidden="true">
+      {WAVE_BARS.map((px, i) => (
+        <i key={i} className="block w-[3px] animate-pulse rounded-sm bg-primary" style={{ height: px, animationDelay: `${i * 150}ms` }} />
+      ))}
+    </span>
+  );
+}
+
+export function VoiceRing({ phase, onCancel }: { phase: Phase; onCancel: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-7">
+      <button
+        type="button"
+        onClick={onCancel}
+        aria-label={phase === "listening" ? "Stop listening" : "Stop"}
+        className="size-[120px] animate-pulse rounded-full border-2 border-primary shadow-[0_0_0_14px_oklch(0.72_0.12_255/0.10),0_0_0_30px_oklch(0.72_0.12_255/0.05)]"
+      />
+      <p className="text-[20px] leading-7 text-ink-2">{phase === "listening" ? "Listening…" : "Got it…"}</p>
+    </div>
+  );
+}
+
+function stateLine(exchange: Exchange, phase: Phase, interrupts: boolean): string | null {
+  if (phase === "thinking") return [...exchange.tools].reverse().find((t) => !t.done)?.label ?? "Thinking…";
+  if (phase === "speaking") return interrupts ? "speaking · say stop or just talk" : "speaking";
+  return null;
+}
+
+export function ExchangeSide({ exchange, voice }: { exchange: Exchange; voice: ReturnType<typeof useVoice> }) {
+  const line = stateLine(exchange, voice.phase, voice.interrupts);
+  return (
+    <div className="min-w-0">
+      <div className="text-[14px] text-muted">You</div>
+      <p className="mt-1 line-clamp-4 text-[20px] leading-7 text-ink">{exchange.question}</p>
+      {line && (
+        <div className="mt-6 flex items-center gap-2 text-[14px] text-muted">
+          <Wave />
+          <span className="truncate">{line}</span>
+        </div>
+      )}
+    </div>
   );
 }
 
