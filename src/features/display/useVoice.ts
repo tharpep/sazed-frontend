@@ -196,7 +196,7 @@ export function useVoice({
   const fillersRef = useRef<ReturnType<typeof createFillerStore> | null>(null);
   fillersRef.current ??= createFillerStore({
     getContext: getAudioContext,
-    busy: () => inFlightRef.current,
+    busy: () => inFlightRef.current || phaseRef.current !== "idle",
   });
 
   function setPhaseTracked(p: Phase) {
