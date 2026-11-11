@@ -6,6 +6,16 @@ import { postMessageStream } from "@/api/chat";
 import { encodeWav } from "@/lib/audioWav";
 import { toolCallPending } from "@/lib/toolMap";
 import type { ToolCall, UIBlock } from "@/mock/data";
+import {
+  newTurn,
+  postTurn,
+  stampFetchStart,
+  stampFirstByte,
+  stampFirstSound,
+  TYPED_TURN,
+  type TurnSeed,
+  type TurnTiming,
+} from "./voiceTiming";
 
 export type Phase = "idle" | "listening" | "thinking" | "speaking";
 
@@ -55,6 +65,7 @@ const MIC_CONSTRAINTS: MediaStreamConstraints = {
   audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
 };
 const DEFAULT_VOICE_URI = "kokoro:am_adam";
+const SPEECH_FRAME_THRESHOLD = 0.3;
 
 function loadCustomProfiles(): CustomVoiceProfile[] {
   try {
@@ -163,6 +174,8 @@ export function useVoice({
   const epochRef = useRef(0);
   const speechActiveRef = useRef(false);
   const noSpeechTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const turnRef = useRef<TurnTiming | null>(null);
+  const lastSpeechFrameAtRef = useRef<number | null>(null);
 
   function setPhaseTracked(p: Phase) {
     phaseRef.current = p;
@@ -284,6 +297,13 @@ export function useVoice({
     }
   }
 
+  function postTurnRecord(outcome: Parameters<typeof postTurn>[1]) {
+    const turn = turnRef.current;
+    if (!turn) return;
+    turnRef.current = null;
+    postTurn(turn, outcome, sessionIdRef.current, kiosk);
+  }
+
   function abortExchange() {
     inFlightRef.current = false;
     exchangeRef.current?.abort();
@@ -298,6 +318,7 @@ export function useVoice({
   function finalize() {
     if (finalizedRef.current) return;
     finalizedRef.current = true;
+    postTurnRecord(turnRef.current?.played ? "spoken" : "silent");
     lastExchangeAtRef.current = Date.now();
     stopAudio();
     endTurn();
@@ -317,6 +338,11 @@ export function useVoice({
       source.buffer = audioBuffer;
       source.connect(ctx.destination);
       source.start(startAt);
+      const turn = turnRef.current;
+      if (turn) {
+        turn.played = true;
+        if (idx === 0) stampFirstSound(turn, performance.now() + (startAt - ctx.currentTime) * 1000);
+      }
 
       setPhaseTracked("speaking");
       scheduledSourcesRef.current.push(source);
@@ -336,6 +362,7 @@ export function useVoice({
     const raw = stripMarkdownForTts(sentence);
     if (!raw) return;
 
+    const turn = turnRef.current;
     const uri = voiceUriRef.current;
     let engine: "kokoro" | "fish" | "browser" = "kokoro";
     let voiceId = "am_adam";
@@ -351,13 +378,24 @@ export function useVoice({
       voiceId = uri.slice(8);
     }
 
+    if (turn && index === 0) stampFetchStart(turn, engine);
+
+    function stampBrowserStart() {
+      if (!turn) return;
+      turn.played = true;
+      if (index === 0) stampFirstSound(turn, performance.now());
+    }
+
     if (engine === "browser") {
       if (typeof speechSynthesis !== "undefined") {
         const u = new SpeechSynthesisUtterance(raw);
         const all = speechSynthesis.getVoices();
         const match = all.find((v) => v.voiceURI === voiceId);
         if (match) u.voice = match;
-        u.onstart = () => setPhaseTracked("speaking");
+        u.onstart = () => {
+          stampBrowserStart();
+          setPhaseTracked("speaking");
+        };
         u.onend = () => {
           finishedRef.current++;
           if (streamDoneRef.current && finishedRef.current >= spokenRef.current) finalize();
@@ -371,7 +409,11 @@ export function useVoice({
     }
 
     try {
-      const buf = await fetchSpeechAudio({ text: raw, voice: voiceId, engine, format: "mp3" }, signal);
+      const buf = await fetchSpeechAudio(
+        { text: raw, voice: voiceId, engine, format: "mp3" },
+        signal,
+        turn && index === 0 ? () => stampFirstByte(turn) : undefined
+      );
       if (signal.aborted) return;
 
       const ctx = getAudioContext();
@@ -386,7 +428,10 @@ export function useVoice({
     } catch {
       if (typeof speechSynthesis !== "undefined") {
         const u = new SpeechSynthesisUtterance(raw);
-        u.onstart = () => setPhaseTracked("speaking");
+        u.onstart = () => {
+          stampBrowserStart();
+          setPhaseTracked("speaking");
+        };
         u.onend = () => {
           finishedRef.current++;
           if (streamDoneRef.current && finishedRef.current >= spokenRef.current) finalize();
@@ -437,10 +482,12 @@ export function useVoice({
     setExchange((prev) => (prev ? fn(prev) : prev));
   }
 
-  async function send(text: string) {
+  async function send(text: string, seed: TurnSeed = TYPED_TURN) {
     if (lastExchangeAtRef.current && Date.now() - lastExchangeAtRef.current > SESSION_IDLE_MS) {
       sessionIdRef.current = null;
     }
+    postTurnRecord("interrupted");
+    turnRef.current = newTurn(seed);
     exchangeRef.current?.abort();
     const ctrl = new AbortController();
     exchangeRef.current = ctrl;
@@ -471,7 +518,11 @@ export function useVoice({
         onSession: (id) => {
           sessionIdRef.current = id;
         },
-        onToolStart: (name) => !signal.aborted && update((e) => ({ ...e, tools: [...e.tools, toolCallPending(name)] })),
+        onToolStart: (name) => {
+          if (signal.aborted) return;
+          if (turnRef.current) turnRef.current.toolTurn = true;
+          update((e) => ({ ...e, tools: [...e.tools, toolCallPending(name)] }));
+        },
         onToolDone: (name, status) =>
           !signal.aborted &&
           update((e) => {
@@ -496,8 +547,9 @@ export function useVoice({
         onUiBlock: ({ component, props }) =>
           !signal.aborted &&
           update((e) => ({ ...e, uiBlocks: [...e.uiBlocks, { type: "ui", component, props }] })),
-        onDone: () => {
+        onDone: (data) => {
           if (signal.aborted) return;
+          if (turnRef.current) turnRef.current.stream = data?.timing ?? null;
           streamDoneRef.current = true;
           if (!mutedRef.current) speak(true);
           if (spokenRef.current === 0) {
@@ -507,6 +559,7 @@ export function useVoice({
         onError: (err) => {
           if (signal.aborted) return;
           update((e) => ({ ...e, error: err.message }));
+          postTurnRecord("error");
           endTurn();
         },
       },
@@ -514,7 +567,7 @@ export function useVoice({
     );
   }
 
-  async function handleSpeechEnd(audio: Float32Array) {
+  async function handleSpeechEnd(audio: Float32Array, speechEndAt: number, endpointMs: number | null) {
     if (phaseRef.current === "speaking") return;
     if (!conversationRef.current && phaseRef.current !== "listening") {
       return;
@@ -525,7 +578,9 @@ export function useVoice({
 
     try {
       const wavBlob = encodeWav(audio, 16000);
+      const sttStart = performance.now();
       const text = await transcribeAudio(wavBlob);
+      const sttMs = Math.round(performance.now() - sttStart);
       if (epoch !== epochRef.current) return;
       const clean = text.trim();
 
@@ -557,13 +612,19 @@ export function useVoice({
         }
       }
 
-      await send(prompt);
+      await send(prompt, {
+        speechEndAt,
+        utteranceMs: Math.round(audio.length / 16),
+        endpointMs,
+        sttMs,
+      });
     } catch {
       if (epoch === epochRef.current) endTurn();
     }
   }
 
   function interrupt() {
+    postTurnRecord("interrupted");
     abortExchange();
     lastExchangeAtRef.current = Date.now();
     vadRef.current?.setOptions({ minSpeechMs: DEFAULT_MIN_SPEECH_MS });
@@ -608,10 +669,15 @@ export function useVoice({
         speechActiveRef.current = false;
         if (phaseRef.current === "listening") endTurn();
       },
+      onFrameProcessed: (probs) => {
+        if (probs.isSpeech >= SPEECH_FRAME_THRESHOLD) lastSpeechFrameAtRef.current = performance.now();
+      },
       onSpeechEnd: (audio) => {
         if (gen !== vadGenRef.current) return;
         speechActiveRef.current = false;
-        void handleSpeechEnd(audio);
+        const speechEndAt = performance.now();
+        const lastFrame = lastSpeechFrameAtRef.current;
+        void handleSpeechEnd(audio, speechEndAt, lastFrame === null ? null : Math.round(speechEndAt - lastFrame));
       },
     }).then(
       (vad) => {
@@ -703,6 +769,7 @@ export function useVoice({
 
   function stopSpeaking() {
     lastExchangeAtRef.current = Date.now();
+    postTurnRecord("stopped");
     abortExchange();
     endTurn();
   }

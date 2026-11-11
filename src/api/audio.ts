@@ -30,7 +30,8 @@ function getKey(): string {
 
 export async function fetchSpeechAudio(
   opts: SpeechOptions,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onFirstByte?: () => void
 ): Promise<ArrayBuffer> {
   const base = getBase();
   const key = getKey();
@@ -49,7 +50,56 @@ export async function fetchSpeechAudio(
     throw new Error(text || `HTTP ${res.status}`);
   }
 
-  return res.arrayBuffer();
+  if (!res.body) return res.arrayBuffer();
+
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value.length === 0) continue;
+    if (total === 0) onFirstByte?.();
+    chunks.push(value);
+    total += value.length;
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.length;
+  }
+  return out.buffer;
+}
+
+export interface VoiceTurnRow {
+  session_id: string | null;
+  kiosk: boolean;
+  outcome: "spoken" | "silent" | "interrupted" | "stopped" | "error";
+  tool_turn: boolean;
+  engine: string | null;
+  utterance_ms: number | null;
+  endpoint_ms: number | null;
+  stt_ms: number | null;
+  setup_ms: number | null;
+  llm_ttft_ms: number | null;
+  first_text_ms: number | null;
+  tts_first_byte_ms: number | null;
+  tts_first_sound_ms: number | null;
+  first_sound_ms: number | null;
+}
+
+export async function postVoiceTurn(row: VoiceTurnRow): Promise<void> {
+  try {
+    const key = getKey();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (key) headers["X-API-Key"] = key;
+    await fetch(`${getBase().replace(/\/$/, "")}/voice/turns`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(row),
+    });
+  } catch {}
 }
 
 export async function fetchVoices(): Promise<VoiceListResponse> {
