@@ -257,6 +257,19 @@ function Wave() {
   );
 }
 
+export function MicChip({ onTap }: { onTap: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      className="absolute right-3 top-2 flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-[14px] text-muted"
+    >
+      <Mic className="size-4" />
+      Tap to turn on the mic
+    </button>
+  );
+}
+
 export function VoiceRing({ phase, onCancel }: { phase: Phase; onCancel: () => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-7">

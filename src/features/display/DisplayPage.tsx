@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 
 import { cn } from "@/lib/utils";
 import { describeWidget } from "@/widgets/catalog";
-import { AnswerCard, AskBar, Card, Carousel, Chips, Empty, ExchangeSide, FarRow, Row, RowTapContext, VoiceRing } from "./parts";
+import { AnswerCard, AskBar, Card, Carousel, Chips, Empty, ExchangeSide, FarRow, MicChip, Row, RowTapContext, VoiceRing } from "./parts";
 import { chips, firstThing, homelabRows, mailFrom, mailRows, nextUp, screenLines, week, type Item, type ScreenLine } from "./items";
 import { useDisplayFeed, type DisplayFeed } from "./useDisplayFeed";
 import { usePresence } from "./usePresence";
@@ -292,7 +292,7 @@ export function DisplayPage() {
     }
     return [...kept.map((l) => (l.key === marked ? `* ${l.text}` : l.text)), ...blocks];
   }, []);
-  const voice = useVoice({ quiet: kiosk && isNight(now), screen: getScreen });
+  const voice = useVoice({ kiosk, screen: getScreen });
   const [visibleCard, setVisibleCard] = useState("Next up");
   const presence = usePresence(now);
   const drift = useDrift();
@@ -502,6 +502,7 @@ export function DisplayPage() {
         style={{ transform: `translate(${drift.x}px, ${drift.y}px)` }}
       >
         {face}
+        {voice.micBlocked && !night && <MicChip onTap={voice.retryMic} />}
       </div>
     </div>
     </RowTapContext.Provider>
