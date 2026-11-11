@@ -7,6 +7,7 @@ import { encodeWav } from "@/lib/audioWav";
 import { toolCallPending } from "@/lib/toolMap";
 import type { ToolCall, UIBlock } from "@/mock/data";
 import { createFillerStore } from "./fillers";
+import { splitSpeech } from "./speechSegments";
 import {
   newTurn,
   postTurn,
@@ -118,6 +119,18 @@ function stripMarkdownForTts(text: string): string {
     .trim();
 }
 
+interface TtsVoice {
+  engine: VoiceOption["engine"];
+  voiceId: string;
+}
+
+function parseTtsVoice(voiceUri: string): TtsVoice {
+  if (voiceUri.startsWith("fish:")) return { engine: "fish", voiceId: voiceUri.slice(5) };
+  if (voiceUri.startsWith("browser:")) return { engine: "browser", voiceId: voiceUri.slice(8) };
+  if (voiceUri.startsWith("kokoro:")) return { engine: "kokoro", voiceId: voiceUri.slice(7) };
+  return { engine: "kokoro", voiceId: "am_adam" };
+}
+
 export function useVoice({
   kiosk = false,
   screen,
@@ -171,6 +184,7 @@ export function useVoice({
   const nextPlayIndexRef = useRef(0);
   const decodedBuffersRef = useRef<Map<number, AudioBuffer>>(new Map());
   const abortCtrlRef = useRef<AbortController | null>(null);
+  const kokoroQueueRef = useRef<Promise<void>>(Promise.resolve());
   const lastExchangeAtRef = useRef(0);
   const exchangeRef = useRef<AbortController | null>(null);
   const epochRef = useRef(0);
@@ -404,26 +418,17 @@ export function useVoice({
     };
   }
 
-  async function enqueueSentence(sentence: string, index: number, signal: AbortSignal) {
+  async function enqueueSentence(
+    sentence: string,
+    index: number,
+    signal: AbortSignal,
+    { engine, voiceId }: TtsVoice
+  ) {
+    if (signal.aborted) return;
     const raw = stripMarkdownForTts(sentence);
     if (!raw) return;
 
     const turn = turnRef.current;
-    const uri = voiceUriRef.current;
-    let engine: "kokoro" | "fish" | "browser" = "kokoro";
-    let voiceId = "am_adam";
-
-    if (uri.startsWith("kokoro:")) {
-      engine = "kokoro";
-      voiceId = uri.slice(7);
-    } else if (uri.startsWith("fish:")) {
-      engine = "fish";
-      voiceId = uri.slice(5);
-    } else if (uri.startsWith("browser:")) {
-      engine = "browser";
-      voiceId = uri.slice(8);
-    }
-
     if (turn && index === 0) stampFetchStart(turn, engine);
 
     function stampBrowserStart() {
@@ -472,6 +477,7 @@ export function useVoice({
       decodedBuffersRef.current.set(index, audioBuffer);
       schedulePendingSentences();
     } catch {
+      if (signal.aborted) return;
       if (typeof speechSynthesis !== "undefined") {
         const u = new SpeechSynthesisUtterance(raw);
         u.onstart = () => {
@@ -491,25 +497,13 @@ export function useVoice({
   }
 
   function speak(isFinal: boolean) {
-    const buffer = ttsBufferRef.current;
-    const boundary = /[.!?]+[\s\n]+/g;
-    const sentences: string[] = [];
-    let last = 0;
-    let match: RegExpExecArray | null;
-
-    while ((match = boundary.exec(buffer)) !== null) {
-      const sentence = buffer.slice(last, match.index + match[0].length).trim();
-      if (sentence) sentences.push(sentence);
-      last = match.index + match[0].length;
-    }
-
-    if (isFinal) {
-      const rest = buffer.slice(last).trim();
-      if (rest) sentences.push(rest);
-      ttsBufferRef.current = "";
-    } else {
-      ttsBufferRef.current = buffer.slice(last);
-    }
+    const voice = parseTtsVoice(voiceUriRef.current);
+    const kokoro = voice.engine === "kokoro";
+    const { segments, rest } = splitSpeech(ttsBufferRef.current, {
+      isFinal,
+      cutFirstClause: kokoro && sentenceIndexRef.current === 0,
+    });
+    ttsBufferRef.current = rest;
 
     if (exchangeRef.current?.signal.aborted) return;
     if (!abortCtrlRef.current) {
@@ -517,10 +511,16 @@ export function useVoice({
     }
     const signal = abortCtrlRef.current.signal;
 
-    for (const sentence of sentences) {
+    for (const segment of segments) {
       spokenRef.current++;
       const idx = sentenceIndexRef.current++;
-      void enqueueSentence(sentence, idx, signal);
+      if (kokoro) {
+        kokoroQueueRef.current = kokoroQueueRef.current.then(() =>
+          enqueueSentence(segment, idx, signal, voice)
+        );
+      } else {
+        void enqueueSentence(segment, idx, signal, voice);
+      }
     }
   }
 
