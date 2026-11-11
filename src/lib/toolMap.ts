@@ -49,6 +49,10 @@ export function getCategory(toolName: string): ToolCall["category"] {
   return TOOL_NAME_TO_CATEGORY[toolName] ?? DEFAULT_CATEGORY;
 }
 
+export function fillerCategory(toolName: string): ToolCall["category"] | null {
+  return TOOL_NAME_TO_CATEGORY[toolName] ?? null;
+}
+
 export function toolUseToToolCall(block: {
   name: string;
   id?: string;

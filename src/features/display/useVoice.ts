@@ -6,10 +6,12 @@ import { postMessageStream } from "@/api/chat";
 import { encodeWav } from "@/lib/audioWav";
 import { toolCallPending } from "@/lib/toolMap";
 import type { ToolCall, UIBlock } from "@/mock/data";
+import { createFillerStore } from "./fillers";
 import {
   newTurn,
   postTurn,
   stampFetchStart,
+  stampFiller,
   stampFirstByte,
   stampFirstSound,
   TYPED_TURN,
@@ -176,6 +178,12 @@ export function useVoice({
   const noSpeechTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const turnRef = useRef<TurnTiming | null>(null);
   const lastSpeechFrameAtRef = useRef<number | null>(null);
+  const fillerPlayedRef = useRef(false);
+  const fillersRef = useRef<ReturnType<typeof createFillerStore> | null>(null);
+  fillersRef.current ??= createFillerStore({
+    getContext: getAudioContext,
+    busy: () => inFlightRef.current,
+  });
 
   function setPhaseTracked(p: Phase) {
     phaseRef.current = p;
@@ -250,6 +258,10 @@ export function useVoice({
       }
     };
   }, []);
+
+  useEffect(() => {
+    fillersRef.current?.prime(voiceUri);
+  }, [voiceUri]);
 
   function stopAudio() {
     abortCtrlRef.current?.abort();
@@ -356,6 +368,40 @@ export function useVoice({
         }
       };
     }
+  }
+
+  function playFiller(name: string, signal: AbortSignal) {
+    if (fillerPlayedRef.current || signal.aborted || mutedRef.current) return;
+    if (spokenRef.current !== 0 || ttsBufferRef.current.trim()) return;
+    const audioBuffer = fillersRef.current?.buffer(voiceUriRef.current, name);
+    if (!audioBuffer) return;
+    fillerPlayedRef.current = true;
+
+    const ctx = getAudioContext();
+    if (ctx.state === "suspended") void ctx.resume();
+    const startAt = Math.max(ctx.currentTime, nextPlayTimeRef.current);
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(ctx.destination);
+    source.start(startAt);
+    if (turnRef.current) {
+      stampFiller(turnRef.current, performance.now() + (startAt - ctx.currentTime) * 1000);
+    }
+
+    setPhaseTracked("speaking");
+    scheduledSourcesRef.current.push(source);
+    nextPlayTimeRef.current = startAt + audioBuffer.duration + 0.08;
+
+    source.onended = () => {
+      scheduledSourcesRef.current = scheduledSourcesRef.current.filter((s) => s !== source);
+      if (
+        phaseRef.current === "speaking" &&
+        scheduledSourcesRef.current.length === 0 &&
+        inFlightRef.current
+      ) {
+        setPhaseTracked("thinking");
+      }
+    };
   }
 
   async function enqueueSentence(sentence: string, index: number, signal: AbortSignal) {
@@ -501,6 +547,7 @@ export function useVoice({
     finishedRef.current = 0;
     streamDoneRef.current = false;
     finalizedRef.current = false;
+    fillerPlayedRef.current = false;
     sentenceIndexRef.current = 0;
     nextPlayIndexRef.current = 0;
     decodedBuffersRef.current.clear();
@@ -518,6 +565,7 @@ export function useVoice({
         onSession: (id) => {
           sessionIdRef.current = id;
         },
+        onToolIntent: (name) => playFiller(name, signal),
         onToolStart: (name) => {
           if (signal.aborted) return;
           if (turnRef.current) turnRef.current.toolTurn = true;
