@@ -20,13 +20,19 @@ export interface EditMessageBody {
   location?: { latitude: number; longitude: number; accuracy?: number };
 }
 
+export interface StreamTiming {
+  setup_ms: number | null;
+  llm_ttft_ms: number | null;
+  first_text_ms: number | null;
+}
+
 export interface StreamCallbacks {
   onSession: (sessionId: string) => void;
   onToolStart: (name: string) => void;
   onToolDone: (name: string, status: "success" | "error", error?: string) => void;
   onText: (delta: string) => void;
   onUiBlock?: (block: { component: string; props: Record<string, unknown> }) => void;
-  onDone: () => void;
+  onDone: (data?: { timing?: StreamTiming }) => void;
   onError: (err: Error) => void;
 }
 
@@ -126,7 +132,7 @@ async function streamRequest(
               break;
             case "done":
               complete = true;
-              callbacks.onDone();
+              callbacks.onDone(data as { timing?: StreamTiming });
               break;
             case "ui_block":
               callbacks.onUiBlock?.({
