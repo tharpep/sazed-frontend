@@ -76,6 +76,18 @@ function recognitionCtor(): (new () => ISpeechRecognition) | undefined {
   return (w.SpeechRecognition ?? w.webkitSpeechRecognition) as (new () => ISpeechRecognition) | undefined;
 }
 
+const WAKE_NAME = "sazed|saws|said|sayzed|saz\\s*it|says\\s*it|sized|say\\s*zed|sa[sz]ed|zed";
+const WAKE_EDGE = /^[\s,.:;!?-]+|[\s,.:;!?-]+$/g;
+const WAKE_RE = new RegExp(
+  `^[\\s,.:;!?-]*(?:(?:um+|uh+)[\\s,.]+)?(?:(?:hey|hi|ok(?:ay)?)[\\s,.]+)?(?:${WAKE_NAME})\\b(.*)$`,
+  "is"
+);
+
+export function matchWake(transcript: string): string | null {
+  const m = WAKE_RE.exec(transcript);
+  return m ? m[1].replace(WAKE_EDGE, "") : null;
+}
+
 function stripMarkdownForTts(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, "")
@@ -93,10 +105,17 @@ function stripMarkdownForTts(text: string): string {
     .trim();
 }
 
-export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: () => string[] } = {}) {
+export function useVoice({
+  kiosk = false,
+  screen,
+}: { kiosk?: boolean; screen?: () => string[] } = {}) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [exchange, setExchange] = useState<Exchange | null>(null);
-  const [conversation, setConversation] = useState(() => localStorage.getItem(CONVERSATION_KEY) === "true");
+  const [conversation, setConversation] = useState(() => {
+    const stored = localStorage.getItem(CONVERSATION_KEY);
+    return stored === null ? kiosk : stored === "true";
+  });
+  const [micBlocked, setMicBlocked] = useState(false);
   const [interrupts, setInterrupts] = useState(() => localStorage.getItem(INTERRUPTS_KEY) !== "false");
   const [muted, setMuted] = useState(() => localStorage.getItem(MUTE_KEY) === "true");
   const [customVoices, setCustomVoices] = useState<CustomVoiceProfile[]>(loadCustomProfiles);
@@ -121,9 +140,12 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
   const finalizedRef = useRef(false);
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const vadRef = useRef<MicVAD | null>(null);
+  const vadInitRef = useRef<Promise<MicVAD> | null>(null);
+  const vadCtxRef = useRef<AudioContext | null>(null);
+  const vadGenRef = useRef(0);
+  const inFlightRef = useRef(false);
   const cancelledRef = useRef(false);
   const conversationRef = useRef(conversation);
-  const quietRef = useRef(quiet);
   const screenRef = useRef(screen);
   screenRef.current = screen;
   const interruptsRef = useRef(interrupts);
@@ -242,17 +264,17 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
   }
 
   function endTurn() {
-    lastExchangeAtRef.current = Date.now();
+    inFlightRef.current = false;
     clearNoSpeechTimer();
     speechActiveRef.current = false;
     const vad = vadRef.current;
     vad?.setOptions({ minSpeechMs: DEFAULT_MIN_SPEECH_MS });
     setPhaseTracked("idle");
-    if (conversationRef.current && !quietRef.current) {
+    if (conversationRef.current) {
       setTimeout(() => {
         if (phaseRef.current !== "idle") return;
         if (vadRef.current) {
-          if (!vadRef.current.listening) void vadRef.current.start();
+          if (!vadRef.current.listening) void startMic();
         } else {
           listen();
         }
@@ -263,6 +285,7 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
   }
 
   function abortExchange() {
+    inFlightRef.current = false;
     exchangeRef.current?.abort();
     stopAudio();
     ttsBufferRef.current = "";
@@ -275,6 +298,7 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
   function finalize() {
     if (finalizedRef.current) return;
     finalizedRef.current = true;
+    lastExchangeAtRef.current = Date.now();
     stopAudio();
     endTurn();
   }
@@ -420,6 +444,7 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
     exchangeRef.current?.abort();
     const ctrl = new AbortController();
     exchangeRef.current = ctrl;
+    inFlightRef.current = true;
     const { signal } = ctrl;
     clearNoSpeechTimer();
     setPhaseTracked("thinking");
@@ -510,17 +535,17 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
       }
 
       const isFollowUp = Date.now() - lastExchangeAtRef.current < 30_000;
-      const wakeMatch = clean.match(/^(?:hey[\s,]+)?(?:sazed|says\s*it|sized|say\s*zed)\b[\s,.:!?]*(.*)$/i);
+      const woke = matchWake(clean);
 
       let prompt = clean;
-      if (conversationRef.current && !quietRef.current && !isFollowUp) {
-        if (!wakeMatch) {
+      if (conversationRef.current && !isFollowUp) {
+        if (woke === null) {
           endTurn();
           return;
         }
-        prompt = wakeMatch[1].trim() || "Hey Sazed";
-      } else if (wakeMatch && wakeMatch[1].trim()) {
-        prompt = wakeMatch[1].trim();
+        prompt = woke || "Hey Sazed";
+      } else if (woke) {
+        prompt = woke;
       }
 
       const vad = vadRef.current;
@@ -545,63 +570,98 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
     setPhaseTracked("listening");
   }
 
-  useEffect(() => {
-    let active = true;
-
-    async function initVad() {
-      try {
-        const vad = await MicVAD.new({
-          baseAssetPath: "/vad/",
-          onnxWASMBasePath: "/vad/",
-          startOnLoad: false,
-          getStream: () => navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS),
-          resumeStream: () => navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS),
-          minSpeechMs: DEFAULT_MIN_SPEECH_MS,
-          onSpeechStart: () => {
-            if (!active) return;
-            speechActiveRef.current = true;
-            clearNoSpeechTimer();
-            if (phaseRef.current === "idle") setPhaseTracked("listening");
-          },
-          onSpeechRealStart: () => {
-            if (!active) return;
-            const p = phaseRef.current;
-            if ((p === "speaking" || p === "thinking") && interruptsRef.current) interrupt();
-          },
-          onVADMisfire: () => {
-            if (!active) return;
-            speechActiveRef.current = false;
-            if (phaseRef.current === "listening") endTurn();
-          },
-          onSpeechEnd: (audio) => {
-            if (!active) return;
-            speechActiveRef.current = false;
-            void handleSpeechEnd(audio);
-          },
-        });
-
-        if (!active) {
-          void vad.destroy();
-          return;
-        }
-
-        vadRef.current = vad;
-        if (conversationRef.current && !quietRef.current && !vad.listening) {
-          void vad.start();
-        }
-      } catch {
-        vadRef.current = null;
-      }
+  function vadAudioContext(): AudioContext {
+    if (!vadCtxRef.current || vadCtxRef.current.state === "closed") {
+      const ctx = new AudioContext();
+      ctx.onstatechange = () => {
+        if (ctx.state === "running") setMicBlocked(false);
+        else if (vadRef.current?.listening) setMicBlocked(true);
+      };
+      vadCtxRef.current = ctx;
     }
+    return vadCtxRef.current;
+  }
 
-    void initVad();
+  function ensureVad(): Promise<MicVAD> {
+    const gen = vadGenRef.current;
+    vadInitRef.current ??= MicVAD.new({
+      baseAssetPath: "/vad/",
+      onnxWASMBasePath: "/vad/",
+      startOnLoad: false,
+      audioContext: vadAudioContext(),
+      getStream: () => navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS),
+      resumeStream: () => navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS),
+      minSpeechMs: DEFAULT_MIN_SPEECH_MS,
+      onSpeechStart: () => {
+        if (gen !== vadGenRef.current) return;
+        speechActiveRef.current = true;
+        clearNoSpeechTimer();
+        if (phaseRef.current === "idle") setPhaseTracked("listening");
+      },
+      onSpeechRealStart: () => {
+        if (gen !== vadGenRef.current) return;
+        const p = phaseRef.current;
+        if ((p === "speaking" || p === "thinking") && interruptsRef.current && inFlightRef.current) interrupt();
+      },
+      onVADMisfire: () => {
+        if (gen !== vadGenRef.current) return;
+        speechActiveRef.current = false;
+        if (phaseRef.current === "listening") endTurn();
+      },
+      onSpeechEnd: (audio) => {
+        if (gen !== vadGenRef.current) return;
+        speechActiveRef.current = false;
+        void handleSpeechEnd(audio);
+      },
+    }).then(
+      (vad) => {
+        if (gen !== vadGenRef.current) {
+          void vad.destroy().catch(() => {});
+          throw new Error("unmounted");
+        }
+        vadRef.current = vad;
+        return vad;
+      },
+      (err) => {
+        vadInitRef.current = null;
+        throw err;
+      }
+    );
+    return vadInitRef.current;
+  }
+
+  async function startMic() {
+    try {
+      const vad = await ensureVad();
+      await vad.start();
+      const ctx = vadAudioContext();
+      void ctx.resume();
+      setMicBlocked(ctx.state !== "running");
+    } catch {
+      if (vadRef.current) void vadRef.current.destroy().catch(() => {});
+      vadRef.current = null;
+      vadInitRef.current = null;
+      setMicBlocked(true);
+    }
+  }
+
+  useEffect(() => {
+    if (conversationRef.current) void startMic();
+    else void ensureVad().catch(() => {});
+
+    function resumeOnGesture() {
+      if (vadCtxRef.current?.state === "suspended") void vadCtxRef.current.resume();
+    }
+    window.addEventListener("pointerdown", resumeOnGesture, true);
 
     return () => {
-      active = false;
-      if (vadRef.current) {
-        void vadRef.current.destroy();
-        vadRef.current = null;
-      }
+      window.removeEventListener("pointerdown", resumeOnGesture, true);
+      vadGenRef.current++;
+      if (vadRef.current) void vadRef.current.destroy().catch(() => {});
+      vadRef.current = null;
+      vadInitRef.current = null;
+      void vadCtxRef.current?.close();
+      vadCtxRef.current = null;
     };
   }, []);
 
@@ -642,6 +702,7 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
     );
 
   function stopSpeaking() {
+    lastExchangeAtRef.current = Date.now();
     abortExchange();
     endTurn();
   }
@@ -666,8 +727,8 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
     if (vadRef.current) {
       cancelledRef.current = false;
       setPhaseTracked("listening");
-      void vadRef.current.start();
-      if (!conversationRef.current || quietRef.current) {
+      void startMic();
+      if (!conversationRef.current) {
         clearNoSpeechTimer();
         noSpeechTimerRef.current = setTimeout(() => {
           if (phaseRef.current === "listening" && !speechActiveRef.current) endTurn();
@@ -688,14 +749,6 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [phase]);
 
-  useEffect(() => {
-    quietRef.current = quiet;
-    const vad = vadRef.current;
-    if (!vad || phaseRef.current !== "idle") return;
-    if (quiet && vad.listening) void vad.pause();
-    else if (!quiet && conversationRef.current && !vad.listening) void vad.start();
-  }, [quiet]);
-
   function ask(text: string) {
     if (text.trim() && phase === "idle") void send(text.trim());
   }
@@ -705,8 +758,8 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
     localStorage.setItem(CONVERSATION_KEY, String(conversationRef.current));
     setConversation(conversationRef.current);
     if (conversationRef.current) {
-      if (vadRef.current && !vadRef.current.listening && phase === "idle" && !quietRef.current) {
-        void vadRef.current.start();
+      if (vadRef.current && !vadRef.current.listening && phase === "idle") {
+        void startMic();
       }
     } else {
       if (vadRef.current?.listening && phase !== "speaking") {
@@ -772,6 +825,8 @@ export function useVoice({ quiet = false, screen }: { quiet?: boolean; screen?: 
     phase,
     exchange,
     conversation,
+    micBlocked,
+    retryMic: startMic,
     interrupts,
     muted,
     voices,
