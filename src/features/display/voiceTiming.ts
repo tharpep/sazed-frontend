@@ -20,6 +20,7 @@ export interface TurnTiming extends TurnSeed {
   ttsFirstByteMs: number | null;
   ttsFirstSoundMs: number | null;
   firstSoundMs: number | null;
+  fillerMs: number | null;
   played: boolean;
 }
 
@@ -33,6 +34,7 @@ export function newTurn(seed: TurnSeed): TurnTiming {
     ttsFirstByteMs: null,
     ttsFirstSoundMs: null,
     firstSoundMs: null,
+    fillerMs: null,
     played: false,
   };
 }
@@ -51,6 +53,10 @@ export function stampFirstSound(t: TurnTiming, soundAt: number) {
   if (t.speechEndAt !== null) t.firstSoundMs = Math.max(0, Math.round(soundAt - t.speechEndAt));
 }
 
+export function stampFiller(t: TurnTiming, soundAt: number) {
+  if (t.speechEndAt !== null) t.fillerMs = Math.max(0, Math.round(soundAt - t.speechEndAt));
+}
+
 export function postTurn(t: TurnTiming, outcome: Outcome, sessionId: string | null, kiosk: boolean) {
   void postVoiceTurn({
     session_id: sessionId,
@@ -67,5 +73,6 @@ export function postTurn(t: TurnTiming, outcome: Outcome, sessionId: string | nu
     tts_first_byte_ms: t.ttsFirstByteMs,
     tts_first_sound_ms: t.ttsFirstSoundMs,
     first_sound_ms: t.firstSoundMs,
+    filler_ms: t.fillerMs,
   });
 }

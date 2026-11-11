@@ -28,6 +28,7 @@ export interface StreamTiming {
 
 export interface StreamCallbacks {
   onSession: (sessionId: string) => void;
+  onToolIntent?: (name: string) => void;
   onToolStart: (name: string) => void;
   onToolDone: (name: string, status: "success" | "error", error?: string) => void;
   onText: (delta: string) => void;
@@ -116,6 +117,9 @@ async function streamRequest(
           switch (eventType) {
             case "session":
               callbacks.onSession(data.session_id as string);
+              break;
+            case "tool_intent":
+              callbacks.onToolIntent?.(data.name as string);
               break;
             case "tool_start":
               callbacks.onToolStart(data.name as string);

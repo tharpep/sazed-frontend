@@ -87,6 +87,7 @@ export interface VoiceTurnRow {
   tts_first_byte_ms: number | null;
   tts_first_sound_ms: number | null;
   first_sound_ms: number | null;
+  filler_ms: number | null;
 }
 
 export async function postVoiceTurn(row: VoiceTurnRow): Promise<void> {
