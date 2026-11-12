@@ -1,4 +1,3 @@
-import { rememberHomelabView } from "@/features/homelab/HomelabPage";
 import type { NavTarget } from "@/nav/hubViews";
 import { useShellStore } from "@/nav/shellFlag";
 import { useChatStore } from "@/store/chatStore";
@@ -15,7 +14,7 @@ export function goTo(target: NavTarget) {
 }
 
 export function openSystem(view: "homelab" | "activity") {
-  if (view === "homelab") rememberHomelabView("list");
+  if (view === "homelab") useNavStore.getState().setSub("system:homelab", "list");
   if (hubShell()) return useNavStore.getState().go("system", view);
   const ui = useUiStore.getState();
   if (view === "activity") ui.toggleAudit();
