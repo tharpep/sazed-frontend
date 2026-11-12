@@ -9,9 +9,14 @@ import {
   type UsageSessions,
 } from "@/api/claudeUsage";
 import { errorText } from "@/api/homelab";
+import { ViewPicker } from "@/components/shell/ViewPicker";
 import { EmptyState, Page, PageBody, PageHeader, Segmented } from "@/components/system";
+import { cn } from "@/lib/utils";
+import { useShellStore } from "@/nav/shellFlag";
+import { useNavStore, useSub } from "@/store/navStore";
 import { Tabs } from "./Card";
 import type { Tab } from "./hub";
+import { ModelSpend } from "./ModelSpend";
 import { Overview } from "./Overview";
 import { SourceTab } from "./SourceTab";
 import { Spend } from "./Spend";
@@ -77,7 +82,11 @@ function ClaudeCodeTab({ days, machine }: { days: number; machine: string | null
 }
 
 export function ClaudeUsagePage() {
-  const [tab, setTab] = useState<Tab>("overview");
+  const hubs = useShellStore((s) => s.shell) === "hubs";
+  const [oldShellTab, setOldShellTab] = useState<Tab>("overview");
+  const storedTab = useSub("system:usage");
+  const tab: Tab = hubs ? storedTab : oldShellTab;
+  const setTab = (t: Tab) => (hubs ? useNavStore.getState().setSub("system:usage", t) : setOldShellTab(t));
   const [range, setRange] = useState<Range>("30");
   const [machine, setMachine] = useState<string | null>(null);
   const [hub, setHub] = useState<UsageHub | null>(null);
@@ -103,22 +112,38 @@ export function ClaudeUsagePage() {
 
   return (
     <Page>
-      <PageHeader title="Usage" />
+      {!hubs && <PageHeader title="Usage" />}
       <PageBody>
-        <Tabs label="Usage view" options={TABS} value={tab} onChange={setTab} />
+        {hubs ? (
+          <div className="-mb-2 flex">
+            <ViewPicker
+              title="Usage"
+              choices={TABS.map((t) => ({ id: t.value, label: t.label }))}
+              value={tab}
+              onChange={(id) => setTab(id as Tab)}
+            />
+          </div>
+        ) : (
+          <Tabs label="Usage view" options={TABS} value={tab} onChange={setTab} />
+        )}
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filters">
           <Segmented
             label="Range"
             options={RANGES.map((r) => ({ value: r.value, label: r.label }))}
             value={range}
             onChange={setRange}
+            // Phones get 44px targets in the hub shell; the old shell keeps its sizes.
+            className={hubs ? "[&>button]:min-h-11 sm:[&>button]:min-h-0" : undefined}
           />
           {showMachine && (
             <select
               aria-label="Machine"
               value={machine ?? ""}
               onChange={(e) => setMachine(e.target.value || null)}
-              className="h-8 rounded-md border border-line bg-surface px-2 text-meta text-ink outline-none focus-visible:border-primary"
+              className={cn(
+                "rounded-md border border-line bg-surface px-2 text-meta text-ink outline-none focus-visible:border-primary",
+                hubs ? "h-11 sm:h-8" : "h-8"
+              )}
             >
               <option value="">All machines</option>
               {machines.map((m) => (
@@ -138,7 +163,10 @@ export function ClaudeUsagePage() {
         ) : !hub ? (
           <p className="text-meta text-muted">Loading…</p>
         ) : tab === "overview" ? (
-          <Overview hub={hub} machine={machine} onOpen={setTab} onPlanSaved={() => setReload((n) => n + 1)} />
+          <>
+            <Overview hub={hub} machine={machine} onOpen={setTab} onPlanSaved={() => setReload((n) => n + 1)} />
+            {hubs && <ModelSpend days={Number(range)} />}
+          </>
         ) : tab === "worker" ? (
           <SourceTab
             key="worker"

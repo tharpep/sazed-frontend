@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { HUB_VIEWS, firstView, isView, type HubId, type NavTarget, type ViewId } from "@/nav/hubViews";
+import { HUB_VIEWS, firstView, isView, type HubId, type NavTarget, type ViewId, type ViewKey } from "@/nav/hubViews";
 
 export type ItemKind =
   | "backlog"
@@ -41,7 +41,24 @@ const ITEM_PLACE: Record<ItemKind, NavTarget & { slot: Slot }> = {
 
 const RECENT_MAX = 8;
 const VIEW_KEY = "sazed-nav-view";
+const SUB_KEY = "sazed-nav-sub";
 const RECENT_KEY = "sazed-nav-recent";
+
+/** Each view's third-level choices (its ViewPicker), default first. A view with no entry has no
+ * picker. */
+export const SUB_CHOICES = {
+  "system:homelab": ["map", "list", "storage", "links"],
+  "system:activity": ["all", "needs", "errors"],
+  "system:usage": ["overview", "claude_code", "worker", "sazed_api"],
+} as const satisfies Partial<Record<ViewKey, readonly [string, ...string[]]>>;
+
+export type SubKey = keyof typeof SUB_CHOICES;
+export type SubValue<K extends SubKey> = (typeof SUB_CHOICES)[K][number];
+type Subs = { [K in SubKey]?: SubValue<K> };
+
+export function isSub<K extends SubKey>(key: K, value: unknown): value is SubValue<K> {
+  return typeof value === "string" && (SUB_CHOICES[key] as readonly string[]).includes(value);
+}
 
 type Views = { [H in HubId]: ViewId<H> };
 type ItemsByHub = Partial<Record<HubId, ItemRef>>;
@@ -49,6 +66,7 @@ type ItemsByHub = Partial<Record<HubId, ItemRef>>;
 interface NavState {
   hub: HubId;
   view: Views;
+  sub: Subs;
   open: ItemsByHub;
   read: ItemsByHub;
   scroll: Record<string, number>;
@@ -57,6 +75,7 @@ interface NavState {
   // item a page holds in its own state.
   retaps: number;
   go: (hub: HubId, view?: string) => void;
+  setSub: <K extends SubKey>(key: K, value: SubValue<K>) => void;
   setScroll: (hubView: string, top: number) => void;
   openItem: (ref: ItemRef) => void;
   closeItem: () => void;
@@ -92,6 +111,17 @@ function loadViews(): Views {
   return views;
 }
 
+export function loadSubs(saved: unknown): Subs {
+  const subs: Record<string, string> = {};
+  if (saved && typeof saved === "object") {
+    for (const key of Object.keys(SUB_CHOICES) as SubKey[]) {
+      const value = (saved as Record<string, unknown>)[key];
+      if (isSub(key, value)) subs[key] = value;
+    }
+  }
+  return subs as Subs;
+}
+
 function isItemRef(r: unknown): r is ItemRef {
   if (!r || typeof r !== "object") return false;
   const { kind, id, version } = r as Record<string, unknown>;
@@ -118,6 +148,7 @@ function without(items: ItemsByHub, hub: HubId): ItemsByHub {
 export const useNavStore = create<NavState>((set, get) => ({
   hub: "home",
   view: loadViews(),
+  sub: loadSubs(readJson(() => localStorage, SUB_KEY)),
   open: {},
   read: {},
   scroll: {},
@@ -143,6 +174,12 @@ export const useNavStore = create<NavState>((set, get) => ({
     writeJson(() => localStorage, VIEW_KEY, views);
     set({ hub, view: views });
   },
+  setSub: (key, value) => {
+    if (!isSub(key, value) || get().sub[key] === value) return;
+    const sub = { ...get().sub, [key]: value };
+    writeJson(() => localStorage, SUB_KEY, sub);
+    set({ sub });
+  },
   setScroll: (hubView, top) => {
     if (get().scroll[hubView] !== top) set({ scroll: { ...get().scroll, [hubView]: top } });
   },
@@ -161,3 +198,8 @@ export const useNavStore = create<NavState>((set, get) => ({
   },
   clearItems: () => set({ open: {}, read: {} }),
 }));
+
+/** A view's third-level choice: the saved one, else its default. */
+export function useSub<K extends SubKey>(key: K): SubValue<K> {
+  return useNavStore((s) => s.sub[key] ?? SUB_CHOICES[key][0]) as SubValue<K>;
+}

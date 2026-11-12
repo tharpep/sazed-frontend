@@ -1,8 +1,9 @@
 import { create } from "zustand";
 
-import type { Service } from "@/api/homelab";
+import { fetchServices, type Service } from "@/api/homelab";
 import { statusOf } from "@/features/homelab/format";
 import type { ItemKind, ItemRef } from "@/store/navStore";
+import { useUiStore } from "@/store/uiStore";
 import { HUBS } from "./hubs";
 import type { HubId, NavTarget } from "./hubViews";
 import type { ShellKind } from "./shellFlag";
@@ -223,3 +224,16 @@ export function rankEntries(entries: PaletteEntry[], query: string): PaletteEntr
     .sort((a, b) => a.score - b.score || a.rank - b.rank || a.index - b.index)
     .map((r) => r.entry);
 }
+
+/** Homelab services as items that open their detail, private ones hidden as in launchableApps. */
+export function serviceItems(services: Service[], privateRevealed: boolean): PaletteItem[] {
+  return services
+    .filter((s) => privateRevealed || !s.private)
+    .map((s) => {
+      const kind = statusOf(s);
+      const hint = kind === "down" ? "Service · down" : kind === "maintenance" ? "Service · in maintenance" : "Service";
+      return { ref: { kind: "service", id: s.id }, label: s.name, hint };
+    });
+}
+
+itemProviders.push(async () => serviceItems((await fetchServices()).services, useUiStore.getState().privateRevealed));

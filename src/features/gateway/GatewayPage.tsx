@@ -10,7 +10,10 @@ import {
   type GatewayHealth,
   type Integrations,
 } from "@/api/gateway";
+import { useShellStore } from "@/nav/shellFlag";
+import { useNavStore } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
+import { modelName, tokens, usd } from "./format";
 
 // The four Google integrations share one OAuth client, so they're one row here.
 const INTEGRATIONS: { key: string; name: string; powers: string }[] = [
@@ -35,6 +38,7 @@ const RANGES = [
 
 export function GatewayPage() {
   const toggleAudit = useUiStore((s) => s.toggleAudit);
+  const hubs = useShellStore((s) => s.shell) === "hubs";
   const [integrations, setIntegrations] = useState<Integrations | null>(null);
   const [health, setHealth] = useState<GatewayHealth | null>(null);
   const [metrics, setMetrics] = useState<AuditMetrics | null>(null);
@@ -68,21 +72,30 @@ export function GatewayPage() {
   const missing = rows.filter((r) => r.status && !r.status.connected);
   const known = rows.filter((r) => r.status);
 
+  const refresh = (
+    <button
+      type="button"
+      onClick={() => load(hours)}
+      disabled={loading}
+      aria-label="Refresh"
+      title="Refresh"
+      className={cn(
+        "flex items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50",
+        hubs ? "-my-2 size-11 sm:-my-1 sm:size-9" : "size-9"
+      )}
+    >
+      <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
+    </button>
+  );
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg">
-      <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <h1 className="text-base font-semibold text-ink">Gateway</h1>
-        <button
-          type="button"
-          onClick={() => load(hours)}
-          disabled={loading}
-          aria-label="Refresh"
-          title="Refresh"
-          className="flex size-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
-        </button>
-      </header>
+      {!hubs && (
+        <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+          <h1 className="text-base font-semibold text-ink">Gateway</h1>
+          {refresh}
+        </header>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-4 pb-8">
@@ -90,7 +103,7 @@ export function GatewayPage() {
             <p className="text-sm text-destructive">Couldn't load {errors.join("; ")}</p>
           )}
 
-          <Section title="Integrations">
+          <Section title="Integrations" action={hubs ? refresh : undefined}>
             {integrations && (
               <p className="px-1 text-sm text-ink">
                 {known.length - missing.length} of {known.length} connected
@@ -125,65 +138,78 @@ export function GatewayPage() {
             </ul>
           </Section>
 
-          <Section
-            title="Model spend"
-            action={
-              <div className="flex gap-1" role="group" aria-label="Time range">
-                {RANGES.map((r) => (
-                  <button
-                    key={r.hours}
-                    type="button"
-                    onClick={() => setHours(r.hours)}
-                    aria-pressed={hours === r.hours}
-                    className={cn(
-                      "rounded-md px-2 py-1 text-xs transition-colors",
-                      hours === r.hours ? "bg-surface text-primary" : "text-muted hover:text-ink"
-                    )}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            }
-          >
-            {metrics && (
-              <>
-                <p className="px-1 text-sm text-ink">
-                  {usd(metrics.llm.total_cost_usd)}
-                  <span className="text-muted">
-                    {" "}· {metrics.llm.total_calls} model calls · {tokens(metrics.llm.total_input_tokens)} in,{" "}
-                    {tokens(metrics.llm.total_output_tokens)} out
-                  </span>
-                </p>
-                <Table
-                  rows={Object.entries(metrics.llm.by_model)
-                    .sort(([, a], [, b]) => b.cost_usd - a.cost_usd)
-                    .map(([model, u]) => [
-                      modelName(model),
-                      `${u.calls} call${u.calls === 1 ? "" : "s"}`,
-                      usd(u.cost_usd),
-                    ])}
-                  empty="No model calls in this range."
-                />
-                {Object.keys(metrics.llm.by_purpose).length > 0 && (
-                  <p className="px-1 text-xs text-muted">
-                    By use:{" "}
-                    {Object.entries(metrics.llm.by_purpose)
-                      .sort(([, a], [, b]) => b.cost_usd - a.cost_usd)
-                      .map(([p, u]) => `${p} ${usd(u.cost_usd)}`)
-                      .join(" · ")}
+          {/* Spend by model lives in Usage in the hub shell. */}
+          {!hubs && (
+            <Section
+              title="Model spend"
+              action={
+                <div className="flex gap-1" role="group" aria-label="Time range">
+                  {RANGES.map((r) => (
+                    <button
+                      key={r.hours}
+                      type="button"
+                      onClick={() => setHours(r.hours)}
+                      aria-pressed={hours === r.hours}
+                      className={cn(
+                        "rounded-md px-2 py-1 text-xs transition-colors",
+                        hours === r.hours ? "bg-surface text-primary" : "text-muted hover:text-ink"
+                      )}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              }
+            >
+              {metrics && (
+                <>
+                  <p className="px-1 text-sm text-ink">
+                    {usd(metrics.llm.total_cost_usd)}
+                    <span className="text-muted">
+                      {" "}· {metrics.llm.total_calls} model calls · {tokens(metrics.llm.total_input_tokens)} in,{" "}
+                      {tokens(metrics.llm.total_output_tokens)} out
+                    </span>
                   </p>
-                )}
-              </>
-            )}
-          </Section>
+                  <Table
+                    rows={Object.entries(metrics.llm.by_model)
+                      .sort(([, a], [, b]) => b.cost_usd - a.cost_usd)
+                      .map(([model, u]) => [
+                        modelName(model),
+                        `${u.calls} call${u.calls === 1 ? "" : "s"}`,
+                        usd(u.cost_usd),
+                      ])}
+                    empty="No model calls in this range."
+                  />
+                  {Object.keys(metrics.llm.by_purpose).length > 0 && (
+                    <p className="px-1 text-xs text-muted">
+                      By use:{" "}
+                      {Object.entries(metrics.llm.by_purpose)
+                        .sort(([, a], [, b]) => b.cost_usd - a.cost_usd)
+                        .map(([p, u]) => `${p} ${usd(u.cost_usd)}`)
+                        .join(" · ")}
+                    </p>
+                  )}
+                </>
+              )}
+            </Section>
+          )}
 
           <Section
             title="Sazed tool calls"
             action={
-              <button type="button" onClick={toggleAudit} className="text-xs text-primary hover:underline">
-                Open tool log
-              </button>
+              hubs ? (
+                <button
+                  type="button"
+                  onClick={() => useNavStore.getState().go("system", "activity")}
+                  className="-my-3 min-h-11 text-xs text-primary hover:underline sm:my-0 sm:min-h-0"
+                >
+                  Open Activity
+                </button>
+              ) : (
+                <button type="button" onClick={toggleAudit} className="text-xs text-primary hover:underline">
+                  Open tool log
+                </button>
+              )
             }
           >
             {metrics && (
@@ -257,24 +283,4 @@ function Table({ rows, empty }: { rows: [string, string, string][]; empty: strin
       ))}
     </ul>
   );
-}
-
-/** claude-haiku-5-5 → "Haiku 5.5", claude-sonnet-5 → "Sonnet 5"; anything else unchanged. */
-function modelName(id: string): string {
-  const m = /^claude-([a-z]+)-(\d+)(?:-(\d+))?(?:-\d{8})?$/.exec(id);
-  if (!m) return id;
-  const family = m[1][0].toUpperCase() + m[1].slice(1);
-  const minor = m[3] && m[3].length <= 2 ? `.${m[3]}` : "";
-  return `${family} ${m[2]}${minor}`;
-}
-
-function usd(n: number): string {
-  if (n === 0) return "$0";
-  return n < 0.01 ? `$${n.toFixed(3)}` : `$${n.toFixed(2)}`;
-}
-
-function tokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
-  return `${n}`;
 }
