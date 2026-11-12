@@ -14,6 +14,14 @@ export function ModelSpend({ days }: { days: number }) {
   const [metrics, setMetrics] = useState<AuditMetrics | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // A new range clears the old figures in the same render, so they never sit under the new label.
+  const [stateFor, setStateFor] = useState(shownDays);
+  if (stateFor !== shownDays) {
+    setStateFor(shownDays);
+    setMetrics(null);
+    setError(null);
+  }
+
   useEffect(() => {
     let current = true;
     getMetrics(shownDays * 24)

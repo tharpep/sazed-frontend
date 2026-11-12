@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 
 import { fetchServices, type Service } from "@/api/homelab";
 import { useUiStore } from "@/store/uiStore";
-import { statusOf } from "./format";
+import { statusOf, visibleServices } from "./format";
 
 /** One line for System in the More sheet. Private services count only once revealed, as on the
  * Homelab page. */
 export function systemSummary(services: Service[], privateRevealed: boolean): string {
-  const shown = services.filter((s) => (privateRevealed || !s.private) && s.lifecycle !== "planned");
+  const shown = visibleServices(services, privateRevealed).filter((s) => s.lifecycle !== "planned");
   const down = shown.filter((s) => statusOf(s) === "down").length;
   if (down > 0) return `${down} down`;
   const maintenance = shown.filter((s) => statusOf(s) === "maintenance").length;

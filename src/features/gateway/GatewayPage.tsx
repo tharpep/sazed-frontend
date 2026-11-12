@@ -195,7 +195,8 @@ export function GatewayPage() {
           )}
 
           <Section
-            title="Sazed tool calls"
+            // The hub shell has no range control (it sat on the spend section), so it reads the last 24h.
+            title={hubs ? "Sazed tool calls, last 24 hours" : "Sazed tool calls"}
             action={
               hubs ? (
                 <button
@@ -225,7 +226,7 @@ export function GatewayPage() {
                 </p>
                 <Table
                   rows={metrics.tools.top_by_call_count.slice(0, 6).map((t) => [t.tool_name, `${t.count}`, ""])}
-                  empty="No tool calls in this range."
+                  empty={hubs ? "No tool calls in the last 24 hours." : "No tool calls in this range."}
                 />
                 {metrics.tools.top_by_error_count.length > 0 && (
                   <p className="px-1 text-xs text-destructive">

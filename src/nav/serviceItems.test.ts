@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Service } from "@/api/homelab";
-import { serviceItems } from "./paletteSources";
+import { buildEntries, serviceItems } from "./paletteSources";
 
 function service(over: Partial<Service> & { id: string }): Service {
   return {
@@ -46,5 +46,27 @@ describe("serviceItems: homelab services as palette items", () => {
       false
     ).map((i) => i.hint);
     expect(hints).toEqual(["Service", "Service · down", "Service · in maintenance"]);
+  });
+});
+
+describe("Recent: services follow the private filter too", () => {
+  const services = [service({ id: "jellyfin" }), service({ id: "secret", private: true })];
+  const recent = [
+    { kind: "service" as const, id: "secret" },
+    { kind: "plan" as const, id: "console-overhaul" },
+    { kind: "service" as const, id: "jellyfin" },
+  ];
+  const recentIds = (revealed: boolean, list: Service[]) =>
+    buildEntries({ recent, services: list, privateRevealed: revealed, items: [], theme: "system", shell: "hubs" })
+      .filter((e) => e.group === "Recent")
+      .map((e) => (e.kind === "item" ? e.ref.id : ""));
+
+  it("drops a private service from Recent until revealed, and leaves other kinds alone", () => {
+    expect(recentIds(false, services)).toEqual(["console-overhaul", "jellyfin"]);
+    expect(recentIds(true, services)).toEqual(["secret", "console-overhaul", "jellyfin"]);
+  });
+
+  it("holds every recent service back until the list shows it is not private", () => {
+    expect(recentIds(false, [])).toEqual(["console-overhaul"]);
   });
 });

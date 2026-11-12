@@ -56,26 +56,41 @@ export function FlowSheet({ target, liveEvents, liveSteps, onClose, onOpenSessio
   const [openSteps, setOpenSteps] = useState<Set<string>>(new Set());
   const [, setTick] = useState(0); // re-renders running bars against "now"
 
+  // Reset in the same render the target changes, so nothing of the last flow paints under the new
+  // one (or opens its session).
+  const [stateFor, setStateFor] = useState(target);
+  if (stateFor !== target) {
+    setStateFor(target);
+    setFlow(null);
+    setError(null);
+    setOpenSegments(new Set());
+    setOpenSteps(new Set());
+  }
+
+  // From 1180px the panel is inline and the list stays clickable, so a slow answer for the last run
+  // can land after another run was picked; only the latest request may set state.
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
     if (!target) return;
+    const seq = ++loadSeq.current;
     try {
-      if (target.trace && !target.trace.startsWith("gw:")) {
-        setFlow(await getFlow(target.trace));
-      } else {
-        const e = await getActivityEvent(target.focusId);
-        setFlow({ trace: target.trace ?? "", traces: [], events: [e], steps: {} });
-      }
+      const next: ActivityFlow =
+        target.trace && !target.trace.startsWith("gw:")
+          ? await getFlow(target.trace)
+          : { trace: target.trace ?? "", traces: [], events: [await getActivityEvent(target.focusId)], steps: {} };
+      if (seq !== loadSeq.current) return;
+      setFlow(next);
       setError(null);
     } catch (err) {
-      setError(errorText(err));
+      if (seq === loadSeq.current) setError(errorText(err));
     }
   }, [target]);
 
   useEffect(() => {
-    setFlow(null);
-    setOpenSegments(new Set());
-    setOpenSteps(new Set());
     load();
+    return () => {
+      loadSeq.current++;
+    };
   }, [load]);
 
   // Live: refetch (debounced) when an event lands in this flow, or one that may link to it.
@@ -230,7 +245,9 @@ export function FlowSheet({ target, liveEvents, liveSteps, onClose, onOpenSessio
                 className="flex items-center gap-2 px-2 py-1.5 text-left hover:bg-surface"
               >
                 {isOpen ? <ChevronDown className="size-3.5 text-muted" /> : <ChevronRight className="size-3.5 text-muted" />}
-                <span className="min-w-0 flex-1 truncate text-xs text-ink">{seg.header.title}</span>
+                <span title={seg.header.title} className="min-w-0 flex-1 truncate text-xs text-ink">
+                  {seg.header.title}
+                </span>
                 <span className="shrink-0 text-[11px] text-muted">
                   {clock(seg.header.at)} · {seg.events.length} events
                 </span>

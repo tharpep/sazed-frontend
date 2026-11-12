@@ -293,7 +293,7 @@ export function ActivityPage() {
         <div className="flex flex-wrap items-center gap-2">
           {hubs ? (
             <ViewPicker
-              title="Show"
+              title="Activity"
               choices={[
                 { id: "all", label: VIEW_LABEL.all },
                 { id: "needs", label: VIEW_LABEL.needs, count: waitingCount || undefined },

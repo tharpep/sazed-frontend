@@ -21,7 +21,7 @@ import { DependenciesView } from "./DependenciesView";
 import { MapView } from "./MapView";
 import { ServiceSheet } from "./ServiceSheet";
 import { StorageCard } from "./StorageCard";
-import { StatusDot, age, gib, pct, statusLine, statusOf, uptime } from "./format";
+import { StatusDot, age, gib, pct, selectedService, statusLine, statusOf, uptime, visibleServices } from "./format";
 
 const REFRESH_MS = 30_000; // the gateway polls every 60s; 30s keeps the page within one cycle
 
@@ -41,6 +41,21 @@ const OLD_SHELL_ORDER: View[] = ["map", "links", "list", "storage"];
 export function rememberHomelabView(v: View) {
   useNavStore.getState().setSub("system:homelab", v);
 }
+
+function clearOpenService() {
+  useNavStore.setState((s) => {
+    if (s.open.system?.kind !== "service") return {};
+    const open = { ...s.open };
+    delete open.system;
+    return { open };
+  });
+}
+
+// A service the hub shell left open must not pop up on the old shell's next Homelab visit; the old
+// shell takes a stored service only from a palette pick made while it is the shell.
+useShellStore.subscribe((s, prev) => {
+  if (s.shell === "old" && prev.shell !== "old") clearOpenService();
+});
 
 const GROUPS: { key: ServiceGroup; label: string }[] = [
   { key: "sazed", label: "Sazed" },
@@ -70,16 +85,16 @@ export function HomelabPage() {
 
   // The hub shell keeps the open service in navStore, so it is still open when Pryce comes back to
   // System. The old shell drops it on leaving the page, as before; it only takes the palette's
-  // pick from the store.
+  // pick from the store (the module-level subscription below clears anything the hub shell left).
   useEffect(() => {
     if (hubs || navOpen?.kind !== "service") return;
     setOldShellId(navOpen.id);
-    useNavStore.getState().closeItem();
+    clearOpenService();
   }, [hubs, navOpen]);
   const selectedId = hubs ? (navOpen?.kind === "service" ? navOpen.id : null) : oldShellId;
   const openService = (id: string) =>
     hubs ? useNavStore.getState().openItem({ kind: "service", id }) : setOldShellId(id);
-  const closeService = () => (hubs ? useNavStore.getState().closeItem() : setOldShellId(null));
+  const closeService = () => (hubs ? clearOpenService() : setOldShellId(null));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -116,12 +131,7 @@ export function HomelabPage() {
     };
   }, [load]);
 
-  // Private services (the gateway's homelab-only registry file) stay out of sight until revealed
-  // on Home, here as everywhere.
-  const shown = useMemo(
-    () => (data?.services ?? []).filter((s) => privateRevealed || !s.private),
-    [data, privateRevealed]
-  );
+  const shown = useMemo(() => visibleServices(data?.services ?? [], privateRevealed), [data, privateRevealed]);
   const shownMap = useMemo(
     () =>
       map && !privateRevealed
@@ -144,7 +154,10 @@ export function HomelabPage() {
 
   const down = shown.filter((s) => statusOf(s) === "down");
   const checked = shown.filter((s) => s.lifecycle !== "planned").length;
-  const selected = data?.services.find((s) => s.id === selectedId) ?? null;
+  const { service: selected, stale } = selectedService(data?.services ?? null, selectedId, privateRevealed);
+  useEffect(() => {
+    if (stale) closeService();
+  }, [stale]);
 
   const refresh = (
     <button

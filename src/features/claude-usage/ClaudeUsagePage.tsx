@@ -163,10 +163,7 @@ export function ClaudeUsagePage() {
         ) : !hub ? (
           <p className="text-meta text-muted">Loading…</p>
         ) : tab === "overview" ? (
-          <>
-            <Overview hub={hub} machine={machine} onOpen={setTab} onPlanSaved={() => setReload((n) => n + 1)} />
-            {hubs && <ModelSpend days={Number(range)} />}
-          </>
+          <Overview hub={hub} machine={machine} onOpen={setTab} onPlanSaved={() => setReload((n) => n + 1)} />
         ) : tab === "worker" ? (
           <SourceTab
             key="worker"
@@ -192,6 +189,8 @@ export function ClaudeUsagePage() {
             empty="No Sazed API calls in this range"
           />
         )}
+        {/* Its own fetch, so a slow or failed usage hub never hides it. */}
+        {hubs && tab === "overview" && <ModelSpend days={Number(range)} />}
       </PageBody>
     </Page>
   );
