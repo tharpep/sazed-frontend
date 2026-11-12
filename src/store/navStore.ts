@@ -41,6 +41,7 @@ const ITEM_PLACE: Record<ItemKind, NavTarget & { slot: Slot }> = {
 
 const RECENT_MAX = 8;
 const VIEW_KEY = "sazed-nav-view";
+const SUB_KEY = "sazed-nav-sub";
 const RECENT_KEY = "sazed-nav-recent";
 
 type Views = { [H in HubId]: ViewId<H> };
@@ -49,11 +50,17 @@ type ItemsByHub = Partial<Record<HubId, ItemRef>>;
 interface NavState {
   hub: HubId;
   view: Views;
+  sub: Record<string, string>;
   open: ItemsByHub;
   read: ItemsByHub;
   scroll: Record<string, number>;
   recent: ItemRef[];
+  // Bumped when the active hub is tapped again, so the hub shell remounts the view and drops any
+  // item a page holds in its own state.
+  retaps: number;
   go: (hub: HubId, view?: string) => void;
+  setSub: (hubView: string, choice: string) => void;
+  setScroll: (hubView: string, top: number) => void;
   openItem: (ref: ItemRef) => void;
   closeItem: () => void;
   clearItems: () => void;
@@ -88,6 +95,12 @@ function loadViews(): Views {
   return views;
 }
 
+function loadSub(): Record<string, string> {
+  const saved = readJson(() => localStorage, SUB_KEY);
+  if (!saved || typeof saved !== "object" || Array.isArray(saved)) return {};
+  return Object.fromEntries(Object.entries(saved).filter((e): e is [string, string] => typeof e[1] === "string"));
+}
+
 function isItemRef(r: unknown): r is ItemRef {
   if (!r || typeof r !== "object") return false;
   const { kind, id, version } = r as Record<string, unknown>;
@@ -114,10 +127,12 @@ function without(items: ItemsByHub, hub: HubId): ItemsByHub {
 export const useNavStore = create<NavState>((set, get) => ({
   hub: "home",
   view: loadViews(),
+  sub: loadSub(),
   open: {},
   read: {},
   scroll: {},
   recent: loadRecent(),
+  retaps: 0,
   go: (hub, view) => {
     const s = get();
     if (view !== undefined && !isView(hub, view)) view = undefined;
@@ -130,12 +145,21 @@ export const useNavStore = create<NavState>((set, get) => ({
         open: without(s.open, hub),
         read: without(s.read, hub),
         scroll: { ...s.scroll, [`${hub}:${first}`]: 0 },
+        retaps: s.retaps + 1,
       });
       return;
     }
     const views = view === undefined ? s.view : { ...s.view, [hub]: view };
     writeJson(() => localStorage, VIEW_KEY, views);
     set({ hub, view: views });
+  },
+  setSub: (hubView, choice) => {
+    const sub = { ...get().sub, [hubView]: choice };
+    writeJson(() => localStorage, SUB_KEY, sub);
+    set({ sub });
+  },
+  setScroll: (hubView, top) => {
+    if (get().scroll[hubView] !== top) set({ scroll: { ...get().scroll, [hubView]: top } });
   },
   openItem: (ref) => {
     const place = ITEM_PLACE[ref.kind];

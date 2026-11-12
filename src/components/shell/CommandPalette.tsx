@@ -5,6 +5,7 @@ import {
   Clock,
   Compass,
   ExternalLink,
+  LayoutPanelLeft,
   MessageSquarePlus,
   Monitor,
   Moon,
@@ -30,6 +31,7 @@ import {
   type PaletteItem,
 } from "@/nav/paletteSources";
 import { useChatStore } from "@/store/chatStore";
+import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore, type ItemRef } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 
@@ -39,6 +41,8 @@ const ACTION_ICON: Record<PaletteAction, LucideIcon> = {
   "theme:light": Sun,
   "theme:dark": Moon,
   "theme:system": Monitor,
+  "shell:hubs": LayoutPanelLeft,
+  "shell:old": LayoutPanelLeft,
 };
 
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
@@ -92,6 +96,7 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   const [items, setItems] = useState<PaletteItem[]>([]);
   const recent = useNavStore((s) => s.recent);
   const privateRevealed = useUiStore((s) => s.privateRevealed);
+  const shell = useShellStore((s) => s.shell);
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -107,8 +112,8 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   }, []);
 
   const entries = useMemo(
-    () => rankEntries(buildEntries({ recent, services, privateRevealed, items, theme }), query),
-    [recent, services, privateRevealed, items, theme, query]
+    () => rankEntries(buildEntries({ recent, services, privateRevealed, items, theme, shell }), query),
+    [recent, services, privateRevealed, items, theme, shell, query]
   );
   // Selection follows the entry, not its row, so apps arriving late never shift it onto another.
   const found = entries.findIndex((e) => e.key === selKey);
@@ -126,7 +131,11 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
     else if (e.kind === "view") ui.openView(e.target);
     else if (e.kind === "item") openRef(e.ref);
     else if (e.kind === "app") window.open(e.url, "_blank", "noopener,noreferrer");
-    else if (e.action === "settings") ui.setSettingsOpen(true);
+    // The hub shell's Settings is a dialog over the current hub; the old shell's is a page.
+    else if (e.action === "settings") {
+      if (shell === "hubs") useShellStore.getState().setSettingsOpen(true);
+      else ui.setSettingsOpen(true);
+    } else if (e.action === "shell:hubs" || e.action === "shell:old") useShellStore.getState().setShell(e.action === "shell:hubs" ? "hubs" : "old");
     else if (e.action === "new-chat") {
       useChatStore.getState().newSession();
       ui.closeAll();

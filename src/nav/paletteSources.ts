@@ -5,10 +5,11 @@ import { statusOf } from "@/features/homelab/format";
 import type { ItemKind, ItemRef } from "@/store/navStore";
 import { HUBS } from "./hubs";
 import type { HubId, NavTarget } from "./hubViews";
+import type { ShellKind } from "./shellFlag";
 
 export type PaletteGroup = "Recent" | "Hubs" | "Apps" | "Views" | "Items" | "Actions";
 export type ThemeChoice = "light" | "dark" | "system";
-export type PaletteAction = "settings" | "new-chat" | `theme:${ThemeChoice}`;
+export type PaletteAction = "settings" | "new-chat" | `theme:${ThemeChoice}` | `shell:${ShellKind}`;
 
 interface EntryBase {
   key: string;
@@ -136,10 +137,11 @@ interface Sources {
   privateRevealed: boolean;
   items: PaletteItem[];
   theme: ThemeChoice;
+  shell: ShellKind;
 }
 
 /** Every entry in display order: Recent, Hubs, Apps, Views, Items, Actions. */
-export function buildEntries({ recent, services, privateRevealed, items, theme }: Sources): PaletteEntry[] {
+export function buildEntries({ recent, services, privateRevealed, items, theme, shell }: Sources): PaletteEntry[] {
   const entries: PaletteEntry[] = recent.map((ref) =>
     itemEntry("Recent", { ref, label: ref.id, hint: refHint(ref) })
   );
@@ -179,6 +181,15 @@ export function buildEntries({ recent, services, privateRevealed, items, theme }
     });
   }
   entries.push({ kind: "action", key: "action:new-chat", group: "Actions", label: "New chat", hint: "", action: "new-chat" });
+  const other: ShellKind = shell === "hubs" ? "old" : "hubs";
+  entries.push({
+    kind: "action",
+    key: `action:shell:${other}`,
+    group: "Actions",
+    label: other === "hubs" ? "Switch to the new layout" : "Switch to the old layout",
+    hint: "",
+    action: `shell:${other}`,
+  });
   return entries;
 }
 

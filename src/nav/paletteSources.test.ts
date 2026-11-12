@@ -90,7 +90,7 @@ describe("app URLs", () => {
 
   it("leaves an app with any other scheme out of the palette", () => {
     const bad = service({ id: "bad", name: "Bad", open_url: "javascript:alert(1)" });
-    const entries = buildEntries({ recent: [], services: [bad], privateRevealed: false, items: [], theme: "dark" });
+    const entries = buildEntries({ recent: [], services: [bad], privateRevealed: false, items: [], theme: "dark", shell: "old" });
     expect(launchableApps([bad], false)).toHaveLength(1);
     expect(entries.some((e) => e.kind === "app")).toBe(false);
   });
@@ -104,6 +104,7 @@ describe("rankEntries", () => {
     privateRevealed: false,
     items: [jellyfinItem],
     theme: "system",
+    shell: "old",
   });
 
   it("offers the three ThemeToggle choices and marks the current one", () => {
@@ -113,6 +114,15 @@ describe("rankEntries", () => {
       ["Dark theme", ""],
       ["Match system theme", "Current"],
     ]);
+  });
+
+  it("offers the layout the console is not on", () => {
+    const layout = (shell: "old" | "hubs") =>
+      buildEntries({ recent: [], services: [], privateRevealed: false, items: [], theme: "system", shell })
+        .filter((e) => e.kind === "action" && e.action.startsWith("shell:"))
+        .map((e) => e.label);
+    expect(layout("old")).toEqual(["Switch to the new layout"]);
+    expect(layout("hubs")).toEqual(["Switch to the old layout"]);
   });
 
   it("with no query lists every group in order and leaves Items out", () => {

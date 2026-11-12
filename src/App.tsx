@@ -1,11 +1,13 @@
 import { useEffect } from "react";
 import { MessageSquarePlus, X } from "lucide-react";
 import { AppShell } from "./components/layout/AppShell";
+import { HubContent } from "./components/shell/HubContent";
 import { Composer } from "./features/chat/Composer";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { FinancePage } from "./features/finance/FinancePage";
 import { parseDeepLink } from "./nav/deepLinks";
 import { viewDef } from "./nav/hubs";
+import { useShellStore } from "./nav/shellFlag";
 import type { HubId } from "./nav/hubViews";
 import { useUiStore } from "./store/uiStore";
 import { useNavStore } from "./store/navStore";
@@ -27,6 +29,14 @@ function App() {
   const newSession = useChatStore((s) => s.newSession);
   const sessionLoadError = useChatStore((s) => s.sessionLoadError);
   const dismissSessionLoadError = useChatStore((s) => s.dismissSessionLoadError);
+  const shell = useShellStore((s) => s.shell);
+  const retaps = useNavStore((s) => s.retaps);
+
+  // Home's ask field answers in Chat, so the reply is not sent to a screen that never shows it.
+  const sendFromHome = (text: string) => {
+    useNavStore.getState().go("chat", "conversation");
+    return send(text);
+  };
 
   const [contentHub, contentView]: [HubId, string] =
     hub === "home" || hub === "chat" ? (messages.length === 0 ? ["home", "home"] : ["chat", "conversation"]) : [hub, view];
@@ -37,13 +47,17 @@ function App() {
 
   useEffect(() => {
     const link = parseDeepLink(window.location.search);
-    if (!link) return;
-    const ui = useUiStore.getState();
-    link.items?.forEach(ui.linkItem);
-    ui.openView(link);
-    window.history.replaceState(null, "", window.location.pathname);
+    // shellFlag has already read ?shell=; it only needs dropping from the address bar.
+    const shellParam = new URLSearchParams(window.location.search).has("shell");
+    if (link) {
+      const ui = useUiStore.getState();
+      link.items?.forEach(ui.linkItem);
+      ui.openView(link);
+    }
+    if (link || shellParam) window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
+  // Private apps never stay revealed once the console leaves the screen.
   useEffect(() => {
     const onVisibility = () => {
       if (document.hidden) hidePrivate();
@@ -64,7 +78,7 @@ function App() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Escape") return;
+      if (e.key !== "Escape" || useShellStore.getState().shell === "hubs") return;
       const ui = useUiStore.getState();
       if (useNavStore.getState().hub !== "home" || ui.settingsOpen || ui.financeOpen) ui.closeAll();
     }
@@ -72,21 +86,47 @@ function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  const banner = sessionLoadError && (
+    <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-destructive/10 px-3 py-2 text-sm text-destructive">
+      <span>{sessionLoadError}</span>
+      <button
+        type="button"
+        onClick={dismissSessionLoadError}
+        aria-label="Dismiss"
+        className="flex size-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-destructive/10"
+      >
+        <X className="size-3.5" aria-hidden="true" />
+      </button>
+    </div>
+  );
+
+  if (shell === "hubs") {
+    // The conversation list still lives inside the old Sidebar, so both Chat views show the
+    // conversation until it moves out.
+    const pageView = hub === "chat" ? "conversation" : view;
+    const HubPage = viewDef(hub, pageView).component;
+    const docked = (hub === "home" || hub === "chat") && (
+      <Composer
+        variant="docked"
+        onSend={hub === "home" ? sendFromHome : send}
+        disabled={isStreaming}
+        isStreaming={isStreaming}
+        onStop={stop}
+      />
+    );
+    return (
+      <AppShell docked={docked}>
+        {banner}
+        <HubContent key={`${hub}:${view}:${retaps}`} hubView={`${hub}:${view}`}>
+          <HubPage />
+        </HubContent>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
-      {sessionLoadError && (
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          <span>{sessionLoadError}</span>
-          <button
-            type="button"
-            onClick={dismissSessionLoadError}
-            aria-label="Dismiss"
-            className="flex size-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-destructive/10"
-          >
-            <X className="size-3.5" aria-hidden="true" />
-          </button>
-        </div>
-      )}
+      {banner}
       <div key={viewKey} className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {viewKey === "chat:conversation" && (
           <div className="flex items-center justify-end border-b border-border px-3 py-2 sm:hidden">
