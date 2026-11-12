@@ -1,24 +1,42 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { listActivity, type ActivityEvent } from "@/api/activity";
-import { listAutomations, type Automation } from "@/api/automations";
+import { getAutomation, listAutomations } from "@/api/automations";
+import { listBacklog, type BacklogItem } from "@/api/backlog";
 import { getCommand, type CommandSummary } from "@/api/command";
+import { fetchCalendarToday, fetchTasksDueToday } from "@/api/display";
 import { fetchServices, fetchStorage, type Service } from "@/api/homelab";
 import { listProjects, type Project } from "@/api/projects";
 import { JobSheet } from "@/features/jobs/JobSheet";
 import { gib, statusOf } from "@/features/homelab/format";
-import { rememberHomelabView } from "@/features/homelab/HomelabPage";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { useShellStore } from "@/nav/shellFlag";
+import { useChatStore } from "@/store/chatStore";
 import { useUiStore } from "@/store/uiStore";
 
-import { HomelabLine, ProjectsInFlight, RecentActivity } from "./HomeSide";
+import { AskField } from "./AskField";
+import { Done } from "./Done";
+import { LinkRows, ProjectsBox, TodayBox, TodayLine } from "./HomeSide";
+import { askFromHome, goTo, openSystem } from "./homeNav";
 import { NeedsYou } from "./NeedsYou";
-import { WorkingNow } from "./WorkingNow";
+import { Ready } from "./Ready";
+import { Running } from "./Running";
+import {
+  failedStep,
+  latestFailure,
+  nextRun,
+  projectsByRank,
+  readyCount,
+  runSentence,
+  todayEntries,
+  topReady,
+  type TodayEntry,
+} from "./summary";
 
 const NAME = "Pryce";
 const COMMAND_POLL_MS = 4000;
 const SIDE_POLL_MS = 30_000;
-const ACTIVITY_SHOWN = 6;
-const PROJECTS_SHOWN = 5;
+const TODAY_POLL_MS = 5 * 60_000;
 
 function getPeriod(): string {
   const h = new Date().getHours();
@@ -27,13 +45,8 @@ function getPeriod(): string {
   return "evening";
 }
 
-function when(iso: string): string {
-  const d = new Date(iso);
-  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(":00", "");
-  const days = Math.round((new Date(d).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86_400_000);
-  if (days <= 0) return time;
-  if (days === 1) return `tomorrow ${time}`;
-  return `${d.toLocaleDateString("en-US", { weekday: "short" })} ${time}`;
+function clockTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 function useVisiblePoll(load: () => void, ms: number) {
@@ -52,19 +65,38 @@ function useVisiblePoll(load: () => void, ms: number) {
 interface Side {
   services: Service[] | null;
   mediaFree: number | null;
-  nextRun: Automation | null;
+  runLine: string | null;
+  runAlert: boolean;
   projects: Project[] | null;
-  activity: ActivityEvent[] | null;
+  latest: ActivityEvent | null;
+  backlog: BacklogItem[] | null;
+}
+
+const NO_SIDE: Side = {
+  services: null,
+  mediaFree: null,
+  runLine: null,
+  runAlert: false,
+  projects: null,
+  latest: null,
+  backlog: null,
+};
+
+interface Today {
+  entries: TodayEntry[] | null;
+  failed: boolean;
 }
 
 export function HomePage() {
   const privateRevealed = useUiStore((s) => s.privateRevealed);
   const togglePrivate = useUiStore((s) => s.togglePrivate);
-  const toggleHomelab = useUiStore((s) => s.toggleHomelab);
-  const toggleAudit = useUiStore((s) => s.toggleAudit);
+  const shell = useShellStore((s) => s.shell);
+  const isStreaming = useChatStore((s) => s.isStreaming);
+  const isMobile = useIsMobile();
   const [command, setCommand] = useState<CommandSummary | null>(null);
   const [commandError, setCommandError] = useState(false);
-  const [side, setSide] = useState<Side>({ services: null, mediaFree: null, nextRun: null, projects: null, activity: null });
+  const [side, setSide] = useState<Side>(NO_SIDE);
+  const [today, setToday] = useState<Today>({ entries: null, failed: false });
   const [openJob, setOpenJob] = useState<string | null>(null);
 
   const loadCommand = useCallback(() => {
@@ -77,102 +109,128 @@ export function HomePage() {
   }, []);
 
   const loadSide = useCallback(async () => {
-    const [services, storage, automations, projects, activity] = await Promise.allSettled([
+    const [services, storage, automations, projects, activity, backlog] = await Promise.allSettled([
       fetchServices(),
       fetchStorage(),
       listAutomations(),
       listProjects(),
-      listActivity([], false, undefined, ACTIVITY_SHOWN),
+      listActivity([], false, undefined, 1),
+      listBacklog("open"),
     ]);
-    const nextRun =
-      automations.status === "fulfilled"
-        ? (automations.value
-            .filter((a) => a.enabled && a.next_run_at)
-            .sort((a, b) => a.next_run_at!.localeCompare(b.next_run_at!))[0] ?? null)
-        : null;
+    const autos = automations.status === "fulfilled" ? automations.value : [];
+    const failure = latestFailure(autos);
+    const step = failure ? await getAutomation(failure.id).then(failedStep, () => null) : null;
     setSide({
       services: services.status === "fulfilled" ? services.value.services : null,
       mediaFree: storage.status === "fulfilled" ? storage.value.media.free_bytes : null,
-      nextRun,
-      projects:
-        projects.status === "fulfilled"
-          ? projects.value.filter((p) => p.state === "active").slice(0, PROJECTS_SHOWN)
-          : null,
-      activity: activity.status === "fulfilled" ? activity.value : null,
+      runLine: runSentence(failure, step, nextRun(autos)),
+      runAlert: failure !== null,
+      projects: projects.status === "fulfilled" ? projectsByRank(projects.value) : null,
+      latest: activity.status === "fulfilled" ? (activity.value[0] ?? null) : null,
+      backlog: backlog.status === "fulfilled" ? backlog.value : null,
+    });
+  }, []);
+
+  const loadToday = useCallback(async () => {
+    const [calendar, tasks] = await Promise.allSettled([fetchCalendarToday(), fetchTasksDueToday()]);
+    if (calendar.status === "rejected" && tasks.status === "rejected") {
+      setToday((t) => (t.entries ? t : { entries: null, failed: true }));
+      return;
+    }
+    setToday({
+      entries: todayEntries(
+        calendar.status === "fulfilled" ? calendar.value.events : [],
+        tasks.status === "fulfilled" ? tasks.value.count : 0
+      ),
+      failed: false,
     });
   }, []);
 
   useVisiblePoll(loadCommand, COMMAND_POLL_MS);
   useVisiblePoll(loadSide, SIDE_POLL_MS);
+  useVisiblePoll(loadToday, TODAY_POLL_MS);
 
   const checked = (side.services ?? []).filter((s) => (privateRevealed || !s.private) && s.lifecycle !== "planned");
   const down = checked.filter((s) => statusOf(s) === "down").length;
   const homelab = [
-    side.services ? (down ? `Homelab: ${down} down` : `Homelab: ${checked.length} of ${checked.length} up`) : "Homelab…",
+    side.services ? (down ? `${down} down` : `${checked.length} of ${checked.length} up`) : "…",
     side.mediaFree != null ? `${gib(side.mediaFree)} GB free for media` : null,
-    side.nextRun ? `${side.nextRun.name} ${when(side.nextRun.next_run_at!)}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
 
-  const needs = command?.needs ?? [];
-  const working = command?.working ?? [];
-  const done = command?.done;
-  const counts = command
-    ? [
-        `${needs.length} ${needs.length === 1 ? "thing needs" : "things need"} you`,
-        `${working.length} ${working.length === 1 ? "agent" : "agents"} working`,
-        `${command.done.succeeded + command.done.failed} jobs finished in the last day`,
-      ].join(" · ")
-    : commandError
-      ? "Couldn't reach Sazed's board."
-      : "Loading…";
+  const needs = command?.needs ?? null;
+  const working = command?.working ?? null;
+  const done = command?.done ?? null;
+  const ready = side.backlog ? readyCount(side.backlog) : null;
+  const askInline = shell === "hubs" && !isMobile;
 
-  function openHomelab() {
-    rememberHomelabView("list");
-    toggleHomelab();
-  }
+  const links = [
+    { key: "homelab", label: "Homelab", text: homelab, alert: down > 0, onClick: () => openSystem("homelab") },
+    ...(side.latest
+      ? [
+          {
+            key: "activity",
+            label: "Activity",
+            text: `${side.latest.title} · ${clockTime(side.latest.at)}`,
+            alert: side.latest.status === "error",
+            onClick: () => openSystem("activity"),
+          },
+        ]
+      : []),
+    ...(side.runLine
+      ? [
+          {
+            key: "automations",
+            label: "Automations",
+            text: side.runLine,
+            alert: side.runAlert,
+            onClick: () => goTo({ hub: "agents", view: "automations" }),
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-8 pb-6 md:px-8">
-        <div className="px-1">
-          <h1 className="font-display text-3xl text-ink" style={{ letterSpacing: "-0.02em" }}>
-            Good {getPeriod()},{" "}
-            <button type="button" onClick={togglePrivate} className="cursor-text font-display text-primary">
-              {NAME}
-            </button>
-          </h1>
-          <p className="mt-1 text-meta text-muted">{counts}</p>
-        </div>
+    <div className="@container min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto w-full max-w-[1240px] px-4 pt-5 pb-6 sm:px-7 sm:pt-7">
+        <h1 className="font-display text-[26px] leading-8 font-normal tracking-[-0.01em] text-ink sm:text-[30px] sm:leading-9">
+          Good {getPeriod()},{" "}
+          <button type="button" onClick={togglePrivate} className="-my-1.5 cursor-text py-1.5 font-display">
+            {NAME}
+          </button>
+        </h1>
+        <p className="mt-0.5 mb-2 text-body text-muted">
+          {command ? (
+            <>
+              <b className={needs!.length ? "font-medium text-warn" : "font-medium text-ink"}>
+                {needs!.length} {needs!.length === 1 ? "needs" : "need"} you
+              </b>
+              {" · "}
+              <b className="font-medium text-ink">{working!.length} running</b>
+              {ready != null && ` · ${ready} ready`}
+              {` · ${done!.succeeded + done!.failed} done`}
+            </>
+          ) : commandError ? (
+            "Couldn't reach Sazed's board."
+          ) : (
+            "Loading…"
+          )}
+        </p>
+        <TodayLine entries={today.entries} className="@min-[860px]:hidden" />
 
-        <div className="grid items-start gap-3.5 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-          <div className="flex min-w-0 flex-col gap-3.5">
-            {command && <NeedsYou cards={needs} onOpenJob={setOpenJob} onChanged={loadCommand} />}
-            {command && <WorkingNow jobs={working} onOpenJob={setOpenJob} onChanged={loadCommand} />}
-            {done && done.latest.length > 0 && (
-              <button
-                type="button"
-                onClick={toggleAudit}
-                className="flex items-center gap-2.5 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-left hover:bg-raised/60"
-              >
-                <span aria-hidden="true" className={`size-2 shrink-0 rounded-full ${done.failed ? "bg-err" : "bg-ok"}`} />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-body text-ink">
-                    {done.succeeded} done{done.failed ? `, ${done.failed} failed` : ""} in the last day
-                  </span>
-                  <span className="block truncate text-caption text-muted">
-                    {done.latest.map((j) => `${j.title}${j.status === "succeeded" ? "" : " (failed)"}`).join(" · ")}
-                  </span>
-                </span>
-                <span className="shrink-0 text-caption text-primary">Activity</span>
-              </button>
-            )}
+        <div className="mt-5 grid items-start gap-7 @min-[860px]:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="flex min-w-0 flex-col gap-4">
+            <NeedsYou cards={needs} onOpenJob={setOpenJob} onChanged={loadCommand} />
+            <Running jobs={working} onOpenJob={setOpenJob} onChanged={loadCommand} />
+            <Ready top={side.backlog ? topReady(side.backlog) : []} total={ready} />
+            <Done done={done} compact={isMobile} onOpenJob={setOpenJob} />
+            {askInline && <AskField onSend={askFromHome} disabled={isStreaming} />}
           </div>
-          <div className="flex min-w-0 flex-col gap-3.5">
-            <ProjectsInFlight projects={side.projects} />
-            <RecentActivity events={side.activity} />
-            <HomelabLine summary={homelab} alert={down > 0} onOpen={openHomelab} />
+          <div className="flex min-w-0 flex-col gap-4">
+            <TodayBox entries={today.entries} failed={today.failed} className="hidden @min-[860px]:block" />
+            <ProjectsBox projects={side.projects} />
+            <LinkRows label="Elsewhere" rows={links} />
           </div>
         </div>
       </div>

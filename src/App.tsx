@@ -3,6 +3,8 @@ import { MessageSquarePlus, X } from "lucide-react";
 import { AppShell } from "./components/layout/AppShell";
 import { HubContent } from "./components/shell/HubContent";
 import { Composer } from "./features/chat/Composer";
+import { askFromHome } from "./features/home/homeNav";
+import { useIsMobile } from "./hooks/useIsMobile";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { FinancePage } from "./features/finance/FinancePage";
 import { parseDeepLink } from "./nav/deepLinks";
@@ -31,14 +33,7 @@ function App() {
   const dismissSessionLoadError = useChatStore((s) => s.dismissSessionLoadError);
   const shell = useShellStore((s) => s.shell);
   const retaps = useNavStore((s) => s.retaps);
-
-  // Home's ask field always starts a new chat and answers in Chat: a question typed on Home must
-  // never land in a session opened elsewhere (an automation run's, say), nor stream off-screen.
-  const sendFromHome = (text: string) => {
-    newSession();
-    useNavStore.getState().go("chat", "conversation");
-    return send(text);
-  };
+  const isMobile = useIsMobile();
 
   const [contentHub, contentView]: [HubId, string] =
     hub === "home" || hub === "chat" ? (messages.length === 0 ? ["home", "home"] : ["chat", "conversation"]) : [hub, view];
@@ -107,10 +102,12 @@ function App() {
     // conversation until it moves out.
     const pageView = hub === "chat" ? "conversation" : view;
     const HubPage = viewDef(hub, pageView).component;
-    const docked = (hub === "home" || hub === "chat") && (
+    // On desktop Home's ask field sits in the page's left column instead.
+    const docked = ((hub === "home" && isMobile) || hub === "chat") && (
       <Composer
         variant="docked"
-        onSend={hub === "home" ? sendFromHome : send}
+        onSend={hub === "home" ? askFromHome : send}
+        placeholder={hub === "home" ? "Ask Sazed, or describe a task" : undefined}
         disabled={isStreaming}
         isStreaming={isStreaming}
         onStop={stop}
