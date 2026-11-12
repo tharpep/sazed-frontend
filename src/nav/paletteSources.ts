@@ -82,6 +82,13 @@ function itemEntry(group: PaletteGroup, item: PaletteItem): PaletteEntry {
   return { kind: "item", key: `${group}:${item.ref.kind}:${item.ref.id}`, group, label: item.label, hint: item.hint, ref: item.ref };
 }
 
+/** The views worth their own entry: a one-view hub is already its Hubs entry, and the open
+ * conversation is not a place to go. */
+function placeViews(hub: (typeof HUBS)[number]) {
+  if (hub.views.length < 2) return [];
+  return hub.views.filter((v) => !(hub.id === "chat" && v.id === "conversation"));
+}
+
 interface Sources {
   recent: ItemRef[];
   services: Service[];
@@ -95,17 +102,14 @@ export function buildEntries({ recent, services, privateRevealed, items }: Sourc
     itemEntry("Recent", { ref, label: ref.id, hint: refHint(ref) })
   );
   for (const hub of HUBS) {
-    const hint = hub.views.length > 1 ? hub.views.map((v) => v.label).join(", ") : "";
+    const hint = placeViews(hub).map((v) => v.label).join(", ");
     entries.push({ kind: "hub", key: `hub:${hub.id}`, group: "Hubs", label: hub.label, hint, hub: hub.id });
   }
   for (const s of launchableApps(services, privateRevealed)) {
     entries.push({ kind: "app", key: `app:${s.id}`, group: "Apps", label: s.name, hint: appHint(s), url: s.open_url! });
   }
   for (const hub of HUBS) {
-    // A one-view hub is already its Hubs entry, and the open conversation is not a place to go.
-    if (hub.views.length < 2) continue;
-    for (const view of hub.views) {
-      if (hub.id === "chat" && view.id === "conversation") continue;
+    for (const view of placeViews(hub)) {
       entries.push({
         kind: "view",
         key: `view:${hub.id}:${view.id}`,
