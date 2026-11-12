@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomTabBar } from "@/components/layout/BottomTabBar";
 import { MoreSheet } from "@/components/layout/MoreSheet";
 import { CommandPalette } from "@/components/shell/CommandPalette";
+import { HubErrorBoundary } from "@/components/shell/HubErrorBoundary";
 import { HubFrame } from "@/components/shell/HubFrame";
 import { useShellStore } from "@/nav/shellFlag";
 import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
@@ -14,7 +15,13 @@ export function AppShell({ children, docked }: { children: ReactNode; docked?: R
   useVisualViewportHeight();
   const shell = useShellStore((s) => s.shell);
 
-  if (shell === "hubs") return <HubFrame docked={docked}>{children}</HubFrame>;
+  if (shell === "hubs") {
+    return (
+      <HubErrorBoundary>
+        <HubFrame docked={docked}>{children}</HubFrame>
+      </HubErrorBoundary>
+    );
+  }
 
   return (
     // The installed iPhone app draws under the status bar and Dynamic Island (black-translucent +

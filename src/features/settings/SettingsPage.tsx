@@ -23,9 +23,6 @@ export function SettingsDialog({ open, onClose }: SettingsPageProps & { open: bo
         <Dialog.Popup
           aria-label="Settings"
           className="fixed inset-x-0 top-[var(--app-offset-top,0px)] z-50 h-[var(--app-height,100dvh)] overflow-y-auto overscroll-contain pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-ink outline-none"
-          onClick={(e) => {
-            if (e.target === e.currentTarget.firstElementChild?.firstElementChild) onClose();
-          }}
         >
           {/* The page centres its card in whatever height it gets; min-h-full lets a card taller
               than the window grow the scroll area instead of being cut off at both ends. */}

@@ -32,8 +32,10 @@ function App() {
   const shell = useShellStore((s) => s.shell);
   const retaps = useNavStore((s) => s.retaps);
 
-  // Home's ask field answers in Chat, so the reply is not sent to a screen that never shows it.
+  // Home's ask field always starts a new chat and answers in Chat: a question typed on Home must
+  // never land in a session opened elsewhere (an automation run's, say), nor stream off-screen.
   const sendFromHome = (text: string) => {
+    newSession();
     useNavStore.getState().go("chat", "conversation");
     return send(text);
   };
@@ -117,7 +119,9 @@ function App() {
     return (
       <AppShell docked={docked}>
         {banner}
-        <HubContent key={`${hub}:${view}:${retaps}`} hubView={`${hub}:${view}`}>
+        {/* MessageList follows the stream to the bottom itself; a restored older scrollTop would
+            leave the reply streaming off-screen. */}
+        <HubContent key={`${hub}:${view}:${retaps}`} scrollKey={hub === "chat" ? null : `${hub}:${view}`}>
           <HubPage />
         </HubContent>
       </AppShell>

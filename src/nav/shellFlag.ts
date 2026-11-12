@@ -20,10 +20,11 @@ function store(shell: ShellKind) {
 
 // Read before the first render so ?shell= never flashes the other layout. App clears the address
 // bar afterwards, together with ?page=.
+// The vitest suites load this through the stores with no window, hence the try around all of it.
 function initialShell(): ShellKind {
-  const asked = new URLSearchParams(window.location.search).get("shell");
-  if (isShell(asked)) store(asked);
   try {
+    const asked = new URLSearchParams(window.location.search).get("shell");
+    if (isShell(asked)) store(asked);
     return localStorage.getItem(KEY) === "hubs" ? "hubs" : "old";
   } catch {
     return "old";

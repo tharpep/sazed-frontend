@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Ellipsis, LoaderCircle } from "lucide-react";
 
-import { useRunningCount } from "@/hooks/useRunningCount";
 import { useWaitingCount } from "@/hooks/useWaitingCount";
 import { useNavStore } from "@/store/navStore";
 import { HUB_ICON, MORE_HUBS, PHONE_BAR_HUBS, hubDef } from "./hubMeta";
@@ -9,6 +8,8 @@ import { HUB_ICON, MORE_HUBS, PHONE_BAR_HUBS, hubDef } from "./hubMeta";
 interface HubBottomBarProps {
   moreOpen: boolean;
   onMore: () => void;
+  // From useRunningCount in the parent, which also feeds the More sheet; one poll serves both.
+  running: number;
 }
 
 const slot =
@@ -22,11 +23,10 @@ function Badge({ children }: { children: ReactNode }) {
 
 /** The phone's hub bar: Home, Chat, Work, Apps and More. More takes the name of an open
  * Agents, System or Library hub. */
-export function HubBottomBar({ moreOpen, onMore }: HubBottomBarProps) {
+export function HubBottomBar({ moreOpen, onMore, running }: HubBottomBarProps) {
   const hub = useNavStore((s) => s.hub);
   const go = useNavStore((s) => s.go);
   const waiting = useWaitingCount();
-  const running = useRunningCount();
 
   const outHub = (MORE_HUBS as readonly string[]).includes(hub) ? hub : null;
   const OutIcon = outHub ? HUB_ICON[outHub] : Ellipsis;

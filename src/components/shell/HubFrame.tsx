@@ -24,6 +24,8 @@ interface HubFrameProps {
   docked?: ReactNode;
 }
 
+const OVERLAY = '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]';
+
 function isTyping(target: EventTarget | null) {
   return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
 }
@@ -58,7 +60,12 @@ export function HubFrame({ children, docked }: HubFrameProps) {
   // The palette and every Base UI dialog take their own Escape; a reader is all that is left here.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !isTyping(e.target)) {
+      if (e.key === "/") {
+        // Journal's own "/" focuses its search; an open dialog, menu or select keeps its keys.
+        const nav = useNavStore.getState();
+        const journal = nav.hub === "library" && nav.view.library === "journal";
+        if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || journal || isTyping(e.target)) return;
+        if (document.querySelector(OVERLAY)) return;
         e.preventDefault();
         usePaletteStore.getState().setOpen(true);
         return;
@@ -119,7 +126,7 @@ function PhoneFrame({ children, docked, onSettings }: HubFrameProps & { onSettin
       />
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>
       {docked}
-      <HubBottomBar moreOpen={moreOpen} onMore={() => setMoreOpen(true)} />
+      <HubBottomBar moreOpen={moreOpen} onMore={() => setMoreOpen(true)} running={running} />
       <HubMoreSheet
         open={moreOpen}
         onOpenChange={setMoreOpen}

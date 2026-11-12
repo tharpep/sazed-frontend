@@ -20,16 +20,24 @@ function mainScroller(root: HTMLElement): HTMLElement | null {
   return best;
 }
 
-/** Saves the content scroller's position under `hubView` and puts it back when the view mounts.
- * Pages cannot yet say when their first data has rendered, so the restore retries each frame, for
- * up to two seconds, until the content is tall enough; a touch, wheel or key from Pryce stops it. */
-export function useHubScroll(ref: RefObject<HTMLElement | null>, hubView: string) {
+/** Saves the content scroller's position under `hubView` and puts it back when the view mounts;
+ * null leaves the page's scroll alone. Pages cannot yet say when their first data has rendered, so
+ * the restore retries each frame, for up to two seconds, until the content is tall enough. A
+ * pointer, wheel or key from Pryce, or a scroll the restore did not make, stops it. */
+export function useHubScroll(ref: RefObject<HTMLElement | null>, hubView: string | null) {
   useEffect(() => {
     const root = ref.current;
-    if (!root) return;
+    if (!root || hubView === null) return;
     const target = useNavStore.getState().scroll[hubView] ?? 0;
     const started = performance.now();
     let frame = 0;
+    let scroller: HTMLElement | null = null;
+    let lastSet = -1;
+
+    function current() {
+      if (!scroller?.isConnected) scroller = mainScroller(root!);
+      return scroller;
+    }
 
     function stop() {
       cancelAnimationFrame(frame);
@@ -37,34 +45,36 @@ export function useHubScroll(ref: RefObject<HTMLElement | null>, hubView: string
     }
 
     function restore() {
-      const el = mainScroller(root!);
-      if (el) {
-        el.scrollTop = target;
-        if (Math.abs(el.scrollTop - target) < 1) return stop();
+      // The page swaps its loading state for its content during the restore, so look again each
+      // frame until it ends; afterwards the scroller found here is cached.
+      scroller = mainScroller(root!);
+      if (scroller) {
+        scroller.scrollTop = target;
+        lastSet = scroller.scrollTop;
+        if (Math.abs(lastSet - target) < 1) return stop();
       }
       if (performance.now() - started > RESTORE_MS) return stop();
       frame = requestAnimationFrame(restore);
     }
 
-    let known: HTMLElement | null = null;
     function onScroll(e: Event) {
-      if (frame) return;
-      const el = e.target;
-      if (!(el instanceof HTMLElement)) return;
-      if (el !== known) {
-        if (el !== mainScroller(root!)) return;
-        known = el;
+      if (e.target !== current()) return;
+      const top = scroller!.scrollTop;
+      if (frame) {
+        if (Math.abs(top - lastSet) < 1) return;
+        stop();
       }
-      useNavStore.getState().setScroll(hubView, el.scrollTop);
+      useNavStore.getState().setScroll(hubView!, top);
     }
 
     if (target > 0) frame = requestAnimationFrame(restore);
+    const stops = ["wheel", "pointerdown", "keydown"] as const;
     root.addEventListener("scroll", onScroll, { capture: true, passive: true });
-    for (const type of ["wheel", "touchstart", "keydown"]) root.addEventListener(type, stop, { passive: true });
+    for (const type of stops) root.addEventListener(type, stop, { capture: true, passive: true });
     return () => {
       stop();
       root.removeEventListener("scroll", onScroll, { capture: true });
-      for (const type of ["wheel", "touchstart", "keydown"]) root.removeEventListener(type, stop);
+      for (const type of stops) root.removeEventListener(type, stop, { capture: true });
     };
   }, [ref, hubView]);
 }
