@@ -16,9 +16,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The app talks to the **Sazed** backend (agent API). Base URL and API key come from env: `VITE_SAZED_URL` (default `http://localhost:8000`) and `VITE_API_KEY` (optional). All requests go through `src/api/client.ts` (`apiFetch`).
 
-**Layout (`App.tsx` + `components/layout/`):** `AppShell` composes `TitleBar` (Tauri window only) + `Sidebar` (labeled and grouped from md, icon rail from sm to md) + the page, which sits on an inset panel over the darker shell from sm up (DESIGN.md, Layout and shell). `App.tsx` itself only holds view-switching state (via `uiStore` booleans, not routes — see below) and renders the active view into that slot. `main.tsx` separately mounts a `BrowserRouter` with two real routes: `/` (the app, i.e. `App.tsx`) and `/display` (`DisplayPage`, the always-on display; see `src/features/display/` below).
+**Layout (`App.tsx` + `components/layout/`):** `AppShell` composes `TitleBar` (Tauri window only) + `Sidebar` (labeled and grouped from md, icon rail from sm to md) + the page, which sits on an inset panel over the darker shell from sm up (DESIGN.md, Layout and shell). `App.tsx` renders the active view into that slot from `navStore` through the hub registry (not routes — see below). `main.tsx` separately mounts a `BrowserRouter` with two real routes: `/` (the app, i.e. `App.tsx`) and `/display` (`DisplayPage`, the always-on display; see `src/features/display/` below).
 
-**View switching is boolean-flag-based, not routed.** `uiStore` holds one boolean per destination (`historyOpen`, `kbOpen`, `settingsOpen`, `auditOpen`, `financeOpen`, `journalOpen`); each `toggleX()` action resets all the others. `Sidebar` calls these toggles directly. `financeOpen`/`FinancePage` still exist and work but have no Sidebar entry — Finance was excluded from navigation by product decision, not deleted.
+**View switching is store state, not routed.** The console overhaul (`plans/console-overhaul-2026-11-11/build-plan.md` in My-AI) moves it to six hubs:
+- `src/nav/hubViews.ts` lists the hubs and Apps with their views (ids and labels).
+- `src/nav/hubs.ts` points each view at the page that renders it today.
+- `src/store/navStore.ts` holds the active hub, each hub's view (localStorage), the open item and reader per hub, and recent items (sessionStorage). The app always opens on Home.
+- `src/nav/deepLinks.ts` parses `?page=` links, including the `?page=<hub>` and `?page=<hub>.<view>` aliases; `pnpm test` guards it.
+- `uiStore` still holds one boolean per old destination, so `Sidebar`, `BottomTabBar` and `MoreSheet` keep their active states. Each `toggleX()` resets the others and calls `navStore.go()`; each `setLinkedX()` also calls `navStore.openItem()`. Apps is a seventh destination with no views. Settings and Finance show over Home until their slices.
+
+`financeOpen`/`FinancePage` still exist and work but have no Sidebar entry — Finance was excluded from navigation by product decision, not deleted.
 
 **Theming:** `components/theme/ThemeProvider.tsx` — light/dark/system, persisted to `localStorage` (`sazed-theme` key), toggles the `.dark` class on `<html>`. `ThemeToggle` lives in Settings (desktop) and the More sheet (phone).
 
@@ -29,7 +36,7 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 - `src/assets/fonts/` — unused now; fonts come from the `geist` npm package (`geist/font/sans`, `geist/font/mono`, imported in `main.tsx`) and `@fontsource-variable/fraunces` (imported in `globals.css`).
 - `src/mock/data.ts` — TypeScript interfaces only: `Message`, `Session`, `MessageBlock`/`ToolBlock`/`UIBlock`. No hardcoded message/session data; content comes from the API.
 - `src/api/` — `client.ts` (apiFetch), `chat.ts` (postMessage), `conversations.ts` (list, get, process), `memory.ts` (get, put, delete), `journal.ts` (listEntries with cursor pagination, CRUD, listSubcategories), `display.ts`, `audit.ts`, `finance.ts`.
-- `src/store/` — Zustand: `chatStore`, `sessionStore`, `uiStore` (view-switching booleans + online status), `settingsStore`, `configStore`, `kbStore`, `memoryStore`.
+- `src/store/` — Zustand: `chatStore`, `sessionStore`, `navStore` (hub, view, open items), `uiStore` (legacy page booleans + online status), `settingsStore`, `configStore`, `kbStore`, `memoryStore`.
 - `src/components/ui/` — shadcn/ui primitives (button, dialog, sheet, dropdown-menu, tooltip, scroll-area, separator, switch, textarea, avatar, tabs, badge). Owned source, restyled per component as they're used — not consumed as a themed package.
 - `src/components/theme/` — `ThemeProvider`, `ThemeToggle`.
 - `src/components/system/` — the shared components from DESIGN.md (Page/PageHeader/PageBody, StatusPill, Segmented, ListSection/ListRow, EmptyState). Use these for new pages and when moving a page over.
@@ -72,7 +79,7 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 - `src/features/backlog/` — the Backlog page (`uiStore.backlogOpen`, desktop rail plus phone More sheet).
   - `BacklogPage`: Open / Approved / Dismissed views, type filter chips, an add form, 30s refresh. The Open view splits into Priority (numbered, by rank) and "Not prioritized yet"; the sheet's Priority row moves items (Top, Up, Down, Remove, Make next, Prioritize).
   - `BacklogSheet`: markdown summary, why, repos, sources. Actions: Approve (repo and an optional note; starts the change job and PR right away), Dismiss, Restore, Mark done. Opens the item's job in `JobSheet`. Merged PRs mark items done on their own (Sazed polls); Mark done is for work done elsewhere.
-  - Deep links: `/?page=<backlog|automations|homelab|activity|kb|journal>[&item=<backlog id>]` (`apps` opens the Apps page; `/?page=plans&dispatch=<plan>` opens Plan Live; `/?page=profiles&profile=<name>` opens that profile), read once on load in `App.tsx` (Pushover buttons use them).
+  - Deep links: `/?page=<backlog|automations|homelab|activity|kb|journal>[&item=<backlog id>]` (`apps` opens the Apps page; `/?page=plans&dispatch=<plan>` opens Plan Live; `/?page=profiles&profile=<name>` opens that profile), parsed once on load by `parseDeepLink` (`src/nav/deepLinks.ts`) and applied in `App.tsx` (Pushover buttons use them).
   - Phone tab bar: Home (command center plus chat), Homelab, Automate (the Automations page; the short label fits next to Knowledge on a 375px phone), Knowledge, More (Apps, Conversations, Gateway, Journal, Backlog, Settings, Activity).
   - Items are never deleted: dismissed ones stay so the scout won't re-propose them.
   - Data from Sazed `/backlog` via `src/api/backlog.ts`. Scout/triage automations (`pipeline` actions) show read-only in `AutomationSheet`.
@@ -99,4 +106,4 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 - Markdown rendering is enabled in chat message bodies (`react-markdown` + `remark-gfm` + `rehype-highlight`, same stack the journal editor's read view already used).
 - Default to desktop-only layouts without media queries. The journal feature is the deliberate exception: it ships a responsive layout (two-pane ≥900px, single-pane below) because it's used on mobile.
 - `DESIGN.md` and `PRODUCT.md` are the design reference for chat/journal/shell work, replacing the old `ui_reference.html` (removed).
-- View switching among Chat/Journal/KB/Settings/Audit/Finance is `uiStore` boolean state, not `react-router` routes — see Architecture above. Only `/` and `/display` are real routes.
+- View switching is `navStore` state (mirrored in `uiStore` booleans until the overhaul's cutover), not `react-router` routes — see Architecture above. Only `/` and `/display` are real routes.

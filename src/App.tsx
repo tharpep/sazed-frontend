@@ -2,64 +2,24 @@ import { useEffect } from "react";
 import { MessageSquarePlus, X } from "lucide-react";
 import { AppShell } from "./components/layout/AppShell";
 import { Composer } from "./features/chat/Composer";
-import { HomePage } from "./features/home/HomePage";
-import { MessageList } from "./features/chat/MessageList";
-import { KnowledgePage } from "./features/kb/KnowledgePage";
 import { SettingsPage } from "./features/settings/SettingsPage";
-import { ActivityPage } from "./features/activity/ActivityPage";
 import { FinancePage } from "./features/finance/FinancePage";
-import { JournalPage } from "./features/journal/JournalPage";
-import { HomelabPage } from "./features/homelab/HomelabPage";
-import { GatewayPage } from "./features/gateway/GatewayPage";
-import { AutomationsPage } from "./features/automations/AutomationsPage";
-import { BacklogPage } from "./features/backlog/BacklogPage";
-import { PlansPage } from "./features/plans/PlansPage";
-import { ProjectsPage } from "./features/projects/ProjectsPage";
-import { AppsPage } from "./features/apps/AppsPage";
-import { ProfilesPage } from "./features/profiles/ProfilesPage";
-import { ClaudeUsagePage } from "./features/claude-usage/ClaudeUsagePage";
+import { parseDeepLink } from "./nav/deepLinks";
+import { viewDef } from "./nav/hubs";
+import type { HubId } from "./nav/hubViews";
 import { useUiStore } from "./store/uiStore";
+import { useNavStore } from "./store/navStore";
 import { useChatStore } from "./store/chatStore";
 import { apiFetch } from "./api/client";
 
 function App() {
-  const kbOpen = useUiStore((s) => s.kbOpen);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
-  const auditOpen = useUiStore((s) => s.auditOpen);
   const financeOpen = useUiStore((s) => s.financeOpen);
-  const journalOpen = useUiStore((s) => s.journalOpen);
-  const homelabOpen = useUiStore((s) => s.homelabOpen);
-  const gatewayOpen = useUiStore((s) => s.gatewayOpen);
-  const automationsOpen = useUiStore((s) => s.automationsOpen);
-  const backlogOpen = useUiStore((s) => s.backlogOpen);
-  const projectsOpen = useUiStore((s) => s.projectsOpen);
-  const plansOpen = useUiStore((s) => s.plansOpen);
-  const appsOpen = useUiStore((s) => s.appsOpen);
-  const profilesOpen = useUiStore((s) => s.profilesOpen);
-  const claudeUsageOpen = useUiStore((s) => s.claudeUsageOpen);
-  const historyOpen = useUiStore((s) => s.historyOpen);
-  const toggleKb = useUiStore((s) => s.toggleKb);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
-  const toggleAudit = useUiStore((s) => s.toggleAudit);
-  const toggleFinance = useUiStore((s) => s.toggleFinance);
-  const toggleJournal = useUiStore((s) => s.toggleJournal);
-  const toggleHomelab = useUiStore((s) => s.toggleHomelab);
-  const toggleGateway = useUiStore((s) => s.toggleGateway);
-  const toggleAutomations = useUiStore((s) => s.toggleAutomations);
-  const toggleBacklog = useUiStore((s) => s.toggleBacklog);
-  const toggleProjects = useUiStore((s) => s.toggleProjects);
-  const togglePlans = useUiStore((s) => s.togglePlans);
-  const toggleApps = useUiStore((s) => s.toggleApps);
-  const toggleProfiles = useUiStore((s) => s.toggleProfiles);
-  const toggleClaudeUsage = useUiStore((s) => s.toggleClaudeUsage);
-  const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
   const setOnline = useUiStore((s) => s.setOnline);
-  const setLinkedBacklogItem = useUiStore((s) => s.setLinkedBacklogItem);
-  const setLinkedProject = useUiStore((s) => s.setLinkedProject);
-  const setLinkedPlan = useUiStore((s) => s.setLinkedPlan);
-  const setLinkedDispatchPlan = useUiStore((s) => s.setLinkedDispatchPlan);
-  const setLinkedProfile = useUiStore((s) => s.setLinkedProfile);
   const hidePrivate = useUiStore((s) => s.hidePrivate);
+  const hub = useNavStore((s) => s.hub);
+  const view = useNavStore((s) => s.view[s.hub]);
   const messages = useChatStore((s) => s.messages);
   const send = useChatStore((s) => s.send);
   const stop = useChatStore((s) => s.stop);
@@ -67,72 +27,23 @@ function App() {
   const newSession = useChatStore((s) => s.newSession);
   const sessionLoadError = useChatStore((s) => s.sessionLoadError);
   const dismissSessionLoadError = useChatStore((s) => s.dismissSessionLoadError);
-  const view = messages.length === 0 ? "empty" : "chat";
-  const viewKey = settingsOpen
-    ? "settings"
-    : auditOpen
-      ? "audit"
-      : financeOpen
-        ? "finance"
-        : journalOpen
-          ? "journal"
-          : homelabOpen
-            ? "homelab"
-            : gatewayOpen
-            ? "gateway"
-            : automationsOpen
-            ? "automations"
-            : backlogOpen
-            ? "backlog"
-            : projectsOpen
-            ? "projects"
-            : plansOpen
-            ? "plans"
-            : appsOpen
-            ? "apps"
-            : profilesOpen
-            ? "profiles"
-            : claudeUsageOpen
-            ? "claude-usage"
-            : kbOpen
-              ? "kb"
-              : view;
 
-  // Links from Pushover open a page directly: /?page=backlog&item=<id>. Views are uiStore flags,
-  // not routes, so read the query once and then drop it from the address bar.
+  const [contentHub, contentView]: [HubId, string] =
+    hub === "home" || hub === "chat" ? (messages.length === 0 ? ["home", "home"] : ["chat", "conversation"]) : [hub, view];
+  const overlay = settingsOpen ? "settings" : financeOpen ? "finance" : null;
+  const viewKey = overlay ?? `${contentHub}:${contentView}`;
+  const onHomeOrChat = overlay === null && (contentHub === "home" || contentHub === "chat");
+  const Page = viewDef(contentHub, contentView).component;
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const page = params.get("page");
-    if (!page) return;
+    const link = parseDeepLink(window.location.search);
+    if (!link) return;
     const ui = useUiStore.getState();
-    const open: Record<string, () => void> = {
-      backlog: ui.toggleBacklog,
-      projects: ui.toggleProjects,
-      plans: ui.togglePlans,
-      "claude-usage": ui.toggleClaudeUsage,
-      automations: ui.toggleAutomations,
-      homelab: ui.toggleHomelab,
-      apps: ui.toggleApps,
-      profiles: ui.toggleProfiles,
-      activity: ui.toggleAudit,
-      kb: ui.toggleKb,
-      journal: ui.toggleJournal,
-    };
-    open[page]?.();
-    if (page === "backlog") setLinkedBacklogItem(params.get("item"));
-    if (page === "projects") setLinkedProject(params.get("project"));
-    if (page === "profiles") setLinkedProfile(params.get("profile"));
-    const plan = params.get("plan");
-    if (page === "plans" && plan) {
-      const version = Number(params.get("version"));
-      setLinkedPlan({ slug: plan, version: Number.isInteger(version) && version > 0 ? version : null });
-    }
-    const dispatch = params.get("dispatch");
-    if (page === "plans" && dispatch) setLinkedDispatchPlan(dispatch);
+    link.items?.forEach(ui.linkItem);
+    ui.openView(link);
     window.history.replaceState(null, "", window.location.pathname);
-  }, [setLinkedBacklogItem, setLinkedProject, setLinkedPlan, setLinkedDispatchPlan, setLinkedProfile]);
+  }, []);
 
-  // Private apps never stay revealed once the console leaves the screen.
   useEffect(() => {
     const onVisibility = () => {
       if (document.hidden) hidePrivate();
@@ -153,58 +64,13 @@ function App() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        if (historyOpen) setHistoryOpen(false);
-        else if (kbOpen) toggleKb();
-        else if (settingsOpen) setSettingsOpen(false);
-        else if (auditOpen) toggleAudit();
-        else if (financeOpen) toggleFinance();
-        else if (journalOpen) toggleJournal();
-        else if (homelabOpen) toggleHomelab();
-        else if (gatewayOpen) toggleGateway();
-        else if (automationsOpen) toggleAutomations();
-        else if (backlogOpen) toggleBacklog();
-        else if (projectsOpen) toggleProjects();
-        else if (plansOpen) togglePlans();
-        else if (appsOpen) toggleApps();
-        else if (profilesOpen) toggleProfiles();
-        else if (claudeUsageOpen) toggleClaudeUsage();
-      }
+      if (e.key !== "Escape") return;
+      const ui = useUiStore.getState();
+      if (useNavStore.getState().hub !== "home" || ui.settingsOpen || ui.financeOpen) ui.closeAll();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [
-    historyOpen,
-    kbOpen,
-    settingsOpen,
-    auditOpen,
-    financeOpen,
-    journalOpen,
-    homelabOpen,
-    gatewayOpen,
-    automationsOpen,
-    backlogOpen,
-    projectsOpen,
-    plansOpen,
-    appsOpen,
-    profilesOpen,
-    claudeUsageOpen,
-    setHistoryOpen,
-    toggleKb,
-    setSettingsOpen,
-    toggleAudit,
-    toggleFinance,
-    toggleJournal,
-    toggleHomelab,
-    toggleGateway,
-    toggleAutomations,
-    toggleBacklog,
-    toggleProjects,
-    togglePlans,
-    toggleApps,
-    toggleProfiles,
-    toggleClaudeUsage,
-  ]);
+  }, []);
 
   return (
     <AppShell>
@@ -222,7 +88,7 @@ function App() {
         </div>
       )}
       <div key={viewKey} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {viewKey === "chat" && messages.length > 0 && (
+        {viewKey === "chat:conversation" && (
           <div className="flex items-center justify-end border-b border-border px-3 py-2 sm:hidden">
             <button
               type="button"
@@ -235,42 +101,15 @@ function App() {
             </button>
           </div>
         )}
-        {settingsOpen ? (
+        {overlay === "settings" ? (
           <SettingsPage onClose={() => setSettingsOpen(false)} />
-        ) : auditOpen ? (
-          // auditOpen is the Activity page now (it replaced the Tool log)
-          <ActivityPage />
-        ) : financeOpen ? (
+        ) : overlay === "finance" ? (
           <FinancePage />
-        ) : journalOpen ? (
-          <JournalPage />
-        ) : homelabOpen ? (
-          <HomelabPage />
-        ) : gatewayOpen ? (
-          <GatewayPage />
-        ) : automationsOpen ? (
-          <AutomationsPage />
-        ) : backlogOpen ? (
-          <BacklogPage />
-        ) : projectsOpen ? (
-          <ProjectsPage />
-        ) : plansOpen ? (
-          <PlansPage />
-        ) : appsOpen ? (
-          <AppsPage />
-        ) : profilesOpen ? (
-          <ProfilesPage />
-        ) : claudeUsageOpen ? (
-          <ClaudeUsagePage />
-        ) : kbOpen ? (
-          <KnowledgePage />
-        ) : view === "empty" ? (
-          <HomePage />
         ) : (
-          <MessageList />
+          <Page />
         )}
       </div>
-      {(viewKey === "chat" || viewKey === "empty") && (
+      {onHomeOrChat && (
         <Composer
           variant="docked"
           onSend={send}
