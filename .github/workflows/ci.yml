@@ -41,3 +41,6 @@ jobs:
           VITE_SAZED_URL: /api
           VITE_GATEWAY_URL: /gw
         run: pnpm build
+
+      - name: Test
+        run: pnpm test

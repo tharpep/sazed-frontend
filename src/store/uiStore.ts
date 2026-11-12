@@ -1,5 +1,8 @@
 import { create } from "zustand";
 
+import type { NavTarget, ViewKey } from "@/nav/hubViews";
+import { useNavStore, type ItemRef } from "./navStore";
+
 interface UiState {
   historyOpen: boolean;
   kbOpen: boolean;
@@ -36,6 +39,8 @@ interface UiState {
   setLinkedDispatchPlan: (plan: string | null) => void;
   linkedProfile: string | null;
   setLinkedProfile: (name: string | null) => void;
+  linkItem: (ref: ItemRef) => void;
+  openView: (target: NavTarget) => void;
   toggleHistory: () => void;
   setHistoryOpen: (v: boolean) => void;
   toggleKb: () => void;
@@ -81,42 +86,132 @@ const ALL_CLOSED = {
   moreOpen: false,
 } as const;
 
-export const useUiStore = create<UiState>((set) => ({
-  ...ALL_CLOSED,
-  online: false,
-  privateRevealed: false,
-  togglePrivate: () => set((s) => ({ privateRevealed: !s.privateRevealed })),
-  hidePrivate: () => set({ privateRevealed: false }),
-  linkedBacklogItem: null,
-  setLinkedBacklogItem: (id) => set({ linkedBacklogItem: id }),
-  linkedProject: null,
-  setLinkedProject: (slug) => set({ linkedProject: slug }),
-  linkedPlan: null,
-  setLinkedPlan: (plan) => set({ linkedPlan: plan }),
-  linkedDispatchPlan: null,
-  setLinkedDispatchPlan: (plan) => set({ linkedDispatchPlan: plan }),
-  linkedProfile: null,
-  setLinkedProfile: (name) => set({ linkedProfile: name }),
-  toggleHistory: () => set((s) => ({ ...ALL_CLOSED, historyOpen: !s.historyOpen })),
-  setHistoryOpen: (v) => set({ ...ALL_CLOSED, historyOpen: v }),
-  toggleKb: () => set((s) => ({ ...ALL_CLOSED, kbOpen: !s.kbOpen })),
-  setKbOpen: (v) => set({ ...ALL_CLOSED, kbOpen: v }),
-  toggleSettings: () => set((s) => ({ ...ALL_CLOSED, settingsOpen: !s.settingsOpen })),
-  setSettingsOpen: (v) => set({ ...ALL_CLOSED, settingsOpen: v }),
-  toggleAudit: () => set((s) => ({ ...ALL_CLOSED, auditOpen: !s.auditOpen })),
-  toggleFinance: () => set((s) => ({ ...ALL_CLOSED, financeOpen: !s.financeOpen })),
-  toggleJournal: () => set((s) => ({ ...ALL_CLOSED, journalOpen: !s.journalOpen })),
-  toggleHomelab: () => set((s) => ({ ...ALL_CLOSED, homelabOpen: !s.homelabOpen })),
-  toggleGateway: () => set((s) => ({ ...ALL_CLOSED, gatewayOpen: !s.gatewayOpen })),
-  toggleAutomations: () => set((s) => ({ ...ALL_CLOSED, automationsOpen: !s.automationsOpen })),
-  toggleBacklog: () => set((s) => ({ ...ALL_CLOSED, backlogOpen: !s.backlogOpen })),
-  toggleProjects: () => set((s) => ({ ...ALL_CLOSED, projectsOpen: !s.projectsOpen })),
-  togglePlans: () => set((s) => ({ ...ALL_CLOSED, plansOpen: !s.plansOpen })),
-  toggleApps: () => set((s) => ({ ...ALL_CLOSED, appsOpen: !s.appsOpen })),
-  toggleProfiles: () => set((s) => ({ ...ALL_CLOSED, profilesOpen: !s.profilesOpen })),
-  toggleClaudeUsage: () => set((s) => ({ ...ALL_CLOSED, claudeUsageOpen: !s.claudeUsageOpen })),
-  toggleMore: () => set((s) => ({ ...ALL_CLOSED, moreOpen: !s.moreOpen })),
-  setMoreOpen: (v) => set({ ...ALL_CLOSED, moreOpen: v }),
-  closeAll: () => set({ ...ALL_CLOSED }),
-  setOnline: (v) => set({ online: v }),
-}));
+type Flag = keyof typeof ALL_CLOSED;
+type PageFlag = Exclude<Flag, "moreOpen">;
+
+const HOME: NavTarget = { hub: "home" };
+
+const PAGE_TARGET: Record<PageFlag, NavTarget> = {
+  historyOpen: { hub: "chat", view: "list" },
+  kbOpen: { hub: "library", view: "knowledge" },
+  settingsOpen: HOME,
+  auditOpen: { hub: "system", view: "activity" },
+  financeOpen: HOME,
+  journalOpen: { hub: "library", view: "journal" },
+  homelabOpen: { hub: "system", view: "homelab" },
+  gatewayOpen: { hub: "system", view: "integrations" },
+  automationsOpen: { hub: "agents", view: "automations" },
+  backlogOpen: { hub: "work", view: "board" },
+  projectsOpen: { hub: "work", view: "projects" },
+  plansOpen: { hub: "work", view: "plans" },
+  appsOpen: HOME,
+  profilesOpen: { hub: "agents", view: "profiles" },
+  claudeUsageOpen: { hub: "system", view: "usage" },
+};
+
+const VIEW_PAGE: Record<ViewKey, PageFlag | null> = {
+  "home:home": null,
+  "chat:list": "historyOpen",
+  "chat:conversation": null,
+  "work:projects": "projectsOpen",
+  "work:board": "backlogOpen",
+  "work:plans": "plansOpen",
+  "agents:runs": "plansOpen",
+  "agents:automations": "automationsOpen",
+  "agents:profiles": "profilesOpen",
+  "agents:mcp": "profilesOpen",
+  "system:homelab": "homelabOpen",
+  "system:activity": "auditOpen",
+  "system:usage": "claudeUsageOpen",
+  "system:integrations": "gatewayOpen",
+  "library:knowledge": "kbOpen",
+  "library:journal": "journalOpen",
+};
+
+function only(flag: Flag | null): Record<Flag, boolean> {
+  const flags: Record<Flag, boolean> = { ...ALL_CLOSED };
+  if (flag) flags[flag] = true;
+  return flags;
+}
+
+function show(target: NavTarget, flag: Flag | null) {
+  useNavStore.getState().go(target.hub, target.view);
+  return only(flag);
+}
+
+function link(ref: ItemRef | null) {
+  if (ref) useNavStore.getState().openItem(ref);
+}
+
+export const useUiStore = create<UiState>((set, get) => {
+  const toggle = (flag: PageFlag) => () =>
+    set(get()[flag] ? show(HOME, null) : show(PAGE_TARGET[flag], flag));
+  const setPage = (flag: PageFlag) => (v: boolean) => set(v ? show(PAGE_TARGET[flag], flag) : show(HOME, null));
+  return {
+    ...ALL_CLOSED,
+    online: false,
+    privateRevealed: false,
+    togglePrivate: () => set((s) => ({ privateRevealed: !s.privateRevealed })),
+    hidePrivate: () => set({ privateRevealed: false }),
+    linkedBacklogItem: null,
+    setLinkedBacklogItem: (id) => {
+      link(id ? { kind: "backlog", id } : null);
+      set({ linkedBacklogItem: id });
+    },
+    linkedProject: null,
+    setLinkedProject: (slug) => {
+      link(slug ? { kind: "project", id: slug } : null);
+      set({ linkedProject: slug });
+    },
+    linkedPlan: null,
+    setLinkedPlan: (plan) => {
+      link(plan && { kind: "plan", id: plan.slug, ...(plan.version !== null && { version: plan.version }) });
+      set({ linkedPlan: plan });
+    },
+    linkedDispatchPlan: null,
+    setLinkedDispatchPlan: (plan) => {
+      link(plan ? { kind: "dispatch", id: plan } : null);
+      set({ linkedDispatchPlan: plan });
+    },
+    linkedProfile: null,
+    setLinkedProfile: (name) => {
+      link(name ? { kind: "profile", id: name } : null);
+      set({ linkedProfile: name });
+    },
+    linkItem: (ref) => {
+      const s = get();
+      if (ref.kind === "backlog") s.setLinkedBacklogItem(ref.id);
+      else if (ref.kind === "project") s.setLinkedProject(ref.id);
+      else if (ref.kind === "plan") s.setLinkedPlan({ slug: ref.id, version: ref.version ?? null });
+      else if (ref.kind === "dispatch") s.setLinkedDispatchPlan(ref.id);
+      else if (ref.kind === "profile") s.setLinkedProfile(ref.id);
+    },
+    openView: (target) => {
+      useNavStore.getState().go(target.hub, target.view);
+      const nav = useNavStore.getState();
+      set(only(VIEW_PAGE[`${nav.hub}:${nav.view[nav.hub]}` as ViewKey]));
+    },
+    toggleHistory: toggle("historyOpen"),
+    setHistoryOpen: setPage("historyOpen"),
+    toggleKb: toggle("kbOpen"),
+    setKbOpen: setPage("kbOpen"),
+    toggleSettings: toggle("settingsOpen"),
+    setSettingsOpen: setPage("settingsOpen"),
+    toggleAudit: toggle("auditOpen"),
+    toggleFinance: toggle("financeOpen"),
+    toggleJournal: toggle("journalOpen"),
+    toggleHomelab: toggle("homelabOpen"),
+    toggleGateway: toggle("gatewayOpen"),
+    toggleAutomations: toggle("automationsOpen"),
+    toggleBacklog: toggle("backlogOpen"),
+    toggleProjects: toggle("projectsOpen"),
+    togglePlans: toggle("plansOpen"),
+    toggleApps: toggle("appsOpen"),
+    toggleProfiles: toggle("profilesOpen"),
+    toggleClaudeUsage: toggle("claudeUsageOpen"),
+    toggleMore: () => set(show(HOME, get().moreOpen ? null : "moreOpen")),
+    setMoreOpen: (v) => set(show(HOME, v ? "moreOpen" : null)),
+    closeAll: () => set(show(HOME, null)),
+    setOnline: (v) => set({ online: v }),
+  };
+});
