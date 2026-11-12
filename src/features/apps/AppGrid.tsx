@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import type { Service } from "@/api/homelab";
-import { StatusDot, statusOf } from "@/features/homelab/format";
+import { StatusDot, STATUS_LABEL, statusOf } from "@/features/homelab/format";
 import { launchableApps } from "@/nav/paletteSources";
 import { useUiStore } from "@/store/uiStore";
 import { appsLead } from "./appsLead";
@@ -40,7 +40,7 @@ export function AppGrid({ services }: { services: Service[] }) {
       {groups.map((g) => (
         <section key={g.key} aria-labelledby={`apps-${g.key}`}>
           <h2 id={`apps-${g.key}`} className="flex min-h-7 items-center gap-2 px-1 pb-1 text-meta font-medium text-ink-2">
-            {g.label}
+            {g.label}{" "}
             <span className="font-normal text-muted tabular-nums">{g.apps.length}</span>
           </h2>
           {/* Four columns on phones; from 640px the columns grow with the page. */}
@@ -68,7 +68,7 @@ function AppTile({ service: s }: { service: Service }) {
       href={s.open_url!}
       target="_blank"
       rel="noreferrer"
-      title={s.description}
+      title={`${s.description}${flagged ? ` (${STATUS_LABEL[kind]})` : ""}`}
       aria-label={`Open ${s.name}${state}${local ? ", home only" : ""}`}
       className="flex min-h-24 flex-col items-center gap-1.5 rounded-[14px] px-0.5 pt-2.5 pb-2 text-center text-caption text-ink-2 transition-colors hover:bg-surface hover:text-ink active:bg-surface"
     >
