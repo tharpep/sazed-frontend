@@ -41,7 +41,7 @@ export function MoreLink({ onClick, children, className }: { onClick: () => void
       )}
     >
       {children}
-      <ChevronRight className="size-3.5" aria-hidden="true" />
+      <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
     </button>
   );
 }

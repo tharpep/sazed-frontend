@@ -117,7 +117,7 @@ export function LinkRows({ rows, label }: { rows: LinkRow[]; label: string }): R
               className="flex min-h-11 w-full items-center gap-2.5 px-3.5 py-2 text-left hover:bg-raised"
             >
               <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", r.alert ? "bg-err" : "bg-muted")} />
-              <span className="min-w-0 flex-1 truncate text-meta text-ink">
+              <span className="line-clamp-2 min-w-0 flex-1 text-meta text-ink">
                 <span className="text-muted">{r.label}</span> {r.text}
               </span>
               <ChevronRight className="size-3.5 shrink-0 text-muted" aria-hidden="true" />

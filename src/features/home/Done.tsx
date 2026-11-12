@@ -29,9 +29,9 @@ export function Done({ done, compact, onOpenJob }: Props) {
     >
       {compact ? (
         latest[0] && (
-          <MoreLink onClick={runs} className="ml-[34px] max-sm:my-0">
-            {latest[0].title}
-            {total! > 1 ? ` and ${total! - 1} more in Runs` : ""}
+          <MoreLink onClick={runs} className="ml-[34px] flex max-w-[calc(100%-34px)] max-sm:my-0">
+            <span className="min-w-0 truncate">{latest[0].title}</span>
+            {total! > 1 && <span className="shrink-0 whitespace-nowrap">&nbsp;and {total! - 1} more in Runs</span>}
           </MoreLink>
         )
       ) : (
