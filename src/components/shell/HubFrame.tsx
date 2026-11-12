@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { TitleBar } from "@/components/layout/TitleBar";
 import { startNewChat, startSessionSync, useOpenChatTitle } from "@/features/chat/openSession";
+import { useSystemSummary } from "@/features/homelab/useSystemSummary";
 import { SettingsDialog } from "@/features/settings/SettingsPage";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useRunningCount } from "@/hooks/useRunningCount";
@@ -117,6 +118,7 @@ function PhoneFrame({ children, docked, onSettings }: HubFrameProps & { onSettin
   const [moreOpen, setMoreOpen] = useState(false);
   const running = useRunningCount();
   const chatTitle = useOpenChatTitle();
+  const system = useSystemSummary(moreOpen);
 
   return (
     <>
@@ -129,7 +131,7 @@ function PhoneFrame({ children, docked, onSettings }: HubFrameProps & { onSettin
         onOpenChange={setMoreOpen}
         onSearch={phoneSearch}
         onSettings={onSettings}
-        summaries={{ agents: running > 0 ? `${running} running` : "Nothing running" }}
+        summaries={{ agents: running > 0 ? `${running} running` : "Nothing running", system }}
       />
     </>
   );
