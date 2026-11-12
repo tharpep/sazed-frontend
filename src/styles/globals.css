@@ -201,6 +201,25 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Hub shell frame (plan: console-overhaul, Tokens). Phone sizes from phone.html option D, desktop
+   sizes from shell.html direction D. Used through arbitrary values, e.g. w-(--rail-w). */
+:root {
+  --rail-w: 64px;
+  --title-h: 48px;
+  --phone-head-h: 54px;
+  --bar-h: calc(56px + env(safe-area-inset-bottom));
+  --panel-w: 400px;
+  --tap-min: 44px;
+  --sheet-medium: min(64%, calc(100% - env(safe-area-inset-top) - 72px));
+  --sheet-full: calc(100% - env(safe-area-inset-top) - 10px);
+  --z-bar: 25;
+  --z-panel: 30;
+  --z-reader: 45;
+  --z-sheet: 50;
+  --z-palette: 60;
+  --z-toast: 70;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
