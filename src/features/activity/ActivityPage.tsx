@@ -272,12 +272,13 @@ export function ActivityPage() {
     <Button
       variant="outline"
       size="sm"
-      className={tapClass}
+      className={cn(tapClass, hubs && "min-w-11")}
       onClick={togglePause}
       aria-label={paused ? "Resume live updates" : "Pause live updates"}
     >
       {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
-      {paused ? "Resume" : "Pause"}
+      {/* The hub shell's phone row has room for the icon only. */}
+      <span className={cn(hubs && "max-sm:sr-only")}>{paused ? "Resume" : "Pause"}</span>
       {paused && held.length > 0 && <span className="text-warn">{held.length} new</span>}
     </Button>
   );
