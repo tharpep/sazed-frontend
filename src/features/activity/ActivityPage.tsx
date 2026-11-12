@@ -35,7 +35,9 @@ import { JobSheet } from "@/features/jobs/JobSheet";
 import { KIND_LABEL, STATUS_LABEL, stepsFromEvents } from "@/features/jobs/format";
 import { useChatStore } from "@/store/chatStore";
 import { useSessionStore } from "@/store/sessionStore";
+import { ViewPicker } from "@/components/shell/ViewPicker";
 import { useShellStore } from "@/nav/shellFlag";
+import { useNavStore, useSub, type SubValue } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 import { DayChart } from "./DayChart";
 import { FlowSheet, type FlowTarget } from "./FlowSheet";
@@ -43,7 +45,9 @@ import { CATEGORY_LABEL, categoryOf, dayLabel, iconFor, shortClock, statusTone, 
 import { duration, groupRuns, runSteps, runText, type Run } from "./runs";
 
 type Live = "connecting" | "live" | "reconnecting" | "paused";
-type View = "all" | "needs" | "errors";
+type View = SubValue<"system:activity">;
+
+const VIEW_LABEL: Record<View, string> = { all: "Everything", needs: "Needs you", errors: "Errors" };
 
 const LIVE_KEEP = 2000; // live events kept in memory for open flows
 const SUMMARY_MS = 30_000;
@@ -54,7 +58,11 @@ export function ActivityPage() {
   const [events, setEvents] = useState<ActivityEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<ActivityCategory[]>([]);
-  const [view, setView] = useState<View>("all");
+  const hubs = useShellStore((s) => s.shell) === "hubs";
+  const [oldShellView, setOldShellView] = useState<View>("all");
+  const storedView = useSub("system:activity");
+  const view = hubs ? storedView : oldShellView;
+  const setView = (v: View) => (hubs ? useNavStore.getState().setSub("system:activity", v) : setOldShellView(v));
   const [summary, setSummary] = useState<ActivitySummary | null>(null);
   const [dayEvents, setDayEvents] = useState<ActivityEvent[]>([]);
   const [waitingJobs, setWaitingJobs] = useState<JobSummary[] | null>(null);
@@ -253,46 +261,62 @@ export function ActivityPage() {
   const liveLabel =
     live === "live" ? "Live" : live === "paused" ? "Paused" : live === "reconnecting" ? "Reconnecting" : "Connecting";
 
+  // Phones get 44px targets in the hub shell; the old shell keeps its sizes.
+  const tapClass = hubs ? "h-11 sm:h-7" : undefined;
+  const liveStatus = (
+    <StatusPill tone={liveTone} pulse={live === "live"}>
+      {liveLabel}
+    </StatusPill>
+  );
+  const pauseButton = (
+    <Button
+      variant="outline"
+      size="sm"
+      className={cn(tapClass, hubs && "min-w-11")}
+      onClick={togglePause}
+      aria-label={paused ? "Resume live updates" : "Pause live updates"}
+    >
+      {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
+      {/* The hub shell's phone row has room for the icon only. */}
+      <span className={cn(hubs && "max-sm:sr-only")}>{paused ? "Resume" : "Pause"}</span>
+      {paused && held.length > 0 && <span className="text-warn">{held.length} new</span>}
+    </Button>
+  );
+
   return (
     <Page>
-      <PageHeader
-        title="Activity"
-        status={
-          <StatusPill tone={liveTone} pulse={live === "live"}>
-            {liveLabel}
-          </StatusPill>
-        }
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={togglePause}
-            aria-label={paused ? "Resume live updates" : "Pause live updates"}
-          >
-            {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
-            {paused ? "Resume" : "Pause"}
-            {paused && held.length > 0 && <span className="text-warn">{held.length} new</span>}
-          </Button>
-        }
-      />
+      {!hubs && <PageHeader title="Activity" status={liveStatus} actions={pauseButton} />}
 
       <PageBody>
         {s && <DayChart events={chartEvents} summary={s} />}
 
         <div className="flex flex-wrap items-center gap-2">
-          <Segmented
-            label="Show"
-            options={[
-              { value: "all", label: "Everything" },
-              { value: "needs", label: "Needs you", count: waitingCount },
-              { value: "errors", label: "Errors", count: s?.errors },
-            ]}
-            value={view}
-            onChange={setView}
-          />
+          {hubs ? (
+            <ViewPicker
+              title="Activity"
+              choices={[
+                { id: "all", label: VIEW_LABEL.all },
+                { id: "needs", label: VIEW_LABEL.needs, count: waitingCount || undefined },
+                { id: "errors", label: VIEW_LABEL.errors, count: s?.errors || undefined },
+              ]}
+              value={view}
+              onChange={(id) => setView(id as View)}
+            />
+          ) : (
+            <Segmented
+              label="Show"
+              options={[
+                { value: "all", label: VIEW_LABEL.all },
+                { value: "needs", label: VIEW_LABEL.needs, count: waitingCount },
+                { value: "errors", label: VIEW_LABEL.errors, count: s?.errors },
+              ]}
+              value={view}
+              onChange={setView}
+            />
+          )}
           {view !== "needs" && (
             <DropdownMenu>
-              <DropdownMenuTrigger className={buttonVariants({ variant: "outline", size: "sm" })}>
+              <DropdownMenuTrigger className={buttonVariants({ variant: "outline", size: "sm", className: tapClass })}>
                 {categories.length ? `Type · ${categories.length}` : "Type"}
                 <ChevronDown aria-hidden="true" />
               </DropdownMenuTrigger>
@@ -311,9 +335,15 @@ export function ActivityPage() {
             </DropdownMenu>
           )}
           {view !== "needs" && categories.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => setCategories([])}>
+            <Button variant="ghost" size="sm" className={tapClass} onClick={() => setCategories([])}>
               Clear
             </Button>
+          )}
+          {hubs && (
+            <div className="ml-auto flex items-center gap-2">
+              {liveStatus}
+              {pauseButton}
+            </div>
           )}
         </div>
 

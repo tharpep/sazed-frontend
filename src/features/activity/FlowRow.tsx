@@ -112,7 +112,9 @@ export function FlowRow({ event, depth, bar, offsetMs, focused, onOpenSession }:
       >
         <span className={cn("size-1.5 shrink-0 rounded-full", statusDot(event.status))} aria-hidden="true" />
         <Icon className={cn("size-3.5 shrink-0", statusTone(event.status))} aria-hidden="true" />
-        <span className="min-w-0 flex-1 truncate text-xs text-ink">{event.title}</span>
+        <span title={event.title} className="min-w-0 flex-1 truncate text-xs text-ink">
+          {event.title}
+        </span>
         <span className="hidden w-24 shrink-0 sm:block" aria-hidden="true">
           <span className="relative block h-1.5 rounded-full bg-surface">
             <span

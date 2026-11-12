@@ -1,8 +1,9 @@
 import { create } from "zustand";
 
-import type { Service } from "@/api/homelab";
-import { statusOf } from "@/features/homelab/format";
+import { fetchServices, type Service } from "@/api/homelab";
+import { statusOf, visibleServices } from "@/features/homelab/format";
 import type { ItemKind, ItemRef } from "@/store/navStore";
+import { useUiStore } from "@/store/uiStore";
 import { HUBS } from "./hubs";
 import type { HubId, NavTarget } from "./hubViews";
 import type { ShellKind } from "./shellFlag";
@@ -147,7 +148,7 @@ interface Sources {
 
 /** Every entry in display order: Recent, Hubs, Apps, Views, Items, Actions. */
 export function buildEntries({ recent, services, privateRevealed, items, theme, shell }: Sources): PaletteEntry[] {
-  const entries: PaletteEntry[] = recent.map((ref) =>
+  const entries: PaletteEntry[] = shownRecent(recent, services, privateRevealed).map((ref) =>
     itemEntry("Recent", { ref, label: ref.id, hint: refHint(ref) })
   );
   for (const hub of HUBS) {
@@ -223,3 +224,23 @@ export function rankEntries(entries: PaletteEntry[], query: string): PaletteEntr
     .sort((a, b) => a.score - b.score || a.rank - b.rank || a.index - b.index)
     .map((r) => r.entry);
 }
+
+/** Recent items minus services Pryce may not see now: until private services are revealed, a
+ * service stays out unless the loaded list shows it is not private. */
+function shownRecent(recent: ItemRef[], services: Service[], privateRevealed: boolean): ItemRef[] {
+  if (privateRevealed) return recent;
+  const visible = new Set(visibleServices(services, false).map((s) => s.id));
+  return recent.filter((ref) => ref.kind !== "service" || visible.has(ref.id));
+}
+
+/** Homelab services as items that open their detail, private ones hidden as in launchableApps. */
+export function serviceItems(services: Service[], privateRevealed: boolean): PaletteItem[] {
+  return visibleServices(services, privateRevealed)
+    .map((s) => {
+      const kind = statusOf(s);
+      const hint = kind === "down" ? "Service · down" : kind === "maintenance" ? "Service · in maintenance" : "Service";
+      return { ref: { kind: "service", id: s.id }, label: s.name, hint };
+    });
+}
+
+itemProviders.push(async () => serviceItems((await fetchServices()).services, useUiStore.getState().privateRevealed));

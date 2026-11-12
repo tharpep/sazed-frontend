@@ -25,6 +25,8 @@ interface ViewPickerProps {
 export function ViewPicker({ title, prefix = "Show", choices, value, onChange }: ViewPickerProps) {
   const [open, setOpen] = useState(false);
   const current = choices.find((c) => c.id === value) ?? choices[0];
+  // The name starts with the visible text (WCAG 2.5.3, label in name), then says what it changes.
+  const visible = [prefix, current.label, current.count].filter((part) => part !== undefined).join(" ");
 
   function pick(id: string) {
     onChange(id);
@@ -37,7 +39,7 @@ export function ViewPicker({ title, prefix = "Show", choices, value, onChange }:
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        aria-label={`${title}: ${current.label}. Change`}
+        aria-label={`${visible}, ${title}`}
         className="inline-flex min-h-11 flex-none items-center gap-1.5 whitespace-nowrap rounded-[9px] border border-line bg-surface px-3 text-body text-ink transition-colors hover:bg-raised"
       >
         <span className="text-muted">{prefix}</span>

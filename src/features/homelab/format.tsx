@@ -12,6 +12,24 @@ export function statusOf(s: Service): StatusKind {
   return "unknown";
 }
 
+/** Private services (the gateway's homelab-only registry file) stay out of sight until revealed on
+ * Home. */
+export function visibleServices(services: Service[], privateRevealed: boolean): Service[] {
+  return services.filter((s) => privateRevealed || !s.private);
+}
+
+/** The open service, shown only while it is in the visible list. `stale` once a loaded list lacks
+ * it (removed, or private and hidden again), so the caller drops it instead of it reopening later. */
+export function selectedService(
+  services: Service[] | null,
+  id: string | null,
+  privateRevealed: boolean
+): { service: Service | null; stale: boolean } {
+  if (id === null || services === null) return { service: null, stale: false };
+  const service = visibleServices(services, privateRevealed).find((s) => s.id === id) ?? null;
+  return { service, stale: service === null };
+}
+
 export const STATUS_LABEL: Record<StatusKind, string> = {
   up: "Up",
   down: "Down",

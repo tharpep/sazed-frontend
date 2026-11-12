@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/useIsMobile";
-import { cn } from "@/lib/utils";
+import { DetailPanel } from "@/components/shell/DetailPanel";
 import { getActivityEvent, getFlow, type ActivityEvent, type ActivityFlow, type StepEvent } from "@/api/activity";
 import { errorText } from "@/api/homelab";
 import { stepsFromEvents } from "@/features/jobs/format";
@@ -52,33 +50,47 @@ function depthOf(e: ActivityEvent, rootTrace: string): number {
 }
 
 export function FlowSheet({ target, liveEvents, liveSteps, onClose, onOpenSession }: Props) {
-  const isMobile = useIsMobile();
   const [flow, setFlow] = useState<ActivityFlow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openSegments, setOpenSegments] = useState<Set<number>>(new Set());
   const [openSteps, setOpenSteps] = useState<Set<string>>(new Set());
   const [, setTick] = useState(0); // re-renders running bars against "now"
 
+  // Reset in the same render the target changes, so nothing of the last flow paints under the new
+  // one (or opens its session).
+  const [stateFor, setStateFor] = useState(target);
+  if (stateFor !== target) {
+    setStateFor(target);
+    setFlow(null);
+    setError(null);
+    setOpenSegments(new Set());
+    setOpenSteps(new Set());
+  }
+
+  // From 1180px the panel is inline and the list stays clickable, so a slow answer for the last run
+  // can land after another run was picked; only the latest request may set state.
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
     if (!target) return;
+    const seq = ++loadSeq.current;
     try {
-      if (target.trace && !target.trace.startsWith("gw:")) {
-        setFlow(await getFlow(target.trace));
-      } else {
-        const e = await getActivityEvent(target.focusId);
-        setFlow({ trace: target.trace ?? "", traces: [], events: [e], steps: {} });
-      }
+      const next: ActivityFlow =
+        target.trace && !target.trace.startsWith("gw:")
+          ? await getFlow(target.trace)
+          : { trace: target.trace ?? "", traces: [], events: [await getActivityEvent(target.focusId)], steps: {} };
+      if (seq !== loadSeq.current) return;
+      setFlow(next);
       setError(null);
     } catch (err) {
-      setError(errorText(err));
+      if (seq === loadSeq.current) setError(errorText(err));
     }
   }, [target]);
 
   useEffect(() => {
-    setFlow(null);
-    setOpenSegments(new Set());
-    setOpenSteps(new Set());
     load();
+    return () => {
+      loadSeq.current++;
+    };
   }, [load]);
 
   // Live: refetch (debounced) when an event lands in this flow, or one that may link to it.
@@ -190,58 +202,61 @@ export function FlowSheet({ target, liveEvents, liveSteps, onClose, onOpenSessio
   }
 
   return (
-    <Sheet open={target !== null} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side={isMobile ? "bottom" : "right"} className={cn("gap-0", isMobile ? "max-h-[90dvh]" : "w-full sm:max-w-2xl")}>
-        <SheetHeader className="border-b border-border">
-          <SheetTitle className="line-clamp-2 pr-8 text-base">{title}</SheetTitle>
-          {events.length > 0 && (
-            <p className="text-xs text-muted">
-              {[
-                clock(new Date(start).toISOString()),
-                running ? `running ${ms(Date.now() - start)}` : ms(end - start),
-                `${events.length} events`,
-                cost > 0 ? usd(cost) : "",
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-              {errors > 0 && <span className="text-destructive"> · {errors} failed</span>}
-            </p>
-          )}
-        </SheetHeader>
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          {!flow && !error && <p className="text-sm text-muted">Loading…</p>}
-          {session && (
-            <button
-              type="button"
-              onClick={() => onOpenSession(session)}
-              className="self-start text-xs text-primary hover:underline"
-            >
-              Open the conversation in chat
-            </button>
-          )}
-          {segments.map((seg, i) => {
-            const isOpen = openSegments.has(i) !== (i === defaultOpen);
-            if (!seg.header) return <ul key={i} className="flex flex-col">{seg.events.map(renderEvent)}</ul>;
-            return (
-              <section key={i} className="flex flex-col rounded-lg border border-border">
-                <button
-                  type="button"
-                  onClick={() => toggle(openSegments, i, setOpenSegments)}
-                  className="flex items-center gap-2 px-2 py-1.5 text-left hover:bg-surface"
-                >
-                  {isOpen ? <ChevronDown className="size-3.5 text-muted" /> : <ChevronRight className="size-3.5 text-muted" />}
-                  <span className="min-w-0 flex-1 truncate text-xs text-ink">{seg.header.title}</span>
-                  <span className="shrink-0 text-[11px] text-muted">
-                    {clock(seg.header.at)} · {seg.events.length} events
-                  </span>
-                </button>
-                {isOpen && <ul className="flex flex-col px-1 pb-1">{[seg.header, ...seg.events].map(renderEvent)}</ul>}
-              </section>
-            );
-          })}
-        </div>
-      </SheetContent>
-    </Sheet>
+    <DetailPanel
+      open={target !== null}
+      onClose={onClose}
+      title={<span className="line-clamp-2">{title}</span>}
+      description={
+        events.length > 0 && (
+          <>
+            {[
+              clock(new Date(start).toISOString()),
+              running ? `running ${ms(Date.now() - start)}` : ms(end - start),
+              `${events.length} events`,
+              cost > 0 ? usd(cost) : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            {errors > 0 && <span className="text-destructive"> · {errors} failed</span>}
+          </>
+        )
+      }
+    >
+      <div className="-mx-1.5 flex flex-col gap-3">
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {!flow && !error && <p className="text-sm text-muted">Loading…</p>}
+        {session && (
+          <button
+            type="button"
+            onClick={() => onOpenSession(session)}
+            className="self-start text-xs text-primary hover:underline"
+          >
+            Open the conversation in chat
+          </button>
+        )}
+        {segments.map((seg, i) => {
+          const isOpen = openSegments.has(i) !== (i === defaultOpen);
+          if (!seg.header) return <ul key={i} className="flex flex-col">{seg.events.map(renderEvent)}</ul>;
+          return (
+            <section key={i} className="flex flex-col rounded-lg border border-border">
+              <button
+                type="button"
+                onClick={() => toggle(openSegments, i, setOpenSegments)}
+                className="flex items-center gap-2 px-2 py-1.5 text-left hover:bg-surface"
+              >
+                {isOpen ? <ChevronDown className="size-3.5 text-muted" /> : <ChevronRight className="size-3.5 text-muted" />}
+                <span title={seg.header.title} className="min-w-0 flex-1 truncate text-xs text-ink">
+                  {seg.header.title}
+                </span>
+                <span className="shrink-0 text-[11px] text-muted">
+                  {clock(seg.header.at)} · {seg.events.length} events
+                </span>
+              </button>
+              {isOpen && <ul className="flex flex-col px-1 pb-1">{[seg.header, ...seg.events].map(renderEvent)}</ul>}
+            </section>
+          );
+        })}
+      </div>
+    </DetailPanel>
   );
 }

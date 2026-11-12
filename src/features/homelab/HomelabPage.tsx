@@ -13,36 +13,49 @@ import {
   type ServiceGroup,
   type ServicesResponse,
 } from "@/api/homelab";
+import { ViewPicker } from "@/components/shell/ViewPicker";
+import { useShellStore } from "@/nav/shellFlag";
+import { SUB_CHOICES, useNavStore, useSub, type SubValue } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 import { DependenciesView } from "./DependenciesView";
 import { MapView } from "./MapView";
 import { ServiceSheet } from "./ServiceSheet";
 import { StorageCard } from "./StorageCard";
-import { StatusDot, age, gib, pct, statusLine, statusOf, uptime } from "./format";
+import { StatusDot, age, gib, pct, selectedService, statusLine, statusOf, uptime, visibleServices } from "./format";
 
 const REFRESH_MS = 30_000; // the gateway polls every 60s; 30s keeps the page within one cycle
-const VIEW_KEY = "sazed-homelab-view";
 
-const VIEWS = { map: "Map", links: "Links", list: "List", storage: "Storage" } as const;
-type View = keyof typeof VIEWS;
+type View = SubValue<"system:homelab">;
 
-/** Open the Homelab page on a given tab (Home's glance tiles): it starts on the remembered one. */
+const VIEW_LABEL: Record<View, string> = { map: "Map", list: "List", storage: "Storage", links: "Links" };
+const VIEW_HINT: Record<View, string> = {
+  map: "Services as a graph",
+  list: "Every service with its health",
+  storage: "Pools and space for media",
+  links: "What depends on what",
+};
+// The old shell's segmented control keeps its order until slice 13 deletes that shell.
+const OLD_SHELL_ORDER: View[] = ["map", "links", "list", "storage"];
+
+/** Open the Homelab page on a given view (Home's glance tiles): it starts on the stored one. */
 export function rememberHomelabView(v: View) {
-  try {
-    localStorage.setItem(VIEW_KEY, v);
-  } catch {
-    // private mode: the page just opens on its default
-  }
+  useNavStore.getState().setSub("system:homelab", v);
 }
 
-function savedView(): View {
-  try {
-    const v = localStorage.getItem(VIEW_KEY);
-    return v && v in VIEWS ? (v as View) : "map";
-  } catch {
-    return "map";
-  }
+function clearOpenService() {
+  useNavStore.setState((s) => {
+    if (s.open.system?.kind !== "service") return {};
+    const open = { ...s.open };
+    delete open.system;
+    return { open };
+  });
 }
+
+// A service the hub shell left open must not pop up on the old shell's next Homelab visit; the old
+// shell takes a stored service only from a palette pick made while it is the shell.
+useShellStore.subscribe((s, prev) => {
+  if (s.shell === "old" && prev.shell !== "old") clearOpenService();
+});
 
 const GROUPS: { key: ServiceGroup; label: string }[] = [
   { key: "sazed", label: "Sazed" },
@@ -58,20 +71,30 @@ export function HomelabPage() {
   const [host, setHost] = useState<HostStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [view, setView] = useState<View>(savedView);
+  const view = useSub("system:homelab");
   const [map, setMap] = useState<ArchMap | null>(null);
   const privateRevealed = useUiStore((s) => s.privateRevealed);
+  const hubs = useShellStore((s) => s.shell) === "hubs";
+  const navOpen = useNavStore((s) => s.open.system);
+  const [oldShellId, setOldShellId] = useState<string | null>(null);
 
   function chooseView(v: View) {
-    setView(v);
-    try {
-      localStorage.setItem(VIEW_KEY, v);
-    } catch {
-      // private mode: the choice just isn't remembered
-    }
+    useNavStore.getState().setSub("system:homelab", v);
   }
+
+  // The hub shell keeps the open service in navStore, so it is still open when Pryce comes back to
+  // System. The old shell drops it on leaving the page, as before; it only takes the palette's
+  // pick from the store (the module-level subscription below clears anything the hub shell left).
+  useEffect(() => {
+    if (hubs || navOpen?.kind !== "service") return;
+    setOldShellId(navOpen.id);
+    clearOpenService();
+  }, [hubs, navOpen]);
+  const selectedId = hubs ? (navOpen?.kind === "service" ? navOpen.id : null) : oldShellId;
+  const openService = (id: string) =>
+    hubs ? useNavStore.getState().openItem({ kind: "service", id }) : setOldShellId(id);
+  const closeService = () => (hubs ? clearOpenService() : setOldShellId(null));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -108,12 +131,7 @@ export function HomelabPage() {
     };
   }, [load]);
 
-  // Private services (the gateway's homelab-only registry file) stay out of sight until revealed
-  // on Home, here as everywhere.
-  const shown = useMemo(
-    () => (data?.services ?? []).filter((s) => privateRevealed || !s.private),
-    [data, privateRevealed]
-  );
+  const shown = useMemo(() => visibleServices(data?.services ?? [], privateRevealed), [data, privateRevealed]);
   const shownMap = useMemo(
     () =>
       map && !privateRevealed
@@ -136,48 +154,72 @@ export function HomelabPage() {
 
   const down = shown.filter((s) => statusOf(s) === "down");
   const checked = shown.filter((s) => s.lifecycle !== "planned").length;
-  const selected = data?.services.find((s) => s.id === selectedId) ?? null;
+  const { service: selected, stale } = selectedService(data?.services ?? null, selectedId, privateRevealed);
+  useEffect(() => {
+    if (stale) closeService();
+  }, [stale]);
+
+  const refresh = (
+    <button
+      type="button"
+      onClick={load}
+      disabled={loading}
+      aria-label="Refresh"
+      title="Refresh"
+      className={cn(
+        "flex items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50",
+        hubs ? "size-11 flex-none sm:size-9" : "size-9"
+      )}
+    >
+      <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
+    </button>
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg">
-      <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div className="flex items-center gap-3">
-          <h1 className="text-base font-semibold text-ink">Homelab</h1>
-          <div role="tablist" aria-label="View" className="flex gap-1 rounded-md bg-surface p-0.5">
-            {(Object.keys(VIEWS) as View[]).map((v) => (
-              <button
-                key={v}
-                type="button"
-                role="tab"
-                aria-selected={view === v}
-                onClick={() => chooseView(v)}
-                className={cn(
-                  "rounded px-2.5 py-0.5 text-sm transition-colors",
-                  view === v ? "bg-bg font-medium text-ink shadow-sm" : "text-muted hover:text-ink"
-                )}
-              >
-                {VIEWS[v]}
-              </button>
-            ))}
+      {!hubs && (
+        <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+          <div className="flex items-center gap-3">
+            <h1 className="text-base font-semibold text-ink">Homelab</h1>
+            <div role="tablist" aria-label="View" className="flex gap-1 rounded-md bg-surface p-0.5">
+              {OLD_SHELL_ORDER.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === v}
+                  onClick={() => chooseView(v)}
+                  className={cn(
+                    "rounded px-2.5 py-0.5 text-sm transition-colors",
+                    view === v ? "bg-bg font-medium text-ink shadow-sm" : "text-muted hover:text-ink"
+                  )}
+                >
+                  {VIEW_LABEL[v]}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <button
-          type="button"
-          onClick={load}
-          disabled={loading}
-          aria-label="Refresh"
-          title="Refresh"
-          className="flex size-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
-        </button>
-      </header>
+          {refresh}
+        </header>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className={cn("mx-auto flex w-full flex-col gap-5 px-4 py-4 pb-8", view === "map" || view === "links" ? "max-w-3xl" : "max-w-2xl")}>
-          {view === "map" && shownMap && <MapView map={shownMap} onOpenService={setSelectedId} />}
+          {hubs && (
+            <div className="-mb-2 flex min-w-0 items-center gap-2">
+              <ViewPicker
+                title="Homelab"
+                choices={SUB_CHOICES["system:homelab"].map((v) => ({ id: v, label: VIEW_LABEL[v], hint: VIEW_HINT[v] }))}
+                value={view}
+                onChange={(id) => chooseView(id as View)}
+              />
+              <span className="flex-1" />
+              {refresh}
+            </div>
+          )}
+          {view === "map" && shownMap && <MapView map={shownMap} onOpenService={openService} />}
           {view === "map" && !map && !error && <p className="text-sm text-muted">Loading the map…</p>}
-          {view === "links" && data && <DependenciesView services={shown} onOpenService={setSelectedId} />}
+          {view === "links" && data && <DependenciesView services={shown} onOpenService={openService} />}
           {view === "storage" && <StorageCard full />}
           {view !== "storage" && error && !data && (
             <p className="text-sm text-destructive">Couldn't load services: {error}</p>
@@ -227,7 +269,7 @@ export function HomelabPage() {
               </h2>
               <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
                 {group.services.map((s) => (
-                  <ServiceRow key={s.id} service={s} now={now} onOpen={() => setSelectedId(s.id)} />
+                  <ServiceRow key={s.id} service={s} now={now} onOpen={() => openService(s.id)} />
                 ))}
               </ul>
             </section>
@@ -238,7 +280,7 @@ export function HomelabPage() {
       <ServiceSheet
         service={selected}
         allServices={data?.services ?? []}
-        onClose={() => setSelectedId(null)}
+        onClose={closeService}
         onChanged={load}
       />
     </div>
