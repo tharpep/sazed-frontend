@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ExternalLink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -54,12 +54,34 @@ export function ServiceSheet({ service, allServices, onClose, onChanged }: Props
   const id = service?.id ?? null;
   const vmid = service?.container ?? null;
 
+  // Inline from 1180px, the list stays clickable, so the panel can move to another service while
+  // a request for the last one is still in flight. Results apply only to the service still shown.
+  const shownId = useRef(id);
+  const loadSeq = useRef(0);
+  useLayoutEffect(() => {
+    shownId.current = id;
+  }, [id]);
+
+  // Reset in the same render the service changes, so nothing of the last one paints under the new title.
+  const [stateFor, setStateFor] = useState(id);
+  if (stateFor !== id) {
+    setStateFor(id);
+    setDetail(null);
+    setContainer(null);
+    setNotes("");
+    setBusy(false);
+    setMessage(null);
+    setConfirmRestart(false);
+  }
+
   const loadDetail = useCallback(async () => {
     if (!id) return;
+    const seq = ++loadSeq.current;
     const [d, c] = await Promise.allSettled([
       fetchService(id),
       vmid != null ? fetchContainer(vmid) : Promise.resolve(null),
     ]);
+    if (seq !== loadSeq.current || shownId.current !== id) return;
     if (d.status === "fulfilled") {
       setDetail(d.value);
       setNotes(d.value.state?.notes ?? "");
@@ -68,24 +90,23 @@ export function ServiceSheet({ service, allServices, onClose, onChanged }: Props
   }, [id, vmid]);
 
   useEffect(() => {
-    setDetail(null);
-    setContainer(null);
-    setMessage(null);
     loadDetail();
   }, [loadDetail]);
 
   async function run(label: string, action: () => Promise<unknown>) {
+    const isShown = () => shownId.current === id;
     setBusy(true);
     setMessage(null);
     try {
       await action();
-      setMessage({ text: label, error: false });
       onChanged();
+      if (!isShown()) return;
+      setMessage({ text: label, error: false });
       await loadDetail();
     } catch (err) {
-      setMessage({ text: errorText(err), error: true });
+      if (isShown()) setMessage({ text: errorText(err), error: true });
     } finally {
-      setBusy(false);
+      if (isShown()) setBusy(false);
     }
   }
 

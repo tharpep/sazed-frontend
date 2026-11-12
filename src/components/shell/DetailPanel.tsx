@@ -51,6 +51,9 @@ export function DetailPanel({ open, title, description, onClose, footer, childre
   const [dragY, setDragY] = useState<number | null>(null);
   const drag = useRef<{ startY: number; moved: boolean } | null>(null);
   const lastDragAt = useRef(0);
+  // Footer actions sit in the thumb zone; a double tap on a list row must not land on them while
+  // the panel slides in.
+  const [settled, setSettled] = useState(false);
 
   // Inline means a sibling of the page panel: the shell's row that holds <main>, so the page
   // narrows instead of being covered.
@@ -58,11 +61,24 @@ export function DetailPanel({ open, title, description, onClose, footer, childre
     setRow(anchorRef.current?.closest("main")?.parentElement ?? null);
   }, []);
 
-  useEffect(() => {
-    if (!open) setFull(false);
-  }, [open]);
-
   const mode: Mode = isMobile ? "sheet" : wide && row ? "inline" : "overlay";
+
+  // The grabber goes away on close or a mode change, possibly mid-drag, so its end event may never
+  // come; a leftover offset would show on the next open with no slide-in.
+  useEffect(() => {
+    if (open && mode === "sheet") return;
+    drag.current = null;
+    setDragY(null);
+    if (!open) {
+      setFull(false);
+      setSettled(false);
+    }
+  }, [open, mode]);
+
+  function cancelDrag() {
+    drag.current = null;
+    setDragY(null);
+  }
 
   function onGrabDown(e: PointerEvent<HTMLButtonElement>) {
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -105,7 +121,7 @@ export function DetailPanel({ open, title, description, onClose, footer, childre
       dragY !== null && "transition-none"
     ),
     overlay: cn(
-      "fixed inset-y-0 right-0 z-30 w-[min(400px,100%)] border-l border-line shadow-lg",
+      "fixed inset-y-0 right-0 z-30 w-[min(400px,100%)] border-l border-line pr-[env(safe-area-inset-right)] shadow-lg",
       "transition-transform duration-[180ms] ease-out",
       "data-starting-style:translate-x-full data-ending-style:translate-x-full"
     ),
@@ -127,6 +143,7 @@ export function DetailPanel({ open, title, description, onClose, footer, childre
       <Dialog.Root
         open={open}
         onOpenChange={(next) => !next && onClose()}
+        onOpenChangeComplete={(isOpen) => setSettled(isOpen)}
         modal={mode !== "inline"}
         disablePointerDismissal={mode === "inline"}
       >
@@ -161,7 +178,7 @@ export function DetailPanel({ open, title, description, onClose, footer, childre
                 onPointerDown={onGrabDown}
                 onPointerMove={onGrabMove}
                 onPointerUp={onGrabEnd}
-                onPointerCancel={onGrabEnd}
+                onPointerCancel={cancelDrag}
                 onClick={onGrabClick}
                 className="relative z-10 -mb-[18px] grid h-11 w-full shrink-0 touch-none place-items-center outline-none focus-visible:[&>i]:bg-ink-2"
               >
@@ -205,9 +222,15 @@ export function DetailPanel({ open, title, description, onClose, footer, childre
 
             {footer && (
               <footer
+                data-settled={settled || undefined}
                 className={cn(
                   "flex shrink-0 flex-wrap gap-2 border-t border-line bg-bg",
-                  mode === "sheet" ? "px-3.5 pt-2.5 pb-[calc(12px+env(safe-area-inset-bottom))]" : "px-[18px] py-3"
+                  !settled && "pointer-events-none motion-reduce:pointer-events-auto",
+                  {
+                    sheet: "px-3.5 pt-2.5 pb-[calc(12px+env(safe-area-inset-bottom))]",
+                    overlay: "px-[18px] pt-3 pb-[calc(12px+env(safe-area-inset-bottom))]",
+                    inline: "px-[18px] py-3",
+                  }[mode]
                 )}
               >
                 {footer}
