@@ -1,10 +1,8 @@
-import { useEffect, useState, type ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  ArrowLeft,
   BookOpen,
   Library,
-  MessageSquarePlus,
   MessagesSquare,
   House,
   Activity,
@@ -21,8 +19,8 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ConversationDrillDown, ConversationList, useConversationList } from "@/features/chat/ConversationList";
 import { useWaitingCount } from "@/hooks/useWaitingCount";
 import { useUiStore } from "@/store/uiStore";
 import { useSessionStore } from "@/store/sessionStore";
@@ -114,10 +112,7 @@ export function Sidebar() {
   const toggleSettings = useUiStore((s) => s.toggleSettings);
   const setHistoryOpen = useUiStore((s) => s.setHistoryOpen);
 
-  const sessions = useSessionStore((s) => s.sessions);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
-  const sessionsError = useSessionStore((s) => s.sessionsError);
-  const loadSessions = useSessionStore((s) => s.loadSessions);
   const selectSession = useSessionStore((s) => s.selectSession);
   const loadSession = useChatStore((s) => s.loadSession);
   const newSession = useChatStore((s) => s.newSession);
@@ -128,22 +123,7 @@ export function Sidebar() {
     !historyOpen && !journalOpen && !kbOpen && !homelabOpen && !gatewayOpen && !automationsOpen && !backlogOpen && !projectsOpen && !plansOpen && !appsOpen && !profilesOpen && !claudeUsageOpen && !auditOpen && !settingsOpen;
 
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!historyOpen) return;
-    setLoading(true);
-    loadSessions().finally(() => setLoading(false));
-  }, [historyOpen, loadSessions]);
-
-  const filtered = query.trim()
-    ? sessions.filter((s) => s.title.toLowerCase().includes(query.toLowerCase()))
-    : sessions;
-
-  const grouped = filtered.reduce<Record<string, typeof sessions>>((acc, s) => {
-    (acc[s.dateGroup] ??= []).push(s);
-    return acc;
-  }, {});
+  const data = useConversationList(historyOpen, query);
 
   function handleNewChat() {
     newSession();
@@ -154,6 +134,14 @@ export function Sidebar() {
     selectSession(id);
     loadSession(id);
   }
+
+  const list = {
+    data,
+    query,
+    onQuery: setQuery,
+    activeId: activeSessionId,
+    onSelect: handleSelectSession,
+  };
 
   return (
     <>
@@ -211,130 +199,19 @@ export function Sidebar() {
                 <div className="flex items-center justify-between px-3 pt-3 pb-2">
                   <h2 className="text-sm font-medium tracking-wide text-ink">Conversations</h2>
                 </div>
-                <div className="px-3 pb-2">
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search conversations…"
-                    className="w-full rounded-md border border-border bg-bg px-2.5 py-1.5 text-sm text-ink placeholder:text-muted outline-none focus-visible:border-primary"
-                  />
-                </div>
-                {sessionsError && (
-                  <p className="px-3 pb-2 text-xs text-destructive">{sessionsError}</p>
-                )}
-                <ScrollArea className="flex-1 px-2">
-                  {loading && sessions.length === 0 ? (
-                    <div className="space-y-2 px-1 py-1">
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="h-9 animate-pulse rounded-md bg-surface" />
-                      ))}
-                    </div>
-                  ) : (
-                    Object.entries(grouped).map(([groupName, groupSessions]) => (
-                      <div key={groupName} className="mb-2">
-                        <div className="px-1.5 py-1 text-xs font-medium tracking-wide text-muted">
-                          {groupName}
-                        </div>
-                        {groupSessions.map((s) => (
-                          <button
-                            key={s.id}
-                            type="button"
-                            onClick={() => handleSelectSession(s.id)}
-                            className={cn(
-                              "flex w-full flex-col items-start rounded-md px-2 py-1.5 text-left transition-colors hover:bg-bg",
-                              s.id === activeSessionId && "bg-bg"
-                            )}
-                          >
-                            <span className="w-full truncate text-sm text-ink">{s.title}</span>
-                            <span className="text-xs text-muted">{s.time}</span>
-                          </button>
-                        ))}
-                      </div>
-                    ))
-                  )}
-                </ScrollArea>
+                <ConversationList variant="panel" {...list} />
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Phone: conversation history drills into a full screen, same
-          list-then-editor pattern JournalPage uses, rather than sharing
-          width with the transcript. */}
-      <div
-        className={cn(
-          // Fixed to the viewport, so it skips AppShell's safe-area padding and needs its own
-          // (status bar / Dynamic Island on top, home indicator below).
-          "fixed inset-0 z-40 flex-col bg-bg pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] sm:hidden",
-          historyOpen ? "flex" : "hidden"
-        )}
-      >
-        <div className="flex items-center gap-2 border-b border-border px-3 py-3">
-          <button
-            type="button"
-            onClick={() => setHistoryOpen(false)}
-            aria-label="Back"
-            className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-          </button>
-          <h2 className="flex-1 text-sm font-medium text-ink">Conversations</h2>
-          <button
-            type="button"
-            onClick={handleNewChat}
-            aria-label="New chat"
-            className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink"
-          >
-            <MessageSquarePlus className="size-4" aria-hidden="true" />
-          </button>
-        </div>
-        <div className="px-3 py-2">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search conversations…"
-            className="w-full rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-ink placeholder:text-muted outline-none focus-visible:border-primary"
-          />
-        </div>
-        {sessionsError && <p className="px-3 pb-2 text-xs text-destructive">{sessionsError}</p>}
-        <ScrollArea className="min-h-0 flex-1 px-2">
-          {loading && sessions.length === 0 ? (
-            <div className="space-y-2 px-1 py-1">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-12 animate-pulse rounded-md bg-surface" />
-              ))}
-            </div>
-          ) : (
-            Object.entries(grouped).map(([groupName, groupSessions]) => (
-              <div key={groupName} className="mb-2">
-                <div className="px-1.5 py-1 text-xs font-medium tracking-wide text-muted">
-                  {groupName}
-                </div>
-                {groupSessions.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => {
-                      handleSelectSession(s.id);
-                      setHistoryOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full flex-col items-start gap-0.5 rounded-md px-2.5 py-2.5 text-left transition-colors hover:bg-surface",
-                      s.id === activeSessionId && "bg-surface"
-                    )}
-                  >
-                    <span className="w-full truncate text-sm text-ink">{s.title}</span>
-                    <span className="text-xs text-muted">{s.time}</span>
-                  </button>
-                ))}
-              </div>
-            ))
-          )}
-        </ScrollArea>
-      </div>
+      <ConversationDrillDown
+        open={historyOpen}
+        onBack={() => setHistoryOpen(false)}
+        onNewChat={handleNewChat}
+        {...list}
+      />
     </>
   );
 }

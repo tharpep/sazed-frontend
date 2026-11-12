@@ -24,10 +24,7 @@ import {
   type AutomationInput,
 } from "@/api/automations";
 import { errorText } from "@/api/homelab";
-import { useChatStore } from "@/store/chatStore";
-import { useSessionStore } from "@/store/sessionStore";
-import { useShellStore } from "@/nav/shellFlag";
-import { useUiStore } from "@/store/uiStore";
+import { openSession } from "@/features/chat/openSession";
 import { RunHistory } from "./RunHistory";
 import { TIMEZONES, describeCron, shortWhen } from "./format";
 
@@ -133,13 +130,6 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
     } finally {
       setBusy(false);
     }
-  }
-
-  function openSession(sessionId: string) {
-    useSessionStore.getState().selectSession(sessionId);
-    useChatStore.getState().loadSession(sessionId);
-    // selectSession has already moved the hub shell to Chat; closeAll would send it back Home.
-    if (useShellStore.getState().shell === "old") useUiStore.getState().closeAll();
   }
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { MessageSquarePlus, X } from "lucide-react";
 import { AppShell } from "./components/layout/AppShell";
 import { HubContent } from "./components/shell/HubContent";
+import { ChatHub } from "./features/chat/ChatHub";
 import { Composer } from "./features/chat/Composer";
 import { askFromHome } from "./features/home/homeNav";
 import { useIsMobile } from "./hooks/useIsMobile";
@@ -98,10 +99,9 @@ function App() {
   );
 
   if (shell === "hubs") {
-    // The conversation list still lives inside the old Sidebar, so both Chat views show the
-    // conversation until it moves out.
-    const pageView = hub === "chat" ? "conversation" : view;
-    const HubPage = viewDef(hub, pageView).component;
+    // The registry's chat views are the old shell's MessageList; the hub shell's Chat is one page
+    // that shows the list, the conversation or both.
+    const HubPage = hub === "chat" ? ChatHub : viewDef(hub, view).component;
     // On desktop Home's ask field sits in the page's left column instead.
     const docked = ((hub === "home" && isMobile) || hub === "chat") && (
       <Composer

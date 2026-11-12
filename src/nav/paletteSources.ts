@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { fetchServices, type Service } from "@/api/homelab";
+import { conversationItems } from "@/features/chat/openSession";
 import { statusOf, visibleServices } from "@/features/homelab/format";
 import type { ItemKind, ItemRef } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
@@ -244,3 +245,5 @@ export function serviceItems(services: Service[], privateRevealed: boolean): Pal
 }
 
 itemProviders.push(async () => serviceItems((await fetchServices()).services, useUiStore.getState().privateRevealed));
+
+itemProviders.push(conversationItems);
