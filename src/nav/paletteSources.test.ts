@@ -153,3 +153,38 @@ describe("rankEntries", () => {
     expect(all).not.toContain("Conversation");
   });
 });
+
+describe("recent conversations", () => {
+  const SESSION = "3f2a9c1e-0000-4000-8000-000000000001";
+  const UNLISTED = "3f2a9c1e-0000-4000-8000-000000000002";
+  const titled: PaletteItem = { ref: { kind: "session", id: SESSION }, label: "Seerr request", hint: "Conversation · 9:41 AM" };
+  const recentOf = (shell: "old" | "hubs") =>
+    buildEntries({
+      recent: [
+        { kind: "session", id: SESSION },
+        { kind: "session", id: UNLISTED },
+      ],
+      services: [],
+      privateRevealed: false,
+      items: shell === "hubs" ? [titled] : [],
+      theme: "system",
+      shell,
+    });
+
+  it("labels a recent conversation with its title, and an unlisted one without its id", () => {
+    const recent = recentOf("hubs").filter((e) => e.group === "Recent");
+    expect(recent.map((e) => [e.label, e.hint])).toEqual([
+      ["Seerr request", "Conversation · 9:41 AM"],
+      ["Conversation", "Conversation"],
+    ]);
+  });
+
+  it("finds a recent conversation by a typed title, once", () => {
+    const found = rankEntries(recentOf("hubs"), "seerr");
+    expect(found.map((e) => [e.group, e.label])).toEqual([["Recent", "Seerr request"]]);
+  });
+
+  it("leaves conversations out of the old shell's Recent", () => {
+    expect(recentOf("old").filter((e) => e.group === "Recent")).toEqual([]);
+  });
+});

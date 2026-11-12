@@ -9,7 +9,8 @@ function daysAgo(d: Date): number {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  return Math.floor((today.getTime() - dayStart.getTime()) / 86400000);
+  // Local midnights are 23 or 25 hours apart across a DST change.
+  return Math.round((today.getTime() - dayStart.getTime()) / 86400000);
 }
 
 function clock(d: Date): string {
@@ -29,20 +30,21 @@ function formatTime(iso: string): string {
 
 // The hub list's one-line rows sit under a day heading, so the time only needs what the heading
 // leaves out.
-function shortTime(iso: string): string {
+// A weekday stays unambiguous for six days back; the seventh would repeat today's.
+export function shortTime(iso: string): string {
   const d = new Date(iso);
   const diffDays = daysAgo(d);
   if (diffDays <= 1) return clock(d);
-  if (diffDays <= 7) return d.toLocaleDateString("en-US", { weekday: "short" });
+  if (diffDays < 7) return d.toLocaleDateString("en-US", { weekday: "short" });
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function dateGroup(iso: string): string {
+export function dateGroup(iso: string): string {
   const diffDays = daysAgo(new Date(iso));
 
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
-  if (diffDays >= 2 && diffDays <= 7) return "This Week";
+  if (diffDays >= 2 && diffDays < 7) return "This Week";
   return "Older";
 }
 

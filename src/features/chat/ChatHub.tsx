@@ -7,8 +7,9 @@ import { useChatStore } from "@/store/chatStore";
 import { useNavStore } from "@/store/navStore";
 import { Composer } from "./Composer";
 import { ConversationList, useConversationList } from "./ConversationList";
+import { NEW_CHAT_DRAFT } from "./draftStore";
 import { MessageList } from "./MessageList";
-import { openSession, useOpenChatTitle } from "./openSession";
+import { openSession, useChatLoading, useOpenChatTitle } from "./openSession";
 
 const TWO_PANES = "(min-width: 900px)";
 
@@ -42,6 +43,7 @@ export function ChatHub() {
   const isMobile = useIsMobile();
   const wide = useTwoPanes();
   const title = useOpenChatTitle();
+  const loading = useChatLoading();
 
   const list = (
     <ConversationList variant="hub" data={data} query={query} onQuery={setQuery} activeId={openId} onSelect={openSession} />
@@ -63,8 +65,14 @@ export function ChatHub() {
           <span className="min-w-0 truncate text-meta text-ink">{title}</span>
         </div>
       )}
-      <MessageList />
-      <ChatComposer />
+      {loading ? (
+        <p role="status" className="grid flex-1 place-items-center p-6 text-meta text-muted">
+          Loading conversation…
+        </p>
+      ) : (
+        <MessageList />
+      )}
+      <ChatComposer loading={loading} draftKey={openId ?? NEW_CHAT_DRAFT} />
     </div>
   );
 
@@ -82,9 +90,20 @@ export function ChatHub() {
   );
 }
 
-function ChatComposer() {
+// Until the named conversation's transcript lands, a send would go to the one still in the store.
+function ChatComposer({ loading, draftKey }: { loading: boolean; draftKey: string }) {
   const send = useChatStore((s) => s.send);
   const stop = useChatStore((s) => s.stop);
   const isStreaming = useChatStore((s) => s.isStreaming);
-  return <Composer variant="docked" onSend={send} disabled={isStreaming} isStreaming={isStreaming} onStop={stop} />;
+  return (
+    <Composer
+      variant="docked"
+      onSend={send}
+      disabled={isStreaming || loading}
+      isStreaming={isStreaming}
+      onStop={stop}
+      placeholder={loading ? "Loading conversation…" : undefined}
+      draftKey={draftKey}
+    />
+  );
 }

@@ -78,6 +78,9 @@ function rawMessagesToMessages(raw: RawMessage[]): Message[] {
 
 interface ChatState {
   sessionId: string | null;
+  // The session loadSession is fetching. Only the newest request lands; newSession or another
+  // load makes an older response stale.
+  loadingSessionId: string | null;
   messages: Message[];
   isStreaming: boolean;
   controller: AbortController | null;
@@ -93,11 +96,17 @@ interface ChatState {
 export const useChatStore = create<ChatState>((set, get) => {
   // Shared between send() and editMessage() — the only difference between the two
   // is which endpoint kicks off the stream; the SSE event handling is identical.
-  function makeCallbacks(): StreamCallbacks {
+  // Every callback checks it still belongs to the current stream: once a load or a new chat has
+  // replaced the controller, a late event would write into the conversation now on screen.
+  function makeCallbacks(controller: AbortController): StreamCallbacks {
+    const live = () => get().controller === controller;
     return {
-      onSession: (id) => set({ sessionId: id }),
+      onSession: (id) => {
+        if (live()) set({ sessionId: id });
+      },
 
       onToolStart: (name) => {
+        if (!live()) return;
         set((s) => {
           const messages = [...s.messages];
           const last = { ...messages[messages.length - 1] };
@@ -109,6 +118,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       },
 
       onToolDone: (name, status, error) => {
+        if (!live()) return;
         set((s) => {
           const messages = [...s.messages];
           const last = { ...messages[messages.length - 1] };
@@ -126,6 +136,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       },
 
       onText: (delta) => {
+        if (!live()) return;
         set((s) => {
           const messages = [...s.messages];
           const last = { ...messages[messages.length - 1] };
@@ -143,6 +154,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       },
 
       onUiBlock: ({ component, props }) => {
+        if (!live()) return;
         set((s) => {
           const messages = [...s.messages];
           const last = { ...messages[messages.length - 1] };
@@ -154,11 +166,13 @@ export const useChatStore = create<ChatState>((set, get) => {
       },
 
       onDone: () => {
+        if (!live()) return;
         set({ isStreaming: false, controller: null });
         useSessionStore.getState().loadSessions();
       },
 
       onError: (err) => {
+        if (!live()) return;
         set((s) => {
           const messages = [...s.messages];
           messages[messages.length - 1] = {
@@ -174,6 +188,7 @@ export const useChatStore = create<ChatState>((set, get) => {
 
   return {
     sessionId: null,
+    loadingSessionId: null,
     messages: [],
     isStreaming: false,
     controller: null,
@@ -205,7 +220,7 @@ export const useChatStore = create<ChatState>((set, get) => {
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           location,
         },
-        makeCallbacks(),
+        makeCallbacks(controller),
         controller.signal,
       );
     },
@@ -245,14 +260,14 @@ export const useChatStore = create<ChatState>((set, get) => {
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           location,
         },
-        makeCallbacks(),
+        makeCallbacks(controller),
         controller.signal,
       );
     },
 
     newSession: () => {
       get().controller?.abort();
-      set({ sessionId: null, messages: [], isStreaming: false, controller: null, sessionLoadError: null });
+      set({ sessionId: null, loadingSessionId: null, messages: [], isStreaming: false, controller: null, sessionLoadError: null });
       useSessionStore.setState({ activeSessionId: null });
     },
 
@@ -262,18 +277,26 @@ export const useChatStore = create<ChatState>((set, get) => {
       // whatever conversation just loaded (they index off "the last message",
       // which is now a different conversation's last message).
       get().controller?.abort();
+      set({ loadingSessionId: id });
       try {
         const res = await getConversation(id);
+        if (get().loadingSessionId !== id) return;
         const messages = rawMessagesToMessages(res.messages);
+        // The old shell leaves its composer enabled during the load, so a send may have started a
+        // stream since; it belongs to the conversation being left.
+        get().controller?.abort();
         set({
           sessionId: id,
+          loadingSessionId: null,
           messages,
           isStreaming: false,
           controller: null,
           sessionLoadError: null,
         });
       } catch (err) {
+        if (get().loadingSessionId !== id) return;
         set({
+          loadingSessionId: null,
           sessionLoadError:
             err instanceof Error ? err.message : "Couldn't load that conversation.",
         });
