@@ -22,10 +22,18 @@ export function ProjectsPage() {
   const [editing, setEditing] = useState(false);
   const [creating, setCreating] = useState(false);
   const requestId = useRef(0);
+  const linkedProject = useUiStore((s) => s.linkedProject);
 
+  // A link can arrive while the page is mounted (the palette's Recent), so react to each one and
+  // clear it so it never fires again on a later mount.
   useEffect(() => {
+    if (!linkedProject) return;
+    setProject(null);
+    setEditing(false);
+    setCreating(false);
+    setSlug(linkedProject);
     useUiStore.getState().setLinkedProject(null);
-  }, []);
+  }, [linkedProject]);
 
   const load = useCallback(async () => {
     const id = ++requestId.current;

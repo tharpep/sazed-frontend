@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { EmptyState, Page, PageBody, PageHeader, Segmented } from "@/components/system";
 import { errorText } from "@/api/homelab";
 import { listPlans, type PlanState, type PlanSummary } from "@/api/plans";
+import { useNavStore } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 import { CompareView } from "./CompareView";
 import { PlanList } from "./PlanList";
@@ -29,15 +30,31 @@ export function PlansPage() {
     return linked ? { ...linked, compare: null } : null;
   });
   const [dispatch, setDispatch] = useState<string | null>(() => useUiStore.getState().linkedDispatchPlan);
-  const [mode, setMode] = useState<Mode>(() => (useUiStore.getState().linkedDispatchPlan ? "dispatch" : "plans"));
+  // The tab is the nav view: work:plans is Plans, agents:runs is Dispatch runs.
+  const mode = useNavStore((s): Mode => (s.hub === "agents" ? "dispatch" : "plans"));
   const [filter, setFilter] = useState<Filter>("active");
   const [plans, setPlans] = useState<PlanSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const linkedPlan = useUiStore((s) => s.linkedPlan);
+  const linkedDispatch = useUiStore((s) => s.linkedDispatchPlan);
+
+  // Links can arrive while the page is mounted (the palette's Recent, a project's Plans list), so
+  // react to each one rather than reading it once, and clear it so it never fires again later.
+  useEffect(() => {
+    if (!linkedPlan) return;
+    setOpen({ ...linkedPlan, compare: null });
+    useUiStore.getState().setLinkedPlan(null);
+  }, [linkedPlan]);
 
   useEffect(() => {
-    useUiStore.getState().setLinkedPlan(null);
+    if (!linkedDispatch) return;
+    setDispatch(linkedDispatch);
     useUiStore.getState().setLinkedDispatchPlan(null);
-  }, []);
+  }, [linkedDispatch]);
+
+  function setMode(next: Mode) {
+    useUiStore.getState().openView(next === "dispatch" ? { hub: "agents", view: "runs" } : { hub: "work", view: "plans" });
+  }
 
   useEffect(() => {
     if (open || mode !== "plans") return;
@@ -72,10 +89,7 @@ export function PlansPage() {
           <DispatchLive
             plan={dispatch}
             onBack={() => setDispatch(null)}
-            onOpenPlan={(slug) => {
-              setOpen({ slug, version: null, compare: null });
-              setMode("plans");
-            }}
+            onOpenPlan={(slug) => useUiStore.getState().setLinkedPlan({ slug, version: null })}
           />
         ) : mode === "dispatch" ? (
           <>
