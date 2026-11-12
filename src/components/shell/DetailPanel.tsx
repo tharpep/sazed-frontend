@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { XIcon } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
+import { DetailSlotContext } from "./detailSlot";
 
 interface DetailPanelProps {
   open: boolean;
@@ -60,8 +61,11 @@ export function DetailPanel({ open, title, description, onClose, footer, childre
   useLayoutEffect(() => {
     setRow(anchorRef.current?.closest("main")?.parentElement ?? null);
   }, []);
+  // The hub shell names its row outright, so a page with its own <main> (Journal) cannot misplace it.
+  const slot = useContext(DetailSlotContext);
+  const target = slot === undefined ? row : slot;
 
-  const mode: Mode = isMobile ? "sheet" : wide && row ? "inline" : "overlay";
+  const mode: Mode = isMobile ? "sheet" : wide && target ? "inline" : "overlay";
 
   // The grabber goes away on close or a mode change, possibly mid-drag, so its end event may never
   // come; a leftover offset would show on the next open with no slide-in.
@@ -148,7 +152,7 @@ export function DetailPanel({ open, title, description, onClose, footer, childre
         disablePointerDismissal={mode === "inline"}
       >
         <Dialog.Portal
-          container={mode === "inline" ? row : undefined}
+          container={mode === "inline" ? target : undefined}
           className={mode === "inline" ? "flex shrink-0" : undefined}
         >
           {mode !== "inline" && (

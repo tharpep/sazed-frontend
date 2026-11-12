@@ -35,6 +35,7 @@ import { JobSheet } from "@/features/jobs/JobSheet";
 import { KIND_LABEL, STATUS_LABEL, stepsFromEvents } from "@/features/jobs/format";
 import { useChatStore } from "@/store/chatStore";
 import { useSessionStore } from "@/store/sessionStore";
+import { useShellStore } from "@/nav/shellFlag";
 import { useUiStore } from "@/store/uiStore";
 import { DayChart } from "./DayChart";
 import { FlowSheet, type FlowTarget } from "./FlowSheet";
@@ -214,7 +215,8 @@ export function ActivityPage() {
   function openSession(id: string) {
     useSessionStore.getState().selectSession(id);
     useChatStore.getState().loadSession(id);
-    useUiStore.getState().closeAll();
+    // selectSession has already moved the hub shell to Chat; closeAll would send it back Home.
+    if (useShellStore.getState().shell === "old") useUiStore.getState().closeAll();
   }
 
   const s = summary?.last_24h;

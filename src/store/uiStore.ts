@@ -41,6 +41,7 @@ interface UiState {
   setLinkedProfile: (name: string | null) => void;
   linkItem: (ref: ItemRef) => void;
   openView: (target: NavTarget) => void;
+  syncPage: () => void;
   toggleHistory: () => void;
   setHistoryOpen: (v: boolean) => void;
   toggleKb: () => void;
@@ -204,6 +205,9 @@ export const useUiStore = create<UiState>((set, get) => {
       useNavStore.getState().go(target.hub, target.view);
       set(only(currentPage()));
     },
+    // The hub shell moves navStore without these adapters; this brings the booleans back in line so
+    // a page's toggleX() opens rather than closes, and the old shell shows the right entry on return.
+    syncPage: () => set(only(currentPage())),
     toggleHistory: toggle("historyOpen"),
     setHistoryOpen: setPage("historyOpen"),
     toggleKb: toggle("kbOpen"),

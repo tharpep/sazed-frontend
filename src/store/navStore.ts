@@ -53,7 +53,11 @@ interface NavState {
   read: ItemsByHub;
   scroll: Record<string, number>;
   recent: ItemRef[];
+  // Bumped when the active hub is tapped again, so the hub shell remounts the view and drops any
+  // item a page holds in its own state.
+  retaps: number;
   go: (hub: HubId, view?: string) => void;
+  setScroll: (hubView: string, top: number) => void;
   openItem: (ref: ItemRef) => void;
   closeItem: () => void;
   clearItems: () => void;
@@ -118,6 +122,7 @@ export const useNavStore = create<NavState>((set, get) => ({
   read: {},
   scroll: {},
   recent: loadRecent(),
+  retaps: 0,
   go: (hub, view) => {
     const s = get();
     if (view !== undefined && !isView(hub, view)) view = undefined;
@@ -130,12 +135,16 @@ export const useNavStore = create<NavState>((set, get) => ({
         open: without(s.open, hub),
         read: without(s.read, hub),
         scroll: { ...s.scroll, [`${hub}:${first}`]: 0 },
+        retaps: s.retaps + 1,
       });
       return;
     }
     const views = view === undefined ? s.view : { ...s.view, [hub]: view };
     writeJson(() => localStorage, VIEW_KEY, views);
     set({ hub, view: views });
+  },
+  setScroll: (hubView, top) => {
+    if (get().scroll[hubView] !== top) set({ scroll: { ...get().scroll, [hubView]: top } });
   },
   openItem: (ref) => {
     const place = ITEM_PLACE[ref.kind];

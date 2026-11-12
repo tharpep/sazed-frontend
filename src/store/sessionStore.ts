@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type { Session } from "../mock/data";
 import { listConversations } from "../api/conversations";
+import { useShellStore } from "../nav/shellFlag";
+import { useNavStore } from "./navStore";
 import { useUiStore } from "./uiStore";
 
 function formatTime(iso: string): string {
@@ -63,6 +65,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
   selectSession: (id: string) => {
     set({ activeSessionId: id });
-    useUiStore.getState().setHistoryOpen(false);
+    // The old shell shows a loaded session on Home; the hub shell shows it only in Chat.
+    if (useShellStore.getState().shell === "hubs") useNavStore.getState().go("chat", "conversation");
+    else useUiStore.getState().setHistoryOpen(false);
   },
 }));
