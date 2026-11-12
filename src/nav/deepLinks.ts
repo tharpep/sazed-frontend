@@ -1,7 +1,7 @@
 import type { ItemRef } from "@/store/navStore";
 import { isHub, isView, type NavTarget } from "./hubViews";
 
-export type DeepLink = NavTarget & { item?: ItemRef; apps?: true };
+export type DeepLink = NavTarget & { items?: ItemRef[] };
 
 const LEGACY_PAGES = new Map<string, NavTarget>(Object.entries({
   backlog: { hub: "work", view: "board" },
@@ -30,24 +30,23 @@ function legacyItem(page: string, params: URLSearchParams): DeepLink | null {
   const profile = value("profile");
   const plan = value("plan");
   const dispatch = value("dispatch");
-  if (page === "backlog" && item) return { hub: "work", view: "board", item: { kind: "backlog", id: item } };
+  if (page === "backlog" && item) return { hub: "work", view: "board", items: [{ kind: "backlog", id: item }] };
   if (page === "projects" && project)
-    return { hub: "work", view: "projects", item: { kind: "project", id: project } };
+    return { hub: "work", view: "projects", items: [{ kind: "project", id: project }] };
   if (page === "profiles" && profile)
-    return { hub: "agents", view: "profiles", item: { kind: "profile", id: profile } };
-  if (page === "plans" && dispatch) return { hub: "agents", view: "runs", item: { kind: "dispatch", id: dispatch } };
-  if (page === "plans" && plan) {
-    const version = positiveInt(params.get("version"));
-    return { hub: "work", view: "plans", item: { kind: "plan", id: plan, ...(version && { version }) } };
-  }
-  return null;
+    return { hub: "agents", view: "profiles", items: [{ kind: "profile", id: profile }] };
+  if (page !== "plans" || (!plan && !dispatch)) return null;
+  const version = positiveInt(params.get("version"));
+  const items: ItemRef[] = [];
+  if (plan) items.push({ kind: "plan", id: plan, ...(version && { version }) });
+  if (dispatch) items.push({ kind: "dispatch", id: dispatch });
+  return dispatch ? { hub: "agents", view: "runs", items } : { hub: "work", view: "plans", items };
 }
 
 export function parseDeepLink(search: string): DeepLink | null {
   const params = new URLSearchParams(search);
   const page = params.get("page");
   if (!page) return null;
-  if (page === "apps") return { hub: "home", apps: true };
   const legacy = LEGACY_PAGES.get(page);
   if (legacy) return legacyItem(page, params) ?? legacy;
   const [hub, view, ...rest] = page.split(".");

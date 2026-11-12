@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 
 import { ActivityPage } from "@/features/activity/ActivityPage";
+import { AppsPage } from "@/features/apps/AppsPage";
 import { AutomationsPage } from "@/features/automations/AutomationsPage";
 import { BacklogPage } from "@/features/backlog/BacklogPage";
 import { MessageList } from "@/features/chat/MessageList";
@@ -32,6 +33,7 @@ const COMPONENTS: Record<ViewKey, ComponentType> = {
   "system:integrations": GatewayPage,
   "library:knowledge": KnowledgePage,
   "library:journal": JournalPage,
+  "apps:apps": AppsPage,
 };
 
 export const HUBS = HUB_VIEWS.map((hub) => ({

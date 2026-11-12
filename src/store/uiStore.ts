@@ -104,7 +104,7 @@ const PAGE_TARGET: Record<PageFlag, NavTarget> = {
   backlogOpen: { hub: "work", view: "board" },
   projectsOpen: { hub: "work", view: "projects" },
   plansOpen: { hub: "work", view: "plans" },
-  appsOpen: HOME,
+  appsOpen: { hub: "apps" },
   profilesOpen: { hub: "agents", view: "profiles" },
   claudeUsageOpen: { hub: "system", view: "usage" },
 };
@@ -126,6 +126,7 @@ const VIEW_PAGE: Record<ViewKey, PageFlag | null> = {
   "system:integrations": "gatewayOpen",
   "library:knowledge": "kbOpen",
   "library:journal": "journalOpen",
+  "apps:apps": "appsOpen",
 };
 
 function only(flag: Flag | null): Record<Flag, boolean> {
@@ -139,14 +140,27 @@ function show(target: NavTarget, flag: Flag | null) {
   return only(flag);
 }
 
+function currentPage(): PageFlag | null {
+  const nav = useNavStore.getState();
+  return VIEW_PAGE[`${nav.hub}:${nav.view[nav.hub]}` as ViewKey];
+}
+
+function openPage(flag: PageFlag) {
+  return currentPage() === flag ? only(flag) : show(PAGE_TARGET[flag], flag);
+}
+
+function closePage() {
+  useNavStore.getState().clearItems();
+  return show(HOME, null);
+}
+
 function link(ref: ItemRef | null) {
   if (ref) useNavStore.getState().openItem(ref);
 }
 
 export const useUiStore = create<UiState>((set, get) => {
-  const toggle = (flag: PageFlag) => () =>
-    set(get()[flag] ? show(HOME, null) : show(PAGE_TARGET[flag], flag));
-  const setPage = (flag: PageFlag) => (v: boolean) => set(v ? show(PAGE_TARGET[flag], flag) : show(HOME, null));
+  const toggle = (flag: PageFlag) => () => set(get()[flag] ? closePage() : openPage(flag));
+  const setPage = (flag: PageFlag) => (v: boolean) => set(v ? openPage(flag) : closePage());
   return {
     ...ALL_CLOSED,
     online: false,
@@ -188,8 +202,7 @@ export const useUiStore = create<UiState>((set, get) => {
     },
     openView: (target) => {
       useNavStore.getState().go(target.hub, target.view);
-      const nav = useNavStore.getState();
-      set(only(VIEW_PAGE[`${nav.hub}:${nav.view[nav.hub]}` as ViewKey]));
+      set(only(currentPage()));
     },
     toggleHistory: toggle("historyOpen"),
     setHistoryOpen: setPage("historyOpen"),
@@ -211,7 +224,7 @@ export const useUiStore = create<UiState>((set, get) => {
     toggleClaudeUsage: toggle("claudeUsageOpen"),
     toggleMore: () => set(show(HOME, get().moreOpen ? null : "moreOpen")),
     setMoreOpen: (v) => set(show(HOME, v ? "moreOpen" : null)),
-    closeAll: () => set(show(HOME, null)),
+    closeAll: () => set(closePage()),
     setOnline: (v) => set({ online: v }),
   };
 });

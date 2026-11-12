@@ -4,7 +4,6 @@ import { AppShell } from "./components/layout/AppShell";
 import { Composer } from "./features/chat/Composer";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { FinancePage } from "./features/finance/FinancePage";
-import { AppsPage } from "./features/apps/AppsPage";
 import { parseDeepLink } from "./nav/deepLinks";
 import { viewDef } from "./nav/hubs";
 import type { HubId } from "./nav/hubViews";
@@ -16,7 +15,6 @@ import { apiFetch } from "./api/client";
 function App() {
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const financeOpen = useUiStore((s) => s.financeOpen);
-  const appsOpen = useUiStore((s) => s.appsOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const setOnline = useUiStore((s) => s.setOnline);
   const hidePrivate = useUiStore((s) => s.hidePrivate);
@@ -32,7 +30,7 @@ function App() {
 
   const [contentHub, contentView]: [HubId, string] =
     hub === "home" || hub === "chat" ? (messages.length === 0 ? ["home", "home"] : ["chat", "conversation"]) : [hub, view];
-  const overlay = settingsOpen ? "settings" : financeOpen ? "finance" : appsOpen ? "apps" : null;
+  const overlay = settingsOpen ? "settings" : financeOpen ? "finance" : null;
   const viewKey = overlay ?? `${contentHub}:${contentView}`;
   const onHomeOrChat = overlay === null && (contentHub === "home" || contentHub === "chat");
   const Page = viewDef(contentHub, contentView).component;
@@ -41,9 +39,8 @@ function App() {
     const link = parseDeepLink(window.location.search);
     if (!link) return;
     const ui = useUiStore.getState();
-    if (link.item) ui.linkItem(link.item);
-    if (link.apps) ui.toggleApps();
-    else ui.openView(link);
+    link.items?.forEach(ui.linkItem);
+    ui.openView(link);
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
@@ -69,7 +66,7 @@ function App() {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
       const ui = useUiStore.getState();
-      if (useNavStore.getState().hub !== "home" || ui.settingsOpen || ui.financeOpen || ui.appsOpen) ui.closeAll();
+      if (useNavStore.getState().hub !== "home" || ui.settingsOpen || ui.financeOpen) ui.closeAll();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -108,8 +105,6 @@ function App() {
           <SettingsPage onClose={() => setSettingsOpen(false)} />
         ) : overlay === "finance" ? (
           <FinancePage />
-        ) : overlay === "apps" ? (
-          <AppsPage />
         ) : (
           <Page />
         )}

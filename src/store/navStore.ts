@@ -56,6 +56,7 @@ interface NavState {
   go: (hub: HubId, view?: string) => void;
   openItem: (ref: ItemRef) => void;
   closeItem: () => void;
+  clearItems: () => void;
 }
 
 function readJson(storage: () => Storage, key: string): unknown {
@@ -87,11 +88,21 @@ function loadViews(): Views {
   return views;
 }
 
+function isItemRef(r: unknown): r is ItemRef {
+  if (!r || typeof r !== "object") return false;
+  const { kind, id, version } = r as Record<string, unknown>;
+  return (
+    typeof kind === "string" &&
+    Object.prototype.hasOwnProperty.call(ITEM_PLACE, kind) &&
+    typeof id === "string" &&
+    id !== "" &&
+    (version === undefined || Number.isInteger(version))
+  );
+}
+
 function loadRecent(): ItemRef[] {
   const saved = readJson(() => sessionStorage, RECENT_KEY);
-  return Array.isArray(saved)
-    ? saved.filter((r): r is ItemRef => typeof r?.id === "string" && r.kind in ITEM_PLACE).slice(0, RECENT_MAX)
-    : [];
+  return Array.isArray(saved) ? saved.filter(isItemRef).slice(0, RECENT_MAX) : [];
 }
 
 function without(items: ItemsByHub, hub: HubId): ItemsByHub {
@@ -139,4 +150,5 @@ export const useNavStore = create<NavState>((set, get) => ({
     if (s.open[s.hub]) set({ open: without(s.open, s.hub) });
     else if (s.read[s.hub]) set({ read: without(s.read, s.hub) });
   },
+  clearItems: () => set({ open: {}, read: {} }),
 }));

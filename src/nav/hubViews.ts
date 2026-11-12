@@ -56,6 +56,7 @@ export const HUB_VIEWS = [
       { id: "journal", label: "Journal" },
     ],
   },
+  { id: "apps", label: "Apps", views: [{ id: "apps", label: "Apps" }] },
 ] as const satisfies readonly HubDef[];
 
 type Hub = (typeof HUB_VIEWS)[number];

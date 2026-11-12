@@ -19,11 +19,11 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 **Layout (`App.tsx` + `components/layout/`):** `AppShell` composes `TitleBar` (Tauri window only) + `Sidebar` (labeled and grouped from md, icon rail from sm to md) + the page, which sits on an inset panel over the darker shell from sm up (DESIGN.md, Layout and shell). `App.tsx` renders the active view into that slot from `navStore` through the hub registry (not routes — see below). `main.tsx` separately mounts a `BrowserRouter` with two real routes: `/` (the app, i.e. `App.tsx`) and `/display` (`DisplayPage`, the always-on display; see `src/features/display/` below).
 
 **View switching is store state, not routed.** The console overhaul (`plans/console-overhaul-2026-11-11/build-plan.md` in My-AI) moves it to six hubs:
-- `src/nav/hubViews.ts` lists the hubs and their views (ids and labels).
+- `src/nav/hubViews.ts` lists the hubs and Apps with their views (ids and labels).
 - `src/nav/hubs.ts` points each view at the page that renders it today.
 - `src/store/navStore.ts` holds the active hub, each hub's view (localStorage), the open item and reader per hub, and recent items (sessionStorage). The app always opens on Home.
 - `src/nav/deepLinks.ts` parses `?page=` links, including the `?page=<hub>` and `?page=<hub>.<view>` aliases; `pnpm test` guards it.
-- `uiStore` still holds one boolean per old destination, so `Sidebar`, `BottomTabBar` and `MoreSheet` keep their active states. Each `toggleX()` resets the others and calls `navStore.go()`; each `setLinkedX()` also calls `navStore.openItem()`. Settings, Apps and Finance show over Home until their slices.
+- `uiStore` still holds one boolean per old destination, so `Sidebar`, `BottomTabBar` and `MoreSheet` keep their active states. Each `toggleX()` resets the others and calls `navStore.go()`; each `setLinkedX()` also calls `navStore.openItem()`. Apps is a seventh destination with no views. Settings and Finance show over Home until their slices.
 
 `financeOpen`/`FinancePage` still exist and work but have no Sidebar entry — Finance was excluded from navigation by product decision, not deleted.
 
