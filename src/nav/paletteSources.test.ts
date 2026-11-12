@@ -41,7 +41,7 @@ const SERVICES = [
 
 const labels = (entries: { label: string }[]) => entries.map((e) => e.label);
 
-describe("launchableApps: the AppGrid filter", () => {
+describe("launchableApps: the Apps page and palette filter", () => {
   it("drops planned, URL-less and console services, hides private ones and lists Apps before Homelab", () => {
     expect(launchableApps(SERVICES, false).map((s) => s.id)).toEqual(["jellyfin", "dashboard", "proxmox"]);
   });
@@ -88,10 +88,10 @@ describe("app URLs", () => {
     expect(httpUrl("not a url")).toBeNull();
   });
 
-  it("leaves an app with any other scheme out of the palette", () => {
+  it("leaves an app with any other scheme off the Apps page and out of the palette", () => {
     const bad = service({ id: "bad", name: "Bad", open_url: "javascript:alert(1)" });
     const entries = buildEntries({ recent: [], services: [bad], privateRevealed: false, items: [], theme: "dark", shell: "old" });
-    expect(launchableApps([bad], false)).toHaveLength(1);
+    expect(launchableApps([bad], false)).toHaveLength(0);
     expect(entries.some((e) => e.kind === "app")).toBe(false);
   });
 });

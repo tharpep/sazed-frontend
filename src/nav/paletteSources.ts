@@ -98,15 +98,20 @@ const KIND_LABEL: Record<ItemKind, string> = {
   session: "Conversation",
 };
 
-// The same filter AppGrid applies today, so the palette offers exactly the Apps page's tiles.
-// Slice 6 owns AppGrid.tsx; it can make AppGrid import this instead of keeping its own copy.
+// The console itself is where you already are, so it gets no tile and no entry.
 const HIDDEN_APPS = new Set(["sazed-console"]);
 
+/** The apps the Apps page shows and the palette offers, Apps group first, then Homelab. Both read
+ * this one list, so the page and the palette cannot drift. */
 export function launchableApps(services: Service[], privateRevealed: boolean): Service[] {
   const openable = services.filter(
-    (s) => s.open_url && s.lifecycle !== "planned" && !HIDDEN_APPS.has(s.id) && (privateRevealed || !s.private)
+    (s) =>
+      s.open_url &&
+      httpUrl(s.open_url) &&
+      s.lifecycle !== "planned" &&
+      !HIDDEN_APPS.has(s.id) &&
+      (privateRevealed || !s.private)
   );
-  // AppGrid shows its Apps section before its Homelab section; keep that order.
   return [...openable.filter((s) => s.group === "apps"), ...openable.filter((s) => s.group !== "apps")];
 }
 
@@ -150,8 +155,7 @@ export function buildEntries({ recent, services, privateRevealed, items, theme, 
     entries.push({ kind: "hub", key: `hub:${hub.id}`, group: "Hubs", label: hub.label, hint, hub: hub.id });
   }
   for (const s of launchableApps(services, privateRevealed)) {
-    const url = httpUrl(s.open_url!);
-    if (url) entries.push({ kind: "app", key: `app:${s.id}`, group: "Apps", label: s.name, hint: appHint(s), url });
+    entries.push({ kind: "app", key: `app:${s.id}`, group: "Apps", label: s.name, hint: appHint(s), url: httpUrl(s.open_url!)! });
   }
   for (const hub of HUBS) {
     for (const view of placeViews(hub)) {
