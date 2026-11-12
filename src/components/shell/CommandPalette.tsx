@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Dialog } from "@base-ui/react/dialog";
-import { ChevronRight, Clock, Compass, ExternalLink, MessageSquarePlus, Search, Settings, SunMoon, type LucideIcon } from "lucide-react";
+import {
+  ChevronRight,
+  Clock,
+  Compass,
+  ExternalLink,
+  MessageSquarePlus,
+  Monitor,
+  Moon,
+  Search,
+  Settings,
+  Sun,
+  type LucideIcon,
+} from "lucide-react";
 
 import { fetchServices, type Service } from "@/api/homelab";
 import { useTheme } from "@/components/theme/ThemeProvider";
@@ -8,8 +20,10 @@ import { cn } from "@/lib/utils";
 import type { NavTarget } from "@/nav/hubViews";
 import {
   buildEntries,
+  isShortcut,
   itemProviders,
   rankEntries,
+  type ShortcutKeys,
   usePaletteStore,
   type PaletteAction,
   type PaletteEntry,
@@ -21,9 +35,14 @@ import { useUiStore } from "@/store/uiStore";
 
 const ACTION_ICON: Record<PaletteAction, LucideIcon> = {
   settings: Settings,
-  theme: SunMoon,
   "new-chat": MessageSquarePlus,
+  "theme:light": Sun,
+  "theme:dark": Moon,
+  "theme:system": Monitor,
 };
+
+const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const isPaletteShortcut = (e: ShortcutKeys) => isShortcut(e, IS_MAC);
 
 function entryIcon(e: PaletteEntry): LucideIcon {
   if (e.kind === "action") return ACTION_ICON[e.action];
@@ -49,10 +68,9 @@ export function CommandPalette() {
 
   useEffect(() => {
     function onKeyDown(e: globalThis.KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setOpen(!usePaletteStore.getState().open);
-      }
+      if (!isPaletteShortcut(e)) return;
+      e.preventDefault();
+      setOpen(true);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -69,12 +87,12 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
-  const [sel, setSel] = useState(0);
+  const [selKey, setSelKey] = useState<string | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [items, setItems] = useState<PaletteItem[]>([]);
   const recent = useNavStore((s) => s.recent);
   const privateRevealed = useUiStore((s) => s.privateRevealed);
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     let live = true;
@@ -82,18 +100,19 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
     fetchServices()
       .then((r) => live && setServices(r.services))
       .catch(() => undefined);
-    Promise.all(itemProviders.map((p) => p().catch(() => [])))
-      .then((lists) => live && setItems(lists.flat()));
+    Promise.all(itemProviders.map((p) => p().catch(() => []))).then((lists) => live && setItems(lists.flat()));
     return () => {
       live = false;
     };
   }, []);
 
   const entries = useMemo(
-    () => rankEntries(buildEntries({ recent, services, privateRevealed, items }), query),
-    [recent, services, privateRevealed, items, query]
+    () => rankEntries(buildEntries({ recent, services, privateRevealed, items, theme }), query),
+    [recent, services, privateRevealed, items, theme, query]
   );
-  const active = Math.min(sel, entries.length - 1);
+  // Selection follows the entry, not its row, so apps arriving late never shift it onto another.
+  const found = entries.findIndex((e) => e.key === selKey);
+  const active = found >= 0 ? found : 0;
 
   useEffect(() => {
     listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
@@ -108,30 +127,49 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
     else if (e.kind === "item") openRef(e.ref);
     else if (e.kind === "app") window.open(e.url, "_blank", "noopener,noreferrer");
     else if (e.action === "settings") ui.setSettingsOpen(true);
-    else if (e.action === "theme") setTheme(document.documentElement.classList.contains("dark") ? "light" : "dark");
-    else {
+    else if (e.action === "new-chat") {
       useChatStore.getState().newSession();
       ui.closeAll();
-    }
+    } else setTheme(e.action === "theme:light" ? "light" : e.action === "theme:dark" ? "dark" : "system");
   }
 
-  function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+  function onInputKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       const step = e.key === "ArrowDown" ? 1 : -1;
-      setSel(Math.max(0, Math.min(entries.length - 1, active + step)));
-    } else if (e.key === "Enter") {
+      // From the previous key, not this render's index, so held-down repeats never drop a step.
+      setSelKey((prev) => {
+        const from = Math.max(0, entries.findIndex((x) => x.key === prev));
+        return entries[Math.max(0, Math.min(entries.length - 1, from + step))]?.key ?? null;
+      });
+    } else if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       run(entries[active]);
-    } else if (e.key === "Escape") {
-      // App.tsx closes the page under the palette on Escape; this one belongs to the palette.
+    }
+  }
+
+  // Every key stops here. The pages and sheets underneath listen on window and document (Journal's
+  // Ctrl+Enter and "n", each Base UI dialog's Escape), and none of them may act while the palette
+  // is open; that includes Base UI's own Escape for this dialog, so the palette closes itself.
+  function onPopupKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    if (e.key === "Escape" || isPaletteShortcut(e)) {
       e.preventDefault();
-      e.stopPropagation();
       onClose();
     }
   }
 
-  const grouped = query.trim() === "";
+  const q = query.trim();
+  const sections = useMemo(() => {
+    if (q) return [{ group: null, start: 0, rows: entries }];
+    const out: { group: string | null; start: number; rows: PaletteEntry[] }[] = [];
+    entries.forEach((e, i) => {
+      const last = out[out.length - 1];
+      if (last && last.group === e.group) last.rows.push(e);
+      else out.push({ group: e.group, start: i, rows: [e] });
+    });
+    return out;
+  }, [entries, q]);
 
   return (
     <Dialog.Portal>
@@ -139,11 +177,18 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       <Dialog.Popup
         initialFocus={inputRef}
         aria-label="Search"
+        onKeyDown={onPopupKeyDown}
+        // Focus stays in the field: a tap on padding, a header or a row must not blur it (on a phone
+        // that would drop the keyboard). Rows still get their click.
+        onMouseDown={(e) => {
+          if (e.target !== inputRef.current) e.preventDefault();
+        }}
         className={cn(
-          "fixed inset-x-0 top-0 z-[60] flex flex-col bg-bg text-ink outline-none",
-          // Phone: full screen, sized to the visual viewport (AppShell's useVisualViewportHeight
-          // keeps --app-height in step) so the bottom field rides above the on-screen keyboard.
-          "h-[var(--app-height,100dvh)] pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]",
+          "fixed inset-x-0 z-[60] flex flex-col bg-bg text-ink outline-none",
+          // Phone: full screen over the visual viewport. AppShell's useVisualViewportHeight keeps the
+          // height and offset in step, so the bottom field rides above the on-screen keyboard even
+          // when iOS scrolls the page under it.
+          "top-[var(--app-offset-top,0px)] h-[var(--app-height,100dvh)] pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]",
           "sm:inset-x-auto sm:top-[11vh] sm:left-1/2 sm:h-auto sm:max-h-[min(440px,calc(100%-11vh-16px))] sm:w-[min(560px,calc(100%-32px))] sm:-translate-x-1/2 sm:overflow-hidden sm:rounded-xl sm:border sm:border-line sm:p-0 sm:shadow-[0_16px_40px_oklch(0_0_0/0.3)]"
         )}
       >
@@ -153,6 +198,9 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
             Close
           </Dialog.Close>
         </div>
+        {entries.length === 0 && (
+          <p className="shrink-0 px-3.5 py-4 text-meta text-muted">Nothing matches. Try a hub, a view or an app.</p>
+        )}
         <div
           ref={listRef}
           id="palette-list"
@@ -160,49 +208,60 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
           aria-label="Results"
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
         >
-          {entries.length === 0 && (
-            <p className="px-2.5 py-4 text-meta text-muted">Nothing matches. Try a hub, a view or an app.</p>
-          )}
-          {entries.map((e, i) => {
-            const Icon = entryIcon(e);
-            const header = grouped && (i === 0 || entries[i - 1].group !== e.group);
-            const hint = grouped ? e.hint : [e.group, e.hint].filter(Boolean).join(" · ");
-            return (
-              <div key={e.key}>
-                {header && <div className="px-2.5 pt-2 pb-0.5 text-caption text-muted">{e.group}</div>}
+          {sections.map((sec) => {
+            const rows = sec.rows.map((e, j) => {
+              const i = sec.start + j;
+              const Icon = entryIcon(e);
+              const hint = sec.group ? e.hint : [e.group, e.hint].filter(Boolean).join(" · ");
+              return (
                 <button
+                  key={e.key}
                   type="button"
                   id={`palette-opt-${i}`}
                   role="option"
                   aria-selected={i === active}
                   tabIndex={-1}
                   onClick={() => run(e)}
-                  onMouseMove={() => i !== active && setSel(i)}
+                  onMouseMove={() => i !== active && setSelKey(e.key)}
                   className="flex min-h-12 w-full items-center gap-2.5 rounded-[7px] px-2.5 text-left text-body text-ink-2 aria-selected:bg-raised sm:min-h-0 sm:py-1.5 sm:text-meta"
                 >
                   <Icon className="size-4 shrink-0 text-muted" aria-hidden="true" />
                   <span className="min-w-0 flex-1 truncate text-ink">{e.label}</span>
                   {hint && <span className="max-w-[45%] truncate text-caption text-muted">{hint}</span>}
                 </button>
+              );
+            });
+            if (!sec.group) return rows;
+            const headId = `palette-group-${sec.group}`;
+            return (
+              <div key={sec.group} role="group" aria-labelledby={headId}>
+                <div id={headId} className="px-2.5 pt-2 pb-0.5 text-caption text-muted">
+                  {sec.group}
+                </div>
+                {rows}
               </div>
             );
           })}
         </div>
-        <div className="flex shrink-0 items-center gap-2.5 border-t border-line py-1.5 pr-2.5 pb-[calc(6px+env(safe-area-inset-bottom))] pl-3.5 text-muted sm:order-first sm:border-t-0 sm:border-b sm:py-1.5 sm:pr-2 sm:pb-1.5">
+        <p aria-live="polite" className="sr-only">
+          {q ? (entries.length === 0 ? "Nothing matches" : `${entries.length} ${entries.length === 1 ? "result" : "results"}`) : ""}
+        </p>
+        <div className="flex shrink-0 items-center gap-2.5 border-t border-line py-1.5 pr-2.5 pb-[calc(6px+var(--keyboard-safe-bottom,env(safe-area-inset-bottom)))] pl-3.5 text-muted sm:order-first sm:border-t-0 sm:border-b sm:py-1.5 sm:pr-2 sm:pb-1.5">
           <Search className="size-4 shrink-0" aria-hidden="true" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
-              setSel(0);
+              setSelKey(null);
             }}
-            onKeyDown={onKeyDown}
+            onKeyDown={onInputKeyDown}
             placeholder="Hubs, views, apps and actions"
             aria-label="Search"
             role="combobox"
             aria-expanded="true"
             aria-controls="palette-list"
+            aria-autocomplete="list"
             aria-activedescendant={entries.length > 0 ? `palette-opt-${active}` : undefined}
             autoComplete="off"
             autoCorrect="off"

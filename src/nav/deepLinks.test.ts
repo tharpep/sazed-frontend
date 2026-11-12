@@ -69,6 +69,7 @@ describe("parseDeepLink: hub aliases", () => {
     ["?page=work.board", { hub: "work", view: "board" }],
     ["?page=system.integrations", { hub: "system", view: "integrations" }],
     ["?page=agents.mcp", { hub: "agents", view: "mcp" }],
+    ["?page=agents.runs", { hub: "agents", view: "runs" }],
     ["?page=library.journal", { hub: "library", view: "journal" }],
     ["?page=chat.conversation", { hub: "chat", view: "conversation" }],
   ])("%s", (search, expected) => {

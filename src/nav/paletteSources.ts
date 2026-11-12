@@ -7,7 +7,8 @@ import { HUBS } from "./hubs";
 import type { HubId, NavTarget } from "./hubViews";
 
 export type PaletteGroup = "Recent" | "Hubs" | "Apps" | "Views" | "Items" | "Actions";
-export type PaletteAction = "settings" | "theme" | "new-chat";
+export type ThemeChoice = "light" | "dark" | "system";
+export type PaletteAction = "settings" | "new-chat" | `theme:${ThemeChoice}`;
 
 interface EntryBase {
   key: string;
@@ -40,6 +41,46 @@ export const usePaletteStore = create<{ open: boolean; setOpen: (open: boolean) 
   open: false,
   setOpen: (open) => set({ open }),
 }));
+
+/** Opens the palette from a tap. iOS raises the keyboard only for a focus() made inside the
+ * gesture, and the palette's input mounts a frame later, so a throwaway input inside `host` takes
+ * focus now; iOS keeps the keyboard up when the palette moves focus to its own input. */
+export function openPaletteFromTap(host: HTMLElement) {
+  const proxy = document.createElement("input");
+  proxy.setAttribute("aria-hidden", "true");
+  proxy.tabIndex = -1;
+  // 16px stops iOS zooming on focus; the input is invisible and takes no space.
+  proxy.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0";
+  host.appendChild(proxy);
+  proxy.focus();
+  usePaletteStore.getState().setOpen(true);
+  setTimeout(() => proxy.remove(), 1000);
+}
+
+export type ShortcutKeys = Pick<KeyboardEvent, "key" | "code" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">;
+
+/** Cmd+K on macOS, where Ctrl+K stays kill-to-end-of-line in text fields; Ctrl+K elsewhere.
+ * `code` matches the physical K on layouts whose K key types another letter. */
+export function isShortcut(e: ShortcutKeys, isMac: boolean): boolean {
+  const mod = isMac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey;
+  return mod && !e.altKey && !e.shiftKey && (e.key.toLowerCase() === "k" || e.code === "KeyK");
+}
+
+const THEME_LABEL: Record<ThemeChoice, string> = {
+  light: "Light theme",
+  dark: "Dark theme",
+  system: "Match system theme",
+};
+
+/** The URL to open, or null for anything but http and https (a registry typo must not run script). */
+export function httpUrl(raw: string): string | null {
+  try {
+    const url = new URL(raw);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
 
 const KIND_LABEL: Record<ItemKind, string> = {
   backlog: "Board card",
@@ -94,10 +135,11 @@ interface Sources {
   services: Service[];
   privateRevealed: boolean;
   items: PaletteItem[];
+  theme: ThemeChoice;
 }
 
 /** Every entry in display order: Recent, Hubs, Apps, Views, Items, Actions. */
-export function buildEntries({ recent, services, privateRevealed, items }: Sources): PaletteEntry[] {
+export function buildEntries({ recent, services, privateRevealed, items, theme }: Sources): PaletteEntry[] {
   const entries: PaletteEntry[] = recent.map((ref) =>
     itemEntry("Recent", { ref, label: ref.id, hint: refHint(ref) })
   );
@@ -106,7 +148,8 @@ export function buildEntries({ recent, services, privateRevealed, items }: Sourc
     entries.push({ kind: "hub", key: `hub:${hub.id}`, group: "Hubs", label: hub.label, hint, hub: hub.id });
   }
   for (const s of launchableApps(services, privateRevealed)) {
-    entries.push({ kind: "app", key: `app:${s.id}`, group: "Apps", label: s.name, hint: appHint(s), url: s.open_url! });
+    const url = httpUrl(s.open_url!);
+    if (url) entries.push({ kind: "app", key: `app:${s.id}`, group: "Apps", label: s.name, hint: appHint(s), url });
   }
   for (const hub of HUBS) {
     for (const view of placeViews(hub)) {
@@ -124,11 +167,18 @@ export function buildEntries({ recent, services, privateRevealed, items }: Sourc
   for (const item of items) {
     if (!recentKeys.has(`${item.ref.kind}:${item.ref.id}`)) entries.push(itemEntry("Items", item));
   }
-  entries.push(
-    { kind: "action", key: "action:settings", group: "Actions", label: "Settings", hint: "", action: "settings" },
-    { kind: "action", key: "action:theme", group: "Actions", label: "Switch light or dark", hint: "", action: "theme" },
-    { kind: "action", key: "action:new-chat", group: "Actions", label: "New chat", hint: "", action: "new-chat" }
-  );
+  entries.push({ kind: "action", key: "action:settings", group: "Actions", label: "Settings", hint: "", action: "settings" });
+  for (const choice of ["light", "dark", "system"] as const) {
+    entries.push({
+      kind: "action",
+      key: `action:theme:${choice}`,
+      group: "Actions",
+      label: THEME_LABEL[choice],
+      hint: choice === theme ? "Current" : "",
+      action: `theme:${choice}`,
+    });
+  }
+  entries.push({ kind: "action", key: "action:new-chat", group: "Actions", label: "New chat", hint: "", action: "new-chat" });
   return entries;
 }
 

@@ -6,6 +6,7 @@ import { listMcpServers, saveMcpServer, type McpServer } from "@/api/mcpServers"
 import { listProfiles, saveProfile, type Profile } from "@/api/profiles";
 import { Button } from "@/components/ui/button";
 import { Author, ago } from "@/features/plans/planParts";
+import { useNavStore } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 import { budget, timeout } from "./format";
 import { BLANK_SERVER, McpServerForm } from "./McpServerForm";
@@ -50,7 +51,8 @@ function Row({ profile, onOpen }: { profile: Profile; onOpen: () => void }) {
 type Section = "profiles" | "servers";
 
 export function ProfilesPage() {
-  const [section, setSection] = useState<Section>("profiles");
+  // The section is the nav view: agents:mcp is MCP servers, agents:profiles is Profiles.
+  const section = useNavStore((s): Section => (s.hub === "agents" && s.view.agents === "mcp" ? "servers" : "profiles"));
   const [server, setServer] = useState<string | null>(null);
   const [servers, setServers] = useState<McpServer[] | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -58,10 +60,21 @@ export function ProfilesPage() {
   const [profiles, setProfiles] = useState<Profile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const linkedProfile = useUiStore((s) => s.linkedProfile);
 
+  // A link can arrive while the page is mounted (the palette's Recent), so react to each one and
+  // clear it so it never fires again on a later mount.
   useEffect(() => {
+    if (!linkedProfile) return;
+    setCreating(false);
+    setName(linkedProfile);
     useUiStore.getState().setLinkedProfile(null);
-  }, []);
+  }, [linkedProfile]);
+
+  function setSection(next: Section) {
+    setCreating(false);
+    useUiStore.getState().openView({ hub: "agents", view: next === "servers" ? "mcp" : "profiles" });
+  }
 
   const load = useCallback(
     () =>
@@ -110,7 +123,7 @@ export function ProfilesPage() {
               { value: "servers", label: "MCP servers" },
             ]}
             value={section}
-            onChange={(v) => (setSection(v), setCreating(false))}
+            onChange={setSection}
           />
         )}
         {inServers ? (

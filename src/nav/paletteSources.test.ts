@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import type { Service } from "@/api/homelab";
-import { buildEntries, launchableApps, rankEntries, type PaletteItem } from "./paletteSources";
+import {
+  buildEntries,
+  httpUrl,
+  isShortcut,
+  launchableApps,
+  rankEntries,
+  type PaletteItem,
+  type ShortcutKeys,
+} from "./paletteSources";
 
 function service(over: Partial<Service> & { id: string }): Service {
   return {
@@ -43,6 +51,51 @@ describe("launchableApps: the AppGrid filter", () => {
   });
 });
 
+describe("isShortcut", () => {
+  const press = (over: Partial<ShortcutKeys>): ShortcutKeys => ({
+    key: "k",
+    code: "KeyK",
+    ctrlKey: false,
+    metaKey: false,
+    altKey: false,
+    shiftKey: false,
+    ...over,
+  });
+
+  it("is Cmd+K on macOS and leaves Ctrl+K to the text field", () => {
+    expect(isShortcut(press({ metaKey: true }), true)).toBe(true);
+    expect(isShortcut(press({ ctrlKey: true }), true)).toBe(false);
+  });
+
+  it("is Ctrl+K elsewhere", () => {
+    expect(isShortcut(press({ ctrlKey: true }), false)).toBe(true);
+    expect(isShortcut(press({ metaKey: true }), false)).toBe(false);
+    expect(isShortcut(press({ ctrlKey: true, shiftKey: true }), false)).toBe(false);
+  });
+
+  it("matches the physical K on a non-Latin layout", () => {
+    expect(isShortcut(press({ ctrlKey: true, key: "л" }), false)).toBe(true);
+    expect(isShortcut(press({ ctrlKey: true, key: "j", code: "KeyJ" }), false)).toBe(false);
+  });
+});
+
+describe("app URLs", () => {
+  it("opens only http and https", () => {
+    expect(httpUrl("https://media.tail.ts.net:8096")).toBe("https://media.tail.ts.net:8096/");
+    expect(httpUrl("http://192.168.1.10:8080/")).toBe("http://192.168.1.10:8080/");
+    expect(httpUrl("javascript:alert(1)")).toBeNull();
+    expect(httpUrl("data:text/html,hi")).toBeNull();
+    expect(httpUrl("not a url")).toBeNull();
+  });
+
+  it("leaves an app with any other scheme out of the palette", () => {
+    const bad = service({ id: "bad", name: "Bad", open_url: "javascript:alert(1)" });
+    const entries = buildEntries({ recent: [], services: [bad], privateRevealed: false, items: [], theme: "dark" });
+    expect(launchableApps([bad], false)).toHaveLength(1);
+    expect(entries.some((e) => e.kind === "app")).toBe(false);
+  });
+});
+
 describe("rankEntries", () => {
   const jellyfinItem: PaletteItem = { ref: { kind: "service", id: "jellyfin" }, label: "Jellyfin", hint: "Service" };
   const entries = buildEntries({
@@ -50,6 +103,16 @@ describe("rankEntries", () => {
     services: SERVICES,
     privateRevealed: false,
     items: [jellyfinItem],
+    theme: "system",
+  });
+
+  it("offers the three ThemeToggle choices and marks the current one", () => {
+    const themes = entries.filter((e) => e.kind === "action" && e.action.startsWith("theme:"));
+    expect(themes.map((e) => [e.label, e.hint])).toEqual([
+      ["Light theme", ""],
+      ["Dark theme", ""],
+      ["Match system theme", "Current"],
+    ]);
   });
 
   it("with no query lists every group in order and leaves Items out", () => {

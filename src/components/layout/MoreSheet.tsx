@@ -4,7 +4,7 @@ import { Activity, BookOpen, FolderKanban, History as HistoryIcon, Gauge, Layout
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { usePaletteStore } from "@/nav/paletteSources";
+import { openPaletteFromTap } from "@/nav/paletteSources";
 import { useUiStore } from "@/store/uiStore";
 
 /** Phone-only overflow sheet for the destinations that don't fit in the
@@ -24,7 +24,6 @@ export function MoreSheet() {
   const toggleProfiles = useUiStore((s) => s.toggleProfiles);
   const toggleClaudeUsage = useUiStore((s) => s.toggleClaudeUsage);
   const toggleSettings = useUiStore((s) => s.toggleSettings);
-  const setPaletteOpen = usePaletteStore((s) => s.setOpen);
   const isMobile = useIsMobile();
 
   // SheetContent is sm:hidden, but the primitive's backdrop isn't scoped to
@@ -124,9 +123,9 @@ export function MoreSheet() {
           </button>
           <button
             type="button"
-            onClick={() => {
+            onClick={(e) => {
+              openPaletteFromTap(e.currentTarget.parentElement!);
               setMoreOpen(false);
-              setPaletteOpen(true);
             }}
             className="flex items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm text-ink transition-colors hover:bg-surface"
           >
