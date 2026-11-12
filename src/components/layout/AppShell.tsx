@@ -4,6 +4,7 @@ import { TitleBar } from "@/components/layout/TitleBar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomTabBar } from "@/components/layout/BottomTabBar";
 import { MoreSheet } from "@/components/layout/MoreSheet";
+import { CommandPalette } from "@/components/shell/CommandPalette";
 import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
 import { isTauri } from "@/lib/isTauri";
 
@@ -27,6 +28,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       <BottomTabBar />
       <MoreSheet />
+      <CommandPalette />
     </div>
   );
 }
