@@ -1,21 +1,15 @@
 import type { NeedsCard } from "@/api/command";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useUiStore } from "@/store/uiStore";
 
-import { CardActions } from "./CardActions";
+import { CardActions, TOUCH_BUTTON } from "./CardActions";
+import { Group } from "./Group";
+import { openDispatch } from "./homeNav";
+import { ago } from "./summary";
 
-function ago(iso: string): string {
-  const mins = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000));
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.round(mins / 60);
-  return hours < 48 ? `${hours}h` : `${Math.round(hours / 24)}d`;
-}
-
-function tone(card: NeedsCard): string {
-  if (card.kind === "dispatch") return card.question ? "bg-accent" : "bg-err";
-  if (card.job_status === "failed" || card.job_status === "timed_out" || card.ci_state === "failure") return "bg-err";
-  if (card.actions.some((a) => a.id === "merge")) return "bg-ok";
-  return "bg-accent";
+function failed(card: NeedsCard): boolean {
+  if (card.kind === "dispatch") return !card.question;
+  return card.job_status === "failed" || card.job_status === "timed_out" || card.ci_state === "failure";
 }
 
 const DISPATCH_ID = /^dispatch:([^:]+):/;
@@ -24,75 +18,84 @@ function dispatchPlan(card: NeedsCard): string | null {
   return card.kind === "dispatch" ? (DISPATCH_ID.exec(card.id)?.[1] ?? null) : null;
 }
 
-function openDispatch(plan: string) {
-  const ui = useUiStore.getState();
-  ui.setLinkedDispatchPlan(plan);
-  ui.togglePlans();
-}
-
 interface Props {
-  cards: NeedsCard[];
+  cards: NeedsCard[] | null;
   onOpenJob: (jobId: string) => void;
   onChanged: () => void;
 }
 
 export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
   return (
-    <section aria-label="Needs you" className="overflow-hidden rounded-lg border border-line bg-surface">
-      <h2 className="border-b border-line px-3.5 py-2.5 text-meta font-semibold text-ink">
-        Needs you <span className="font-normal text-muted">{cards.length}</span>
-      </h2>
-      {cards.length === 0 && <p className="px-3.5 py-3 text-meta text-muted">Nothing is waiting on you.</p>}
+    <Group name="Needs you" count={cards ? cards.length : null} empty="Nothing is waiting on you.">
       <ul className="divide-y divide-line">
-        {cards.map((card) => {
+        {(cards ?? []).map((card) => {
           const asking = card.job_status === "needs_input";
-          const dispatchQuestion = card.kind === "dispatch" && card.question;
           const plan = dispatchPlan(card);
+          const bad = failed(card);
+          const open = card.job_id ? () => onOpenJob(card.job_id!) : plan ? () => openDispatch(plan) : null;
+          const body = card.question ?? card.next;
           return (
             <li
               key={card.id}
-              className={cn("px-3.5 py-2.5", (card.job_id || plan) && "cursor-pointer hover:bg-raised/60")}
-              onClick={() => (card.job_id ? onOpenJob(card.job_id) : plan && openDispatch(plan))}
+              onClick={open ?? undefined}
+              className={cn(
+                "grid grid-cols-[22px_minmax(0,1fr)] gap-x-2.5 px-1 pt-2.5 pb-3 sm:rounded-lg sm:px-3",
+                open && "cursor-pointer sm:hover:bg-surface"
+              )}
             >
-              <div className="flex items-center gap-2.5">
-                <span aria-hidden="true" className={cn("size-2 shrink-0 rounded-full", tone(card))} />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-body text-ink">
-                    {card.title} {card.repo && <span className="text-muted">{card.repo}</span>}
-                  </div>
-                  <div className="truncate text-caption text-muted">
-                    {card.next}
-                    {card.pr_number ? ` · PR #${card.pr_number}` : ""} · {ago(card.updated_at)}
-                  </div>
-                </div>
-                {!asking && (
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    {card.pr_url && (
+              <span aria-hidden="true" className={cn("text-center font-mono text-[15px] leading-5", bad ? "text-err" : "text-warn")}>
+                {bad ? "!" : "✻"}
+              </span>
+              <div className="min-w-0">
+                <div className="text-body font-medium [overflow-wrap:anywhere] text-ink">{card.title}</div>
+                <div className="text-caption text-muted">
+                  {[card.repo, plan && `plan ${plan}`].filter(Boolean).map((part) => `${part} · `).join("")}
+                  {card.pr_url && (
+                    <>
                       <a
                         href={card.pr_url}
                         target="_blank"
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="hidden text-meta text-primary hover:underline sm:inline"
+                        className="text-primary hover:underline"
                       >
-                        PR
+                        PR #{card.pr_number}
                       </a>
-                    )}
-                    <CardActions cardId={card.id} actions={card.actions} onDone={onChanged} />
-                  </div>
-                )}
-              </div>
-              {dispatchQuestion && <p className="mt-1 pl-[18px] text-body text-ink">{card.question}</p>}
-              {asking && (
-                <div className="mt-1.5 flex flex-col gap-1.5 pl-[18px]">
-                  {card.question && <p className="text-body text-ink">{card.question}</p>}
-                  <CardActions cardId={card.id} actions={card.actions} onDone={onChanged} openText="answer" />
+                      {" · "}
+                    </>
+                  )}
+                  {ago(card.updated_at)}
                 </div>
-              )}
+                {body && <p className="mt-1.5 text-meta [overflow-wrap:anywhere] text-ink-2">{body}</p>}
+                <div className="mt-2.5 flex flex-wrap items-start justify-end gap-2">
+                  {open && !asking && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={TOUCH_BUTTON}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        open();
+                      }}
+                    >
+                      {card.job_id ? (bad ? "Log" : "Details") : "Open plan"}
+                    </Button>
+                  )}
+                  <CardActions
+                    key={asking ? "ask" : "act"}
+                    cardId={card.id}
+                    actions={card.actions}
+                    onDone={onChanged}
+                    openText={asking ? "answer" : null}
+                    touch
+                    className={asking ? "min-w-0 flex-1" : undefined}
+                  />
+                </div>
+              </div>
             </li>
           );
         })}
       </ul>
-    </section>
+    </Group>
   );
 }

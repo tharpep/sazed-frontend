@@ -1,54 +1,92 @@
-import type { ActivityEvent, ActivityStatus } from "@/api/activity";
+import type { ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
+
 import type { Project } from "@/api/projects";
 import { cn } from "@/lib/utils";
-import { useUiStore } from "@/store/uiStore";
 
-const ACTIVITY_DOT: Record<ActivityStatus, string> = {
-  ok: "bg-ok",
-  error: "bg-err",
-  running: "bg-primary",
-  pending: "bg-accent",
-  info: "bg-muted",
-};
+import { MoreLink } from "./Group";
+import { goTo, openProject } from "./homeNav";
+import type { Today } from "./summary";
 
-function time(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: false });
+const box = "min-w-0 overflow-hidden rounded-[10px] border border-line bg-surface";
+const boxHead = "flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-line px-3.5 py-2.5 text-meta font-medium text-ink";
+
+function dateLabel(d: Date) {
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
-const panel = "overflow-hidden rounded-lg border border-line bg-surface";
-const heading = "flex items-baseline gap-1.5 border-b border-line px-3.5 py-2.5 text-meta font-semibold text-ink";
-
-export function ProjectsInFlight({ projects }: { projects: Project[] | null }) {
-  const ui = useUiStore();
-  function open(slug: string) {
-    ui.setLinkedProject(slug);
-    ui.toggleProjects();
-  }
+/** The phone's and narrow page's one Today line, under the counts. */
+export function TodayLine({ today, className }: { today: Today; className?: string }) {
+  const entries = today.entries ?? [];
+  if (entries.length === 0 && !today.note) return null;
   return (
-    <section aria-label="Projects in flight" className={panel}>
-      <h2 className={heading}>
-        Projects in flight <span className="font-normal text-muted">from the board</span>
+    <p aria-label="Today" className={cn("text-meta text-ink-2", className)}>
+      {entries.map((e, i) => (
+        <span key={i}>
+          {i > 0 && <span className="text-muted"> · </span>}
+          {e.timed && <span className="mr-1 font-mono text-muted tabular-nums">{e.when}</span>}
+          {e.text}
+        </span>
+      ))}
+      {today.note && (
+        <span className="text-muted">
+          {entries.length > 0 && " · "}
+          {today.note}
+        </span>
+      )}
+    </p>
+  );
+}
+
+export function TodayBox({ today, className }: { today: Today; className?: string }) {
+  return (
+    <section aria-label="Today" className={cn(box, className)}>
+      <h2 className={boxHead}>
+        Today <span className="font-normal text-muted">{dateLabel(new Date())}</span>
       </h2>
-      {projects && projects.length === 0 && <p className="px-3.5 py-3 text-meta text-muted">No active projects.</p>}
+      <div className="px-3.5 py-2.5">
+        {today.entries?.map((e, i) => (
+          <div key={i} className="grid grid-cols-[52px_minmax(0,1fr)] gap-2.5 py-0.5 text-meta">
+            <span className="font-mono text-muted tabular-nums">{e.when}</span>
+            <span className="text-ink">{e.text}</span>
+          </div>
+        ))}
+        {(today.note || !today.entries) && (
+          <p className="py-0.5 text-meta text-muted">{today.note ?? "Loading…"}</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export function ProjectsBox({ projects }: { projects: Project[] | null }) {
+  return (
+    <section aria-label="Projects by rank" className={box}>
+      <h2 className={boxHead}>
+        Projects <span className="font-normal text-muted">by rank</span>
+        <MoreLink onClick={() => goTo({ hub: "work", view: "projects" })} className="ml-auto">
+          All projects
+        </MoreLink>
+      </h2>
+      {projects?.length === 0 && <p className="px-3.5 py-3 text-meta text-muted">No active projects.</p>}
       <ul className="divide-y divide-line">
         {(projects ?? []).map((p) => (
           <li key={p.id}>
             <button
               type="button"
-              onClick={() => open(p.slug)}
-              className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left hover:bg-raised/60"
+              onClick={() => openProject(p.slug)}
+              className="grid min-h-11 w-full grid-cols-[minmax(0,1fr)_auto] gap-x-2.5 gap-y-0.5 px-3.5 py-2 text-left hover:bg-raised"
             >
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-body text-ink">{p.title}</span>
-                <span className="block truncate text-caption text-muted">{p.current?.title ?? "No open step"}</span>
-              </span>
-              <span aria-hidden="true" className="flex h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-raised">
-                <span className="h-full bg-ok" style={{ width: `${p.bar.done * 100}%` }} />
-                <span className="h-full bg-primary" style={{ width: `${p.bar.in_flight * 100}%` }} />
-                <span className="h-full bg-accent" style={{ width: `${p.bar.needs_me * 100}%` }} />
-              </span>
-              <span className="shrink-0 text-right font-mono text-caption whitespace-nowrap text-muted tabular-nums">
+              <span className="truncate text-body text-ink">{p.title}</span>
+              <span className="font-mono text-caption text-muted tabular-nums">
                 {p.steps_done}/{p.steps_total}
+              </span>
+              <span className="col-span-2 truncate text-caption text-muted">{p.current?.title ?? "No open step"}</span>
+              <span aria-hidden="true" className="col-span-2 mt-1 block h-[3px] overflow-hidden rounded-sm bg-raised">
+                <span
+                  className="block h-full bg-muted"
+                  style={{ width: `${p.steps_total ? (p.steps_done / p.steps_total) * 100 : 0}%` }}
+                />
               </span>
             </button>
           </li>
@@ -58,34 +96,36 @@ export function ProjectsInFlight({ projects }: { projects: Project[] | null }) {
   );
 }
 
-export function RecentActivity({ events }: { events: ActivityEvent[] | null }) {
-  const toggleAudit = useUiStore((s) => s.toggleAudit);
+interface LinkRow {
+  key: string;
+  label: string;
+  text: string;
+  alert?: boolean;
+  onClick: () => void;
+}
+
+/** One-line links out of Home: each names its destination and carries a live summary. */
+export function LinkRows({ rows, label }: { rows: LinkRow[]; label: string }): ReactNode {
+  if (rows.length === 0) return null;
   return (
-    <section aria-label="Activity" className={panel}>
-      <h2 className={heading}>
-        Activity
-        <button type="button" onClick={toggleAudit} className="ml-auto text-caption font-normal text-primary hover:underline">
-          All activity
-        </button>
-      </h2>
-      <ul className="flex flex-col py-1.5">
-        {(events ?? []).map((e) => (
-          <li key={e.id} className="flex items-baseline gap-2.5 px-3.5 py-1 text-meta">
-            <time className="shrink-0 font-mono text-caption text-muted tabular-nums">{time(e.at)}</time>
-            <span aria-hidden="true" className={cn("size-1.5 shrink-0 -translate-y-px rounded-full", ACTIVITY_DOT[e.status])} />
-            <span className="min-w-0 truncate text-ink">{e.title}</span>
+    <nav aria-label={label} className={box}>
+      <ul className="divide-y divide-line">
+        {rows.map((r) => (
+          <li key={r.key}>
+            <button
+              type="button"
+              onClick={r.onClick}
+              className="flex min-h-11 w-full items-center gap-2.5 px-3.5 py-2 text-left hover:bg-raised"
+            >
+              <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", r.alert ? "bg-err" : "bg-muted")} />
+              <span className="line-clamp-2 min-w-0 flex-1 text-meta text-ink">
+                <span className="text-muted">{r.label}</span> {r.text}
+              </span>
+              <ChevronRight className="size-3.5 shrink-0 text-muted" aria-hidden="true" />
+            </button>
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-export function HomelabLine({ summary, alert, onOpen }: { summary: string; alert: boolean; onOpen: () => void }) {
-  return (
-    <button type="button" onClick={onOpen} className={cn(panel, "flex items-center gap-2.5 px-3.5 py-2.5 text-left hover:bg-raised/60")}>
-      <span aria-hidden="true" className={cn("size-2 shrink-0 rounded-full", alert ? "bg-err" : "bg-ok")} />
-      <span className="min-w-0 truncate text-meta text-ink">{summary}</span>
-    </button>
+    </nav>
   );
 }

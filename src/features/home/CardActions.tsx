@@ -10,6 +10,7 @@ const PLACEHOLDER: Record<string, string> = {
   answer: "Answer, and the same session resumes",
   steer: "New directions; the same session picks them up",
 };
+export const TOUCH_BUTTON = "max-sm:h-11 max-sm:min-w-[88px] max-sm:rounded-[9px] max-sm:px-3.5 max-sm:text-sm";
 
 interface Props {
   cardId: string;
@@ -17,9 +18,10 @@ interface Props {
   onDone: () => void;
   openText?: CardAction["id"] | null;
   className?: string;
+  touch?: boolean;
 }
 
-export function CardActions({ cardId, actions, onDone, openText = null, className }: Props) {
+export function CardActions({ cardId, actions, onDone, openText = null, className, touch = false }: Props) {
   const [typing, setTyping] = useState<CardAction["id"] | null>(openText);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -42,6 +44,7 @@ export function CardActions({ cardId, actions, onDone, openText = null, classNam
 
   const buttons = actions.filter((a) => !(a.takes_text && typing === a.id));
   const textAction = actions.find((a) => a.id === typing);
+  const size = touch ? TOUCH_BUTTON : undefined;
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)} onClick={(e) => e.stopPropagation()}>
@@ -58,9 +61,12 @@ export function CardActions({ cardId, actions, onDone, openText = null, classNam
             onChange={(e) => setText(e.target.value)}
             aria-label={textAction.label}
             placeholder={PLACEHOLDER[textAction.id]}
-            className="min-w-0 flex-1 rounded-md border border-line bg-bg px-2 py-1 text-meta text-ink outline-none placeholder:text-muted focus-visible:border-primary"
+            className={cn(
+              "min-w-0 flex-1 rounded-md border border-line bg-bg px-2 py-1 text-meta text-ink outline-none placeholder:text-muted focus-visible:border-primary",
+              touch && "max-sm:h-11 max-sm:text-base"
+            )}
           />
-          <Button type="submit" size="sm" disabled={busy || text.trim().length < 2}>
+          <Button type="submit" size="sm" className={size} disabled={busy || text.trim().length < 2}>
             Send
           </Button>
         </form>
@@ -69,7 +75,7 @@ export function CardActions({ cardId, actions, onDone, openText = null, classNam
         <div className="flex flex-wrap items-center justify-end gap-1.5">
           {buttons.map((a, i) =>
             a.takes_text ? (
-              <Button key={a.id} size="sm" variant="outline" disabled={busy} onClick={() => setTyping(a.id)}>
+              <Button key={a.id} size="sm" variant="outline" className={size} disabled={busy} onClick={() => setTyping(a.id)}>
                 {a.label}
               </Button>
             ) : (
@@ -77,7 +83,7 @@ export function CardActions({ cardId, actions, onDone, openText = null, classNam
                 key={a.id}
                 size="sm"
                 variant={QUIET.has(a.id) ? "ghost" : i === 0 ? "default" : "outline"}
-                className={cn(QUIET.has(a.id) && "text-err hover:text-err")}
+                className={cn(QUIET.has(a.id) && "text-err hover:text-err", size)}
                 disabled={busy}
                 onClick={() => run(a.id)}
               >
