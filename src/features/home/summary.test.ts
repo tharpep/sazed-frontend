@@ -8,7 +8,9 @@ import type { Project } from "@/api/projects";
 import {
   failedStep,
   latestFailure,
+  NO_TODAY,
   nextRun,
+  nextToday,
   projectsByRank,
   readyCount,
   runSentence,
@@ -57,6 +59,30 @@ describe("todayEntries", () => {
   it("says task, singular, and adds nothing when none are due", () => {
     expect(todayEntries([], 1, NOW)).toEqual([{ when: "due", timed: false, text: "1 task due today" }]);
     expect(todayEntries([], 0, NOW)).toEqual([]);
+  });
+});
+
+describe("nextToday", () => {
+  const standup = event("Stand-up", at(13), at(13, 30));
+  const shown = { entries: [{ when: "13:00", timed: true, text: "Stand-up" }], note: null };
+
+  it("never calls a failed calendar an empty day", () => {
+    expect(nextToday(NO_TODAY, null, 0, NOW)).toEqual({ entries: [], note: "Couldn't reach the calendar." });
+    expect(nextToday(NO_TODAY, null, 2, NOW).note).toBe("Couldn't reach the calendar.");
+    expect(nextToday(NO_TODAY, [], null, NOW)).toEqual({ entries: [], note: "Couldn't load today's tasks." });
+  });
+
+  it("says the day is empty only when both sources answered", () => {
+    expect(nextToday(NO_TODAY, [], 0, NOW)).toEqual({ entries: [], note: "Nothing on the calendar and no tasks due today." });
+    expect(nextToday(NO_TODAY, [standup], 0, NOW)).toEqual(shown);
+  });
+
+  it("keeps the last entries marked as possibly stale when both fail, or says the calendar is unreachable", () => {
+    expect(nextToday(shown, null, null, NOW)).toEqual({
+      entries: shown.entries,
+      note: "Couldn't refresh the calendar, so this may be out of date.",
+    });
+    expect(nextToday(NO_TODAY, null, null, NOW)).toEqual({ entries: null, note: "Couldn't reach the calendar." });
   });
 });
 

@@ -82,6 +82,7 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
                     </Button>
                   )}
                   <CardActions
+                    key={asking ? "ask" : "act"}
                     cardId={card.id}
                     actions={card.actions}
                     onDone={onChanged}

@@ -44,7 +44,7 @@ export function Running({ jobs, onOpenJob, onChanged }: Props) {
               )}
             >
               <span aria-hidden="true" className="flex justify-center">
-                {job.status === "running" ? (
+                {job.status !== "queued" ? (
                   <span className="size-[11px] animate-spin rounded-full border-[1.5px] border-line border-t-ink motion-reduce:animate-none" />
                 ) : (
                   <span className="size-[9px] rounded-full border-[1.5px] border-dashed border-muted" />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { listActivity, type ActivityEvent } from "@/api/activity";
 import { getAutomation, listAutomations } from "@/api/automations";
@@ -24,13 +24,14 @@ import { Running } from "./Running";
 import {
   failedStep,
   latestFailure,
+  NO_TODAY,
   nextRun,
+  nextToday,
   projectsByRank,
   readyCount,
   runSentence,
-  todayEntries,
   topReady,
-  type TodayEntry,
+  type Today,
 } from "./summary";
 
 const NAME = "Pryce";
@@ -82,22 +83,20 @@ const NO_SIDE: Side = {
   backlog: null,
 };
 
-interface Today {
-  entries: TodayEntry[] | null;
-  failed: boolean;
-}
-
 export function HomePage() {
   const privateRevealed = useUiStore((s) => s.privateRevealed);
   const togglePrivate = useUiStore((s) => s.togglePrivate);
   const shell = useShellStore((s) => s.shell);
   const isStreaming = useChatStore((s) => s.isStreaming);
+  const stopReply = useChatStore((s) => s.stop);
   const isMobile = useIsMobile();
   const [command, setCommand] = useState<CommandSummary | null>(null);
   const [commandError, setCommandError] = useState(false);
   const [side, setSide] = useState<Side>(NO_SIDE);
-  const [today, setToday] = useState<Today>({ entries: null, failed: false });
+  const [today, setToday] = useState<Today>(NO_TODAY);
   const [openJob, setOpenJob] = useState<string | null>(null);
+  const sideSeq = useRef(0);
+  const failedRun = useRef<{ run: string; step: string | null } | null>(null);
 
   const loadCommand = useCallback(() => {
     getCommand()
@@ -109,6 +108,7 @@ export function HomePage() {
   }, []);
 
   const loadSide = useCallback(async () => {
+    const seq = ++sideSeq.current;
     const [services, storage, automations, projects, activity, backlog] = await Promise.allSettled([
       fetchServices(),
       fetchStorage(),
@@ -119,7 +119,17 @@ export function HomePage() {
     ]);
     const autos = automations.status === "fulfilled" ? automations.value : [];
     const failure = latestFailure(autos);
-    const step = failure ? await getAutomation(failure.id).then(failedStep, () => null) : null;
+    let step: string | null = null;
+    if (failure) {
+      // One detail fetch per failed run: the failure stays in the line for a day of 30 s polls.
+      const run = `${failure.id}@${failure.last_run_at}`;
+      if (failedRun.current?.run !== run) {
+        failedRun.current = { run, step: await getAutomation(failure.id).then(failedStep, () => null) };
+      }
+      step = failedRun.current.step;
+    }
+    // A slow poll that finishes after a newer one must not put older data back.
+    if (seq !== sideSeq.current) return;
     setSide({
       services: services.status === "fulfilled" ? services.value.services : null,
       mediaFree: storage.status === "fulfilled" ? storage.value.media.free_bytes : null,
@@ -133,17 +143,13 @@ export function HomePage() {
 
   const loadToday = useCallback(async () => {
     const [calendar, tasks] = await Promise.allSettled([fetchCalendarToday(), fetchTasksDueToday()]);
-    if (calendar.status === "rejected" && tasks.status === "rejected") {
-      setToday((t) => (t.entries ? t : { entries: null, failed: true }));
-      return;
-    }
-    setToday({
-      entries: todayEntries(
-        calendar.status === "fulfilled" ? calendar.value.events : [],
-        tasks.status === "fulfilled" ? tasks.value.count : 0
-      ),
-      failed: false,
-    });
+    setToday((prev) =>
+      nextToday(
+        prev,
+        calendar.status === "fulfilled" ? calendar.value.events : null,
+        tasks.status === "fulfilled" ? tasks.value.count : null
+      )
+    );
   }, []);
 
   useVisiblePoll(loadCommand, COMMAND_POLL_MS);
@@ -217,7 +223,7 @@ export function HomePage() {
             "Loading…"
           )}
         </p>
-        <TodayLine entries={today.entries} className="@min-[860px]:hidden" />
+        <TodayLine today={today} className="@min-[860px]:hidden" />
 
         <div className="mt-5 grid items-start gap-7 @min-[860px]:grid-cols-[minmax(0,1fr)_300px]">
           <div className="flex min-w-0 flex-col gap-4">
@@ -225,10 +231,10 @@ export function HomePage() {
             <Running jobs={working} onOpenJob={setOpenJob} onChanged={loadCommand} />
             <Ready top={side.backlog ? topReady(side.backlog) : []} total={ready} />
             <Done done={done} compact={isMobile} onOpenJob={setOpenJob} />
-            {askInline && <AskField onSend={askFromHome} disabled={isStreaming} />}
+            {askInline && <AskField onSend={askFromHome} isStreaming={isStreaming} onStop={stopReply} />}
           </div>
           <div className="flex min-w-0 flex-col gap-4">
-            <TodayBox entries={today.entries} failed={today.failed} className="hidden @min-[860px]:block" />
+            <TodayBox today={today} className="hidden @min-[860px]:block" />
             <ProjectsBox projects={side.projects} />
             <LinkRows label="Elsewhere" rows={links} />
           </div>

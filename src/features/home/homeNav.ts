@@ -15,11 +15,11 @@ export function goTo(target: NavTarget) {
 }
 
 export function openSystem(view: "homelab" | "activity") {
+  if (view === "homelab") rememberHomelabView("list");
   if (hubShell()) return useNavStore.getState().go("system", view);
   const ui = useUiStore.getState();
-  if (view === "activity") return ui.toggleAudit();
-  rememberHomelabView("list");
-  ui.toggleHomelab();
+  if (view === "activity") ui.toggleAudit();
+  else ui.toggleHomelab();
 }
 
 // Pages still read their item from uiStore's linkedX until their hub slice moves the reads to

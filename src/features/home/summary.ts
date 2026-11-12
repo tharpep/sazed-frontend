@@ -5,8 +5,8 @@ import type { Project } from "@/api/projects";
 
 const DAY_MS = 86_400_000;
 
-export const READY_SHOWN = 3;
-export const PROJECTS_SHOWN = 5;
+const READY_SHOWN = 3;
+const PROJECTS_SHOWN = 5;
 
 export interface TodayEntry {
   when: string;
@@ -28,6 +28,26 @@ export function todayEntries(events: CalendarEvent[], tasksDue: number, now = ne
     left.push({ when: "due", timed: false, text: `${tasksDue} ${tasksDue === 1 ? "task" : "tasks"} due today` });
   }
   return left;
+}
+
+export interface Today {
+  entries: TodayEntry[] | null;
+  note: string | null;
+}
+
+export const NO_TODAY: Today = { entries: null, note: null };
+
+/** The next Today state from one poll; a null source failed. A failure never reads as an empty day. */
+export function nextToday(prev: Today, events: CalendarEvent[] | null, tasksDue: number | null, now = new Date()): Today {
+  if (events === null && tasksDue === null) {
+    return prev.entries?.length
+      ? { entries: prev.entries, note: "Couldn't refresh the calendar, so this may be out of date." }
+      : { entries: null, note: "Couldn't reach the calendar." };
+  }
+  const entries = todayEntries(events ?? [], tasksDue ?? 0, now);
+  if (events === null) return { entries, note: "Couldn't reach the calendar." };
+  if (tasksDue === null) return { entries, note: "Couldn't load today's tasks." };
+  return { entries, note: entries.length ? null : "Nothing on the calendar and no tasks due today." };
 }
 
 function isOpen(item: BacklogItem): boolean {
@@ -81,7 +101,7 @@ export function ago(iso: string, now = new Date()): string {
   return hours < 48 ? `${hours}h` : `${Math.round(hours / 24)}d`;
 }
 
-export function when(iso: string, now = new Date()): string {
+function when(iso: string, now = new Date()): string {
   const d = new Date(iso);
   const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(":00", "");
   const days = Math.round((new Date(d).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / DAY_MS);

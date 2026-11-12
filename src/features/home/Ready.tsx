@@ -17,7 +17,7 @@ export function Ready({ top, total }: Props) {
       name="Ready"
       count={total}
       empty="Nothing is ready to start."
-      extra={<span className="font-normal text-muted max-sm:hidden">ranked by Sazed, you approve</span>}
+      extra={<span className="font-normal text-muted max-sm:hidden">in your saved order</span>}
     >
       <ul className="@container/ready">
         {top.map((item) => (

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 import { MoreLink } from "./Group";
 import { goTo, openProject } from "./homeNav";
-import type { TodayEntry } from "./summary";
+import type { Today } from "./summary";
 
 const box = "min-w-0 overflow-hidden rounded-[10px] border border-line bg-surface";
 const boxHead = "flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-line px-3.5 py-2.5 text-meta font-medium text-ink";
@@ -16,11 +16,11 @@ function dateLabel(d: Date) {
 }
 
 /** The phone's and narrow page's one Today line, under the counts. */
-export function TodayLine({ entries, className }: { entries: TodayEntry[] | null; className?: string }) {
-  if (!entries) return null;
+export function TodayLine({ today, className }: { today: Today; className?: string }) {
+  const entries = today.entries ?? [];
+  if (entries.length === 0 && !today.note) return null;
   return (
     <p aria-label="Today" className={cn("text-meta text-ink-2", className)}>
-      {entries.length === 0 && <span className="text-muted">Nothing on the calendar and no tasks due today.</span>}
       {entries.map((e, i) => (
         <span key={i}>
           {i > 0 && <span className="text-muted"> · </span>}
@@ -28,31 +28,32 @@ export function TodayLine({ entries, className }: { entries: TodayEntry[] | null
           {e.text}
         </span>
       ))}
+      {today.note && (
+        <span className="text-muted">
+          {entries.length > 0 && " · "}
+          {today.note}
+        </span>
+      )}
     </p>
   );
 }
 
-interface TodayBoxProps {
-  entries: TodayEntry[] | null;
-  failed: boolean;
-  className?: string;
-}
-
-export function TodayBox({ entries, failed, className }: TodayBoxProps) {
+export function TodayBox({ today, className }: { today: Today; className?: string }) {
   return (
     <section aria-label="Today" className={cn(box, className)}>
       <h2 className={boxHead}>
         Today <span className="font-normal text-muted">{dateLabel(new Date())}</span>
       </h2>
       <div className="px-3.5 py-2.5">
-        {entries === null && <p className="text-meta text-muted">{failed ? "Couldn't reach the calendar." : "Loading…"}</p>}
-        {entries?.length === 0 && <p className="text-meta text-muted">Nothing on the calendar and no tasks due.</p>}
-        {entries?.map((e, i) => (
+        {today.entries?.map((e, i) => (
           <div key={i} className="grid grid-cols-[52px_minmax(0,1fr)] gap-2.5 py-0.5 text-meta">
             <span className="font-mono text-muted tabular-nums">{e.when}</span>
             <span className="text-ink">{e.text}</span>
           </div>
         ))}
+        {(today.note || !today.entries) && (
+          <p className="py-0.5 text-meta text-muted">{today.note ?? "Loading…"}</p>
+        )}
       </div>
     </section>
   );
