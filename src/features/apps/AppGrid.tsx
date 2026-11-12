@@ -2,15 +2,15 @@ import { useState } from "react";
 
 import type { Service } from "@/api/homelab";
 import { StatusDot, STATUS_LABEL, statusOf } from "@/features/homelab/format";
+import { launchableApps } from "@/nav/paletteSources";
+import { useUiStore } from "@/store/uiStore";
+import { appsLead } from "./appsLead";
 
 // Icons come from homarr-labs/dashboard-icons by the registry's `icon` slug. PNG because a few
 // apps have no SVG there.
 const ICON_BASE = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png";
 
-// The console itself is where you already are, so it gets no tile.
-const HIDDEN = new Set(["sazed-console"]);
-
-const SECTIONS: { key: string; label: string; match: (s: Service) => boolean }[] = [
+const GROUPS: { key: string; label: string; match: (s: Service) => boolean }[] = [
   { key: "apps", label: "Apps", match: (s) => s.group === "apps" },
   { key: "admin", label: "Homelab", match: (s) => s.group !== "apps" },
 ];
@@ -24,24 +24,29 @@ function homeOnly(url: string): boolean {
   }
 }
 
-/** Launcher tiles for every registry service with an open_url, split into Apps and Homelab.
- * The caller decides which services to pass (Home drops private ones until revealed). */
+/** The launcher: a lead line, then tiles for the palette's app list, split into Apps and Homelab.
+ * Private apps stay out until revealed on Home. */
 export function AppGrid({ services }: { services: Service[] }) {
-  const openable = services.filter((s) => s.open_url && s.lifecycle !== "planned" && !HIDDEN.has(s.id));
-  const sections = SECTIONS.map((sec) => ({ ...sec, apps: openable.filter(sec.match) })).filter(
-    (sec) => sec.apps.length > 0
-  );
+  const privateRevealed = useUiStore((s) => s.privateRevealed);
+  const apps = launchableApps(services, privateRevealed);
+  const groups = GROUPS.map((g) => ({ ...g, apps: apps.filter(g.match) })).filter((g) => g.apps.length > 0);
 
   return (
     <>
-      {sections.map((sec) => (
-        <section key={sec.key} aria-labelledby={`apps-${sec.key}`}>
-          <h2 id={`apps-${sec.key}`} className="px-1 pb-2 text-sm font-medium text-muted">
-            {sec.label}
+      <div>
+        <p className="text-title font-medium text-ink">{appsLead(apps)}</p>
+        <p className="mt-0.5 text-meta text-muted">Each opens in a new tab.</p>
+      </div>
+      {groups.map((g) => (
+        <section key={g.key} aria-labelledby={`apps-${g.key}`}>
+          <h2 id={`apps-${g.key}`} className="flex min-h-7 items-center gap-2 px-1 pb-1 text-meta font-medium text-ink-2">
+            {g.label}{" "}
+            <span className="font-normal text-muted tabular-nums">{g.apps.length}</span>
           </h2>
-          <ul className="grid grid-cols-4 gap-x-2 gap-y-4 sm:grid-cols-5">
-            {sec.apps.map((s) => (
-              <li key={s.id}>
+          {/* Four columns on phones; from 640px the columns grow with the page. */}
+          <ul className="mt-0.5 grid grid-cols-4 gap-x-1 gap-y-1.5 sm:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))]">
+            {g.apps.map((s) => (
+              <li key={s.id} className="min-w-0">
                 <AppTile service={s} />
               </li>
             ))}
@@ -57,25 +62,22 @@ function AppTile({ service: s }: { service: Service }) {
   const local = homeOnly(s.open_url!);
   // Healthy stays quiet (house rule: only down and maintenance get color).
   const flagged = kind === "down" || kind === "maintenance";
+  const state = kind === "down" ? ", down" : kind === "maintenance" ? ", in maintenance" : "";
   return (
     <a
       href={s.open_url!}
       target="_blank"
       rel="noreferrer"
       title={`${s.description}${flagged ? ` (${STATUS_LABEL[kind]})` : ""}`}
-      className="group flex flex-col items-center gap-1.5 rounded-lg px-1 py-2 text-center transition-colors hover:bg-surface"
+      aria-label={`Open ${s.name}${state}${local ? ", home only" : ""}`}
+      className="flex min-h-24 flex-col items-center gap-1.5 rounded-[14px] px-0.5 pt-2.5 pb-2 text-center text-caption text-ink-2 transition-colors hover:bg-surface hover:text-ink active:bg-surface"
     >
-      <span className="relative">
+      <span className="relative grid size-14 shrink-0 place-items-center rounded-[15px] border border-line bg-surface">
         <AppIcon service={s} />
-        {flagged && (
-          <StatusDot
-            kind={kind}
-            className="absolute -right-0.5 -top-0.5 size-3 ring-2 ring-bg"
-          />
-        )}
+        {flagged && <StatusDot kind={kind} className="absolute -top-[3px] -right-[3px] size-3 ring-2 ring-bg" />}
       </span>
-      <span className="line-clamp-2 text-xs leading-tight text-ink">{s.name}</span>
-      {local && <span className="text-[10px] leading-none text-muted">home only</span>}
+      <span className="max-w-full wrap-break-word">{s.name}</span>
+      {local && <span className="-mt-1 leading-[14px] text-muted">home only</span>}
     </a>
   );
 }
@@ -83,11 +85,7 @@ function AppTile({ service: s }: { service: Service }) {
 function AppIcon({ service: s }: { service: Service }) {
   const [failed, setFailed] = useState(false);
   if (!s.icon || failed) {
-    return (
-      <span className="flex size-12 items-center justify-center rounded-xl bg-surface text-lg font-semibold text-muted">
-        {s.name.charAt(0)}
-      </span>
-    );
+    return <span className="font-mono text-[15px] font-medium text-ink">{s.name.charAt(0)}</span>;
   }
   return (
     <img
@@ -95,7 +93,7 @@ function AppIcon({ service: s }: { service: Service }) {
       alt=""
       loading="lazy"
       onError={() => setFailed(true)}
-      className="size-12 rounded-xl bg-surface object-contain p-1.5"
+      className="size-9 object-contain"
     />
   );
 }
