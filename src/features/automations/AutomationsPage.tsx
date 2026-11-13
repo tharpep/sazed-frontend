@@ -4,7 +4,6 @@ import { ChevronRight, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { listAutomations, type Automation } from "@/api/automations";
 import { errorText } from "@/api/homelab";
-import { JobsPanel } from "@/features/jobs/JobsPanel";
 import { AutomationSheet } from "./AutomationSheet";
 import { RUN_LABEL, describeCron, runTone, shortWhen } from "./format";
 
@@ -16,9 +15,6 @@ export function AutomationsPage() {
   const [loading, setLoading] = useState(false);
   // null = closed, "new" = create form, otherwise an automation id
   const [open, setOpen] = useState<string | null>(null);
-  // Jobs (research, second opinions) share this page: both are "Sazed doing things for you".
-  const [tab, setTab] = useState<"automations" | "jobs">("automations");
-  const [jobsRefresh, setJobsRefresh] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,27 +39,11 @@ export function AutomationsPage() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg">
       <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div role="tablist" aria-label="Section" className="flex gap-1 rounded-md bg-surface p-0.5">
-          {([["automations", "Automations"], ["jobs", "Jobs"]] as const).map(([t, label]) => (
-            <button
-              key={t}
-              type="button"
-              role="tab"
-              aria-selected={tab === t}
-              onClick={() => setTab(t)}
-              className={cn(
-                "rounded px-3 py-1 text-sm transition-colors",
-                tab === t ? "bg-bg font-semibold text-ink shadow-sm" : "text-muted hover:text-ink"
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <h1 className="text-sm font-medium text-ink">Automations</h1>
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => (tab === "jobs" ? setJobsRefresh((n) => n + 1) : load())}
+            onClick={load}
             disabled={loading}
             aria-label="Refresh"
             title="Refresh"
@@ -71,7 +51,6 @@ export function AutomationsPage() {
           >
             <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
           </button>
-          {tab === "automations" && (
           <button
             type="button"
             onClick={() => setOpen("new")}
@@ -81,13 +60,11 @@ export function AutomationsPage() {
           >
             <Plus className="size-4" aria-hidden="true" />
           </button>
-          )}
         </div>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4 pb-8">
-          {tab === "jobs" ? <JobsPanel refreshKey={jobsRefresh} /> : (<>
           {error && <p className="text-sm text-destructive">Couldn't load automations: {error}</p>}
           {!items && !error && <p className="text-sm text-muted">Loading…</p>}
 
@@ -137,7 +114,6 @@ export function AutomationsPage() {
               ))}
             </ul>
           )}
-          </>)}
         </div>
       </div>
 

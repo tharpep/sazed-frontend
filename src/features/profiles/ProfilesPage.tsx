@@ -6,6 +6,7 @@ import { listMcpServers, saveMcpServer, type McpServer } from "@/api/mcpServers"
 import { listProfiles, saveProfile, type Profile } from "@/api/profiles";
 import { Button } from "@/components/ui/button";
 import { Author, ago } from "@/features/plans/planParts";
+import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 import { budget, timeout } from "./format";
@@ -51,8 +52,10 @@ function Row({ profile, onOpen }: { profile: Profile; onOpen: () => void }) {
 type Section = "profiles" | "servers";
 
 export function ProfilesPage() {
+  const hubs = useShellStore((s) => s.shell) === "hubs";
   // The section is the nav view: agents:mcp is MCP servers, agents:profiles is Profiles.
   const section = useNavStore((s): Section => (s.hub === "agents" && s.view.agents === "mcp" ? "servers" : "profiles"));
+  const navProfile = useNavStore((s) => s.open.agents);
   const [server, setServer] = useState<string | null>(null);
   const [servers, setServers] = useState<McpServer[] | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -73,7 +76,8 @@ export function ProfilesPage() {
 
   function setSection(next: Section) {
     setCreating(false);
-    useUiStore.getState().openView({ hub: "agents", view: next === "servers" ? "mcp" : "profiles" });
+    if (hubs) useNavStore.getState().go("agents", next === "servers" ? "mcp" : "profiles");
+    else useUiStore.getState().openView({ hub: "agents", view: next === "servers" ? "mcp" : "profiles" });
   }
 
   const load = useCallback(
@@ -98,7 +102,8 @@ export function ProfilesPage() {
   }, [load, loadServers]);
 
   const inServers = section === "servers";
-  const open = inServers ? server : name;
+  const selectedName = hubs && navProfile?.kind === "profile" ? navProfile.id : name;
+  const open = inServers ? server : selectedName;
 
   return (
     <Page>
@@ -148,7 +153,11 @@ export function ProfilesPage() {
             </>
           )
         ) : name ? (
-          <ProfileView name={name} onBack={() => setName(null)} onChanged={load} />
+          <ProfileView
+            name={selectedName!}
+            onBack={() => (hubs ? useNavStore.getState().closeItem() : setName(null))}
+            onChanged={load}
+          />
         ) : (
           <>
             <p className="text-meta text-ink-2">
