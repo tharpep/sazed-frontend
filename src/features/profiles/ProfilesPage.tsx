@@ -76,8 +76,7 @@ export function ProfilesPage() {
 
   function setSection(next: Section) {
     setCreating(false);
-    if (hubs) useNavStore.getState().go("agents", next === "servers" ? "mcp" : "profiles");
-    else useUiStore.getState().openView({ hub: "agents", view: next === "servers" ? "mcp" : "profiles" });
+    useNavStore.getState().go("agents", next === "servers" ? "mcp" : "profiles");
   }
 
   const load = useCallback(

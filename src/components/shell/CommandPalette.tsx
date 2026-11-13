@@ -5,7 +5,6 @@ import {
   Clock,
   Compass,
   ExternalLink,
-  LayoutPanelLeft,
   MessageSquarePlus,
   Monitor,
   Moon,
@@ -19,7 +18,6 @@ import { fetchServices, type Service } from "@/api/homelab";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { startNewChat } from "@/features/chat/openSession";
 import { cn } from "@/lib/utils";
-import type { NavTarget } from "@/nav/hubViews";
 import {
   buildEntries,
   isShortcut,
@@ -31,7 +29,6 @@ import {
   type PaletteEntry,
   type PaletteItem,
 } from "@/nav/paletteSources";
-import { useChatStore } from "@/store/chatStore";
 import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore, type ItemRef } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
@@ -42,8 +39,6 @@ const ACTION_ICON: Record<PaletteAction, LucideIcon> = {
   "theme:light": Sun,
   "theme:dark": Moon,
   "theme:system": Monitor,
-  "shell:hubs": LayoutPanelLeft,
-  "shell:old": LayoutPanelLeft,
 };
 
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
@@ -57,14 +52,8 @@ function entryIcon(e: PaletteEntry): LucideIcon {
   return Clock;
 }
 
-// Goes through the uiStore adapters, not navStore alone, so the old shell's booleans (and with
-// them its active rail entry and tab) follow the palette.
 function openRef(ref: ItemRef) {
-  const ui = useUiStore.getState();
   useNavStore.getState().openItem(ref);
-  ui.linkItem(ref);
-  const nav = useNavStore.getState();
-  ui.openView({ hub: nav.hub, view: nav.view[nav.hub] } as NavTarget);
 }
 
 export function CommandPalette() {
@@ -97,7 +86,6 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   const [items, setItems] = useState<PaletteItem[]>([]);
   const recent = useNavStore((s) => s.recent);
   const privateRevealed = useUiStore((s) => s.privateRevealed);
-  const shell = useShellStore((s) => s.shell);
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -113,8 +101,8 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   }, []);
 
   const entries = useMemo(
-    () => rankEntries(buildEntries({ recent, services, privateRevealed, items, theme, shell }), query),
-    [recent, services, privateRevealed, items, theme, shell, query]
+    () => rankEntries(buildEntries({ recent, services, privateRevealed, items, theme }), query),
+    [recent, services, privateRevealed, items, theme, query]
   );
   // Selection follows the entry, not its row, so apps arriving late never shift it onto another.
   const found = entries.findIndex((e) => e.key === selKey);
@@ -127,24 +115,14 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   function run(e: PaletteEntry | undefined) {
     if (!e) return;
     onClose();
-    const ui = useUiStore.getState();
-    if (e.kind === "hub") ui.openView({ hub: e.hub } as NavTarget);
-    else if (e.kind === "view") ui.openView(e.target);
+    if (e.kind === "hub") useNavStore.getState().go(e.hub);
+    else if (e.kind === "view") useNavStore.getState().go(e.target.hub, e.target.view);
     else if (e.kind === "item") openRef(e.ref);
     else if (e.kind === "app") window.open(e.url, "_blank", "noopener,noreferrer");
-    // The hub shell's Settings is a dialog over the current hub; the old shell's is a page.
     else if (e.action === "settings") {
-      if (shell === "hubs") useShellStore.getState().setSettingsOpen(true);
-      else ui.setSettingsOpen(true);
-    } else if (e.action === "shell:hubs" || e.action === "shell:old") useShellStore.getState().setShell(e.action === "shell:hubs" ? "hubs" : "old");
-    else if (e.action === "new-chat") {
-      // The old shell shows an empty chat as Home; the hub shell shows it in Chat.
-      if (shell === "hubs") startNewChat();
-      else {
-        useChatStore.getState().newSession();
-        ui.closeAll();
-      }
-    } else setTheme(e.action === "theme:light" ? "light" : e.action === "theme:dark" ? "dark" : "system");
+      useShellStore.getState().setSettingsOpen(true);
+    } else if (e.action === "new-chat") startNewChat();
+    else setTheme(e.action === "theme:light" ? "light" : e.action === "theme:dark" ? "dark" : "system");
   }
 
   function onInputKeyDown(e: KeyboardEvent<HTMLInputElement>) {

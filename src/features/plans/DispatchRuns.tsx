@@ -11,6 +11,14 @@ export function counts(states: Record<string, number>) {
   return ORDER.filter((s) => states[s]).map((s) => `${states[s]} ${s}`).join(" · ");
 }
 
+export type RunOutcome = "Running" | "Failed" | "Done";
+
+export function outcomeOf(plan: DispatchPlanSummary): RunOutcome {
+  if ((plan.states.running ?? 0) + (plan.states.waiting ?? 0) > 0) return "Running";
+  if (["failed", "conflict", "blocked"].some((state) => (plan.states[state] ?? 0) > 0)) return "Failed";
+  return "Done";
+}
+
 export function DispatchRuns({ onOpen }: { onOpen: (plan: string) => void }) {
   const [plans, setPlans] = useState<DispatchPlanSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,11 +37,10 @@ export function DispatchRuns({ onOpen }: { onOpen: (plan: string) => void }) {
   if (!plans) return <p className="text-meta text-muted">Loading…</p>;
   if (plans.length === 0)
     return <EmptyState title="No dispatch runs">Runs show up here once dispatch posts its first task row.</EmptyState>;
-  const groups = [
-    ["Running", plans.filter((p) => (p.states.running ?? 0) + (p.states.waiting ?? 0) > 0)],
-    ["Failed", plans.filter((p) => ["failed", "conflict", "blocked"].some((state) => (p.states[state] ?? 0) > 0))],
-    ["Done", plans.filter((p) => ["done", "landed", "cleaned"].some((state) => (p.states[state] ?? 0) > 0))],
-  ] as const;
+  const groups = (["Running", "Failed", "Done"] as const).map((outcome) => [
+    outcome,
+    plans.filter((plan) => outcomeOf(plan) === outcome),
+  ] as const);
 
   return (
     <div className="flex flex-col gap-4">

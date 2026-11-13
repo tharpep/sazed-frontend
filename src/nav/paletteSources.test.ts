@@ -90,7 +90,7 @@ describe("app URLs", () => {
 
   it("leaves an app with any other scheme off the Apps page and out of the palette", () => {
     const bad = service({ id: "bad", name: "Bad", open_url: "javascript:alert(1)" });
-    const entries = buildEntries({ recent: [], services: [bad], privateRevealed: false, items: [], theme: "dark", shell: "old" });
+    const entries = buildEntries({ recent: [], services: [bad], privateRevealed: false, items: [], theme: "dark" });
     expect(launchableApps([bad], false)).toHaveLength(0);
     expect(entries.some((e) => e.kind === "app")).toBe(false);
   });
@@ -104,7 +104,6 @@ describe("rankEntries", () => {
     privateRevealed: false,
     items: [jellyfinItem],
     theme: "system",
-    shell: "old",
   });
 
   it("offers the three ThemeToggle choices and marks the current one", () => {
@@ -114,15 +113,6 @@ describe("rankEntries", () => {
       ["Dark theme", ""],
       ["Match system theme", "Current"],
     ]);
-  });
-
-  it("offers the layout the console is not on", () => {
-    const layout = (shell: "old" | "hubs") =>
-      buildEntries({ recent: [], services: [], privateRevealed: false, items: [], theme: "system", shell })
-        .filter((e) => e.kind === "action" && e.action.startsWith("shell:"))
-        .map((e) => e.label);
-    expect(layout("old")).toEqual(["Switch to the new layout"]);
-    expect(layout("hubs")).toEqual(["Switch to the old layout"]);
   });
 
   it("with no query lists every group in order and leaves Items out", () => {
@@ -158,7 +148,7 @@ describe("recent conversations", () => {
   const SESSION = "3f2a9c1e-0000-4000-8000-000000000001";
   const UNLISTED = "3f2a9c1e-0000-4000-8000-000000000002";
   const titled: PaletteItem = { ref: { kind: "session", id: SESSION }, label: "Seerr request", hint: "Conversation · 9:41 AM" };
-  const recentOf = (shell: "old" | "hubs") =>
+  const recentOf = () =>
     buildEntries({
       recent: [
         { kind: "session", id: SESSION },
@@ -166,13 +156,12 @@ describe("recent conversations", () => {
       ],
       services: [],
       privateRevealed: false,
-      items: shell === "hubs" ? [titled] : [],
+      items: [titled],
       theme: "system",
-      shell,
     });
 
   it("labels a recent conversation with its title, and an unlisted one without its id", () => {
-    const recent = recentOf("hubs").filter((e) => e.group === "Recent");
+    const recent = recentOf().filter((e) => e.group === "Recent");
     expect(recent.map((e) => [e.label, e.hint])).toEqual([
       ["Seerr request", "Conversation · 9:41 AM"],
       ["Conversation", "Conversation"],
@@ -180,11 +169,8 @@ describe("recent conversations", () => {
   });
 
   it("finds a recent conversation by a typed title, once", () => {
-    const found = rankEntries(recentOf("hubs"), "seerr");
+    const found = rankEntries(recentOf(), "seerr");
     expect(found.map((e) => [e.group, e.label])).toEqual([["Recent", "Seerr request"]]);
   });
 
-  it("leaves conversations out of the old shell's Recent", () => {
-    expect(recentOf("old").filter((e) => e.group === "Recent")).toEqual([]);
-  });
 });

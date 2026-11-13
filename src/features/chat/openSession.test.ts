@@ -9,7 +9,6 @@ const api = vi.hoisted(() => ({
 
 vi.mock("@/api/conversations", () => ({ getConversation: api.getConversation, listConversations: api.listConversations }));
 
-import { useShellStore } from "@/nav/shellFlag";
 import { useChatStore } from "@/store/chatStore";
 import { useNavStore } from "@/store/navStore";
 import { useSessionStore, type ChatSession } from "@/store/sessionStore";
@@ -44,7 +43,6 @@ beforeEach(() => {
   useChatStore.setState(chatInitial, true);
   useSessionStore.setState(sessionInitial, true);
   useNavStore.setState({ hub: "home", open: {}, read: {}, recent: [] });
-  useShellStore.setState({ shell: "hubs" });
   stop = startSessionSync();
 });
 
@@ -135,19 +133,6 @@ describe("startSessionSync on start", () => {
   });
 });
 
-describe("openSession in the old shell", () => {
-  it("loads the session itself and leaves navStore.open alone", async () => {
-    // Only HubFrame runs the sync.
-    stop();
-    stop = () => undefined;
-    useShellStore.setState({ shell: "old" });
-    openSession("a");
-    await vi.waitFor(() => expect(useChatStore.getState().sessionId).toBe("a"));
-    expect(openChat()).toBeUndefined();
-    expect(useSessionStore.getState().activeSessionId).toBe("a");
-  });
-});
-
 describe("conversationItems", () => {
   beforeEach(() => {
     useSessionStore.setState({ loadSessions: vi.fn(async () => undefined), sessions: [session("a", "Seerr request")] });
@@ -159,8 +144,4 @@ describe("conversationItems", () => {
     ]);
   });
 
-  it("offers none in the old shell, which never loads from navStore.open", async () => {
-    useShellStore.setState({ shell: "old" });
-    expect(await conversationItems()).toEqual([]);
-  });
 });
