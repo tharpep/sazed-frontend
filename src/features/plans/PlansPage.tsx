@@ -34,6 +34,9 @@ export function PlansPage() {
   const [plans, setPlans] = useState<PlanSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
+    setCompare(null);
+  }, [openRef?.id, openRef?.version]);
+  useEffect(() => {
     if (open) return;
     let live = true;
     setPlans(null);
