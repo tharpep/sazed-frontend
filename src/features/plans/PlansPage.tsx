@@ -7,12 +7,9 @@ import { ToolsRow } from "@/components/shell/ToolsRow";
 import { ViewPicker } from "@/components/shell/ViewPicker";
 import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore } from "@/store/navStore";
-import { useUiStore } from "@/store/uiStore";
 import { CompareView } from "./CompareView";
 import { PlanList } from "./PlanList";
 import { PlanView } from "./PlanView";
-import { DispatchLive } from "./DispatchLive";
-import { DispatchRuns } from "./DispatchRuns";
 
 type Filter = PlanState | "all";
 
@@ -23,32 +20,21 @@ const FILTERS = [
   { value: "all", label: "All" },
 ] as const;
 
-type Mode = "plans" | "dispatch";
-
 type Open = { slug: string; version: number | null; compare: [number, number] | null };
 
 export function PlansPage() {
   const hubs = useShellStore((s) => s.shell) === "hubs";
   const navPlan = useNavStore((s) => s.read.work);
-  const hub = useNavStore((s) => s.hub);
   const openRef = navPlan?.kind === "plan" ? navPlan : null;
   const open: Open | null = openRef
     ? { slug: openRef.id, version: openRef.version ?? null, compare: null }
     : null;
   const [compare, setCompare] = useState<[number, number] | null>(null);
-  const navDispatch = useNavStore((s) => s.read.agents);
-  const dispatch = navDispatch?.kind === "dispatch" ? navDispatch.id : null;
-  // The tab is the nav view: work:plans is Plans, agents:runs is Dispatch runs.
-  const mode = useNavStore((s): Mode => (s.hub === "agents" ? "dispatch" : "plans"));
   const [filter, setFilter] = useState<Filter>("active");
   const [plans, setPlans] = useState<PlanSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  function setMode(next: Mode) {
-    useUiStore.getState().openView(next === "dispatch" ? { hub: "agents", view: "runs" } : { hub: "work", view: "plans" });
-  }
-
   useEffect(() => {
-    if (open || mode !== "plans") return;
+    if (open) return;
     let live = true;
     setPlans(null);
     listPlans(filter === "all" ? {} : { state: filter })
@@ -57,37 +43,13 @@ export function PlansPage() {
     return () => {
       live = false;
     };
-  }, [filter, open, mode]);
-
-  const modeSwitch = (
-    <Segmented
-      label="Plans view"
-      options={[
-        { value: "plans", label: "Plans" },
-        { value: "dispatch", label: "Dispatch runs" },
-      ]}
-      value={mode}
-      onChange={setMode}
-      className="self-start"
-    />
-  );
+  }, [filter, open]);
 
   return (
     <Page>
       {!hubs && <PageHeader title="Plans" />}
-      <PageBody className={mode === "dispatch" && dispatch ? "max-w-none" : undefined}>
-        {mode === "dispatch" && dispatch ? (
-          <DispatchLive
-            plan={dispatch}
-            onBack={() => useNavStore.getState().closeItem()}
-            onOpenPlan={(slug) => useUiStore.getState().setLinkedPlan({ slug, version: null })}
-          />
-        ) : mode === "dispatch" ? (
-          <>
-            {hubs && hub === "agents" ? modeSwitch : !hubs && modeSwitch}
-            <DispatchRuns onOpen={(plan) => useNavStore.getState().openItem({ kind: "dispatch", id: plan })} />
-          </>
-        ) : compare ? (
+      <PageBody>
+        {compare ? (
           <CompareView
             slug={open!.slug}
             a={compare[0]}
@@ -119,16 +81,13 @@ export function PlansPage() {
                 }
               />
             ) : (
-              <>
-                {modeSwitch}
-                <Segmented
-                  label="Plan state"
-                  options={[...FILTERS]}
-                  value={filter}
-                  onChange={setFilter}
-                  className="self-start"
-                />
-              </>
+              <Segmented
+                label="Plan state"
+                options={[...FILTERS]}
+                value={filter}
+                onChange={setFilter}
+                className="self-start"
+              />
             )}
             {error && <p className="text-meta text-err">Couldn't load plans: {error}</p>}
             {plans ? (
