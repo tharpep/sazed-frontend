@@ -1,15 +1,15 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { TitleBar } from "@/components/layout/TitleBar";
+import { startNewChat, startSessionSync, useOpenChatTitle } from "@/features/chat/openSession";
+import { useSystemSummary } from "@/features/homelab/useSystemSummary";
 import { SettingsDialog } from "@/features/settings/SettingsPage";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useRunningCount } from "@/hooks/useRunningCount";
 import { isTauri } from "@/lib/isTauri";
 import { openPaletteFromTap, usePaletteStore } from "@/nav/paletteSources";
 import { useShellStore } from "@/nav/shellFlag";
-import { useChatStore } from "@/store/chatStore";
 import { useNavStore } from "@/store/navStore";
-import { useSessionStore } from "@/store/sessionStore";
 import { useUiStore } from "@/store/uiStore";
 import { CommandPalette } from "./CommandPalette";
 import { DetailSlotContext } from "./detailSlot";
@@ -40,6 +40,8 @@ function desktopSearch() {
   usePaletteStore.getState().setOpen(true);
 }
 
+const NEW_CHAT = { label: "New chat", onClick: startNewChat };
+
 /** The six-hub shell: header, content, docked field and hub bar on phones; rail and page panel
  * with the title row from 640px. */
 export function HubFrame({ children, docked }: HubFrameProps) {
@@ -47,6 +49,11 @@ export function HubFrame({ children, docked }: HubFrameProps) {
   const settingsOpen = useShellStore((s) => s.settingsOpen);
   const setSettingsOpen = useShellStore((s) => s.setSettingsOpen);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const inChat = useNavStore((s) => s.hub === "chat");
+  // Chat docks its own composer inside the conversation pane, so it is never beside the list.
+  const dock = inChat ? null : docked;
+
+  useEffect(startSessionSync, []);
 
   useEffect(
     () =>
@@ -72,6 +79,8 @@ export function HubFrame({ children, docked }: HubFrameProps) {
       }
       if (e.key !== "Escape" || document.querySelector('[role="dialog"]')) return;
       const nav = useNavStore.getState();
+      // Chat's open session is the conversation on screen, not a sheet.
+      if (nav.hub === "chat") return;
       if (nav.open[nav.hub] || nav.read[nav.hub]) nav.closeItem();
     }
     window.addEventListener("keydown", onKeyDown);
@@ -85,16 +94,16 @@ export function HubFrame({ children, docked }: HubFrameProps) {
       {isTauri && <TitleBar />}
       <DetailSlotContext.Provider value={slot}>
         {isMobile ? (
-          <PhoneFrame docked={docked} onSettings={openSettings}>
+          <PhoneFrame docked={dock} onSettings={openSettings}>
             {children}
           </PhoneFrame>
         ) : (
           <div ref={setSlot} className="flex min-h-0 flex-1">
             <HubRail onSettings={openSettings} />
             <main className="relative my-2 mr-2 flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-line bg-bg">
-              <HubTitleRow onSearch={desktopSearch} />
+              <HubTitleRow onSearch={desktopSearch} action={inChat ? NEW_CHAT : undefined} />
               {children}
-              {docked}
+              {dock}
             </main>
           </div>
         )}
@@ -108,22 +117,12 @@ export function HubFrame({ children, docked }: HubFrameProps) {
 function PhoneFrame({ children, docked, onSettings }: HubFrameProps & { onSettings: () => void }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const running = useRunningCount();
-  const sessionId = useChatStore((s) => s.sessionId);
-  const chatTitle = useSessionStore((s) => s.sessions.find((x) => x.id === sessionId)?.title);
-
-  function newChat() {
-    useChatStore.getState().newSession();
-    useNavStore.getState().go("chat", "conversation");
-  }
+  const chatTitle = useOpenChatTitle();
+  const system = useSystemSummary(moreOpen);
 
   return (
     <>
-      <PhoneHeader
-        onSearch={phoneSearch}
-        onSettings={onSettings}
-        chatTitle={chatTitle}
-        chatAction={{ label: "New chat", onClick: newChat }}
-      />
+      <PhoneHeader onSearch={phoneSearch} onSettings={onSettings} chatTitle={chatTitle} chatAction={NEW_CHAT} />
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>
       {docked}
       <HubBottomBar moreOpen={moreOpen} onMore={() => setMoreOpen(true)} running={running} />
@@ -132,7 +131,7 @@ function PhoneFrame({ children, docked, onSettings }: HubFrameProps & { onSettin
         onOpenChange={setMoreOpen}
         onSearch={phoneSearch}
         onSettings={onSettings}
-        summaries={{ agents: running > 0 ? `${running} running` : "Nothing running" }}
+        summaries={{ agents: running > 0 ? `${running} running` : "Nothing running", system }}
       />
     </>
   );

@@ -17,6 +17,7 @@ import {
 
 import { fetchServices, type Service } from "@/api/homelab";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import { startNewChat } from "@/features/chat/openSession";
 import { cn } from "@/lib/utils";
 import type { NavTarget } from "@/nav/hubViews";
 import {
@@ -137,8 +138,12 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       else ui.setSettingsOpen(true);
     } else if (e.action === "shell:hubs" || e.action === "shell:old") useShellStore.getState().setShell(e.action === "shell:hubs" ? "hubs" : "old");
     else if (e.action === "new-chat") {
-      useChatStore.getState().newSession();
-      ui.closeAll();
+      // The old shell shows an empty chat as Home; the hub shell shows it in Chat.
+      if (shell === "hubs") startNewChat();
+      else {
+        useChatStore.getState().newSession();
+        ui.closeAll();
+      }
     } else setTheme(e.action === "theme:light" ? "light" : e.action === "theme:dark" ? "dark" : "system");
   }
 

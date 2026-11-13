@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { fetchServices, type Service } from "@/api/homelab";
+import { conversationItems } from "@/features/chat/openSession";
 import { statusOf, visibleServices } from "@/features/homelab/format";
 import type { ItemKind, ItemRef } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
@@ -147,10 +148,16 @@ interface Sources {
 }
 
 /** Every entry in display order: Recent, Hubs, Apps, Views, Items, Actions. */
-export function buildEntries({ recent, services, privateRevealed, items, theme, shell }: Sources): PaletteEntry[] {
-  const entries: PaletteEntry[] = shownRecent(recent, services, privateRevealed).map((ref) =>
-    itemEntry("Recent", { ref, label: ref.id, hint: refHint(ref) })
-  );
+export function buildEntries({ recent: opened, services, privateRevealed, items, theme, shell }: Sources): PaletteEntry[] {
+  // Only the hub shell loads a conversation from navStore.open, so the old shell's Recent has none.
+  const recent = shownRecent(shell === "hubs" ? opened : opened.filter((r) => r.kind !== "session"), services, privateRevealed);
+  // A recent item takes its provider's label, so a typed title finds it; a session id is never shown.
+  const known = new Map(items.map((i) => [`${i.ref.kind}:${i.ref.id}`, i]));
+  const entries: PaletteEntry[] = recent.map((ref) => {
+    const item = known.get(`${ref.kind}:${ref.id}`);
+    const label = item?.label ?? (ref.kind === "session" ? KIND_LABEL.session : ref.id);
+    return itemEntry("Recent", { ref, label, hint: item?.hint ?? refHint(ref) });
+  });
   for (const hub of HUBS) {
     const hint = placeViews(hub).map((v) => v.label).join(", ");
     entries.push({ kind: "hub", key: `hub:${hub.id}`, group: "Hubs", label: hub.label, hint, hub: hub.id });
@@ -244,3 +251,5 @@ export function serviceItems(services: Service[], privateRevealed: boolean): Pal
 }
 
 itemProviders.push(async () => serviceItems((await fetchServices()).services, useUiStore.getState().privateRevealed));
+
+itemProviders.push(conversationItems);

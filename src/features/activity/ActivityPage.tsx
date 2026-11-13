@@ -33,12 +33,10 @@ import { errorText } from "@/api/homelab";
 import { listWaitingJobs, type JobSummary } from "@/api/jobs";
 import { JobSheet } from "@/features/jobs/JobSheet";
 import { KIND_LABEL, STATUS_LABEL, stepsFromEvents } from "@/features/jobs/format";
-import { useChatStore } from "@/store/chatStore";
-import { useSessionStore } from "@/store/sessionStore";
+import { openSession } from "@/features/chat/openSession";
 import { ViewPicker } from "@/components/shell/ViewPicker";
 import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore, useSub, type SubValue } from "@/store/navStore";
-import { useUiStore } from "@/store/uiStore";
 import { DayChart } from "./DayChart";
 import { FlowSheet, type FlowTarget } from "./FlowSheet";
 import { CATEGORY_LABEL, categoryOf, dayLabel, iconFor, shortClock, statusTone, usd } from "./format";
@@ -218,13 +216,6 @@ export function ActivityPage() {
       else next.add(key);
       return next;
     });
-  }
-
-  function openSession(id: string) {
-    useSessionStore.getState().selectSession(id);
-    useChatStore.getState().loadSession(id);
-    // selectSession has already moved the hub shell to Chat; closeAll would send it back Home.
-    if (useShellStore.getState().shell === "old") useUiStore.getState().closeAll();
   }
 
   const s = summary?.last_24h;

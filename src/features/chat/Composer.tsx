@@ -1,8 +1,9 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { ArrowUp, Square } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useDraftStore } from "./draftStore";
 
 interface ComposerProps {
   onSend: (text: string) => void;
@@ -12,6 +13,8 @@ interface ComposerProps {
   variant?: "docked" | "hero";
   placeholder?: string;
   autoFocus?: boolean;
+  /** Keeps the unsent text in the draft store under this key instead of in the component. */
+  draftKey?: string;
 }
 
 export function Composer({
@@ -22,11 +25,27 @@ export function Composer({
   variant = "docked",
   placeholder = "Ask Sazed anything…",
   autoFocus = false,
+  draftKey,
 }: ComposerProps) {
-  const [value, setValue] = useState("");
+  const [local, setLocal] = useState("");
+  const draft = useDraftStore((s) => (draftKey === undefined ? "" : (s.drafts[draftKey] ?? "")));
+  const setDraft = useDraftStore((s) => s.setDraft);
+  const value = draftKey === undefined ? local : draft;
+  const setValue = useCallback(
+    (text: string) => (draftKey === undefined ? setLocal(text) : setDraft(draftKey, text)),
+    [draftKey, setDraft]
+  );
   const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isMobile = useIsMobile();
+
+  // A restored draft needs the height handleChange would have given it.
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el || draftKey === undefined) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [draftKey]);
 
   const canSend = value.trim() !== "" && !disabled;
 
@@ -43,7 +62,7 @@ export function Composer({
       el.style.height = "auto";
       el.focus();
     }
-  }, [value, disabled, onSend]);
+  }, [value, disabled, onSend, setValue]);
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setValue(e.target.value);
