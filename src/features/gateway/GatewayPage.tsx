@@ -12,7 +12,6 @@ import {
 } from "@/api/gateway";
 import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore } from "@/store/navStore";
-import { useUiStore } from "@/store/uiStore";
 import { modelName, tokens, usd } from "./format";
 
 // The four Google integrations share one OAuth client, so they're one row here.
@@ -37,7 +36,6 @@ const RANGES = [
 ] as const;
 
 export function GatewayPage() {
-  const toggleAudit = useUiStore((s) => s.toggleAudit);
   const hubs = useShellStore((s) => s.shell) === "hubs";
   const [integrations, setIntegrations] = useState<Integrations | null>(null);
   const [health, setHealth] = useState<GatewayHealth | null>(null);
@@ -207,7 +205,7 @@ export function GatewayPage() {
                   Open Activity
                 </button>
               ) : (
-                <button type="button" onClick={toggleAudit} className="text-xs text-primary hover:underline">
+                <button type="button" onClick={() => useNavStore.getState().go("system", "activity")} className="text-xs text-primary hover:underline">
                   Open tool log
                 </button>
               )

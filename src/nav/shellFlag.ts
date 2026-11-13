@@ -1,14 +1,8 @@
 import { create } from "zustand";
 
-import { useUiStore } from "@/store/uiStore";
-
 export type ShellKind = "old" | "hubs";
 
 const KEY = "sazed-shell";
-
-function isShell(v: string | null): v is ShellKind {
-  return v === "old" || v === "hubs";
-}
 
 function store(shell: ShellKind) {
   try {
@@ -23,11 +17,10 @@ function store(shell: ShellKind) {
 // The vitest suites load this through the stores with no window, hence the try around all of it.
 function initialShell(): ShellKind {
   try {
-    const asked = new URLSearchParams(window.location.search).get("shell");
-    if (isShell(asked)) store(asked);
-    return localStorage.getItem(KEY) === "hubs" ? "hubs" : "old";
+    store("hubs");
+    return "hubs";
   } catch {
-    return "old";
+    return "hubs";
   }
 }
 
@@ -42,7 +35,6 @@ export const useShellStore = create<ShellState>((set) => ({
   shell: initialShell(),
   setShell: (shell) => {
     store(shell);
-    useUiStore.getState().syncPage();
     set({ shell, settingsOpen: false });
   },
   settingsOpen: false,

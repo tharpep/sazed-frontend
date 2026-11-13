@@ -10,11 +10,10 @@ import type { ItemKind, ItemRef } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 import { HUBS } from "./hubs";
 import type { HubId, NavTarget } from "./hubViews";
-import type { ShellKind } from "./shellFlag";
 
 export type PaletteGroup = "Recent" | "Hubs" | "Apps" | "Views" | "Items" | "Actions";
 export type ThemeChoice = "light" | "dark" | "system";
-export type PaletteAction = "settings" | "new-chat" | `theme:${ThemeChoice}` | `shell:${ShellKind}`;
+export type PaletteAction = "settings" | "new-chat" | `theme:${ThemeChoice}`;
 
 interface EntryBase {
   key: string;
@@ -147,13 +146,11 @@ interface Sources {
   privateRevealed: boolean;
   items: PaletteItem[];
   theme: ThemeChoice;
-  shell: ShellKind;
 }
 
 /** Every entry in display order: Recent, Hubs, Apps, Views, Items, Actions. */
-export function buildEntries({ recent: opened, services, privateRevealed, items, theme, shell }: Sources): PaletteEntry[] {
-  // Only the hub shell loads a conversation from navStore.open, so the old shell's Recent has none.
-  const recent = shownRecent(shell === "hubs" ? opened : opened.filter((r) => r.kind !== "session"), services, privateRevealed);
+export function buildEntries({ recent: opened, services, privateRevealed, items, theme }: Sources): PaletteEntry[] {
+  const recent = shownRecent(opened, services, privateRevealed);
   // A recent item takes its provider's label, so a typed title finds it; a session id is never shown.
   const known = new Map(items.map((i) => [`${i.ref.kind}:${i.ref.id}`, i]));
   const entries: PaletteEntry[] = recent.map((ref) => {
@@ -196,15 +193,6 @@ export function buildEntries({ recent: opened, services, privateRevealed, items,
     });
   }
   entries.push({ kind: "action", key: "action:new-chat", group: "Actions", label: "New chat", hint: "", action: "new-chat" });
-  const other: ShellKind = shell === "hubs" ? "old" : "hubs";
-  entries.push({
-    kind: "action",
-    key: `action:shell:${other}`,
-    group: "Actions",
-    label: other === "hubs" ? "Switch to the new layout" : "Switch to the old layout",
-    hint: "",
-    action: `shell:${other}`,
-  });
   return entries;
 }
 

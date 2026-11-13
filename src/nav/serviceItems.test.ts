@@ -57,7 +57,7 @@ describe("Recent: services follow the private filter too", () => {
     { kind: "service" as const, id: "jellyfin" },
   ];
   const recentIds = (revealed: boolean, list: Service[]) =>
-    buildEntries({ recent, services: list, privateRevealed: revealed, items: [], theme: "system", shell: "hubs" })
+    buildEntries({ recent, services: list, privateRevealed: revealed, items: [], theme: "system" })
       .filter((e) => e.group === "Recent")
       .map((e) => (e.kind === "item" ? e.ref.id : ""));
 

@@ -1,44 +1,26 @@
 import type { NavTarget } from "@/nav/hubViews";
-import { useShellStore } from "@/nav/shellFlag";
 import { useChatStore } from "@/store/chatStore";
 import { useNavStore } from "@/store/navStore";
-import { useUiStore } from "@/store/uiStore";
-
-// The hub shell resyncs uiStore's page booleans on every navStore change, so a toggleX() after a
-// move there would read the page as open and close it again. Only the old shell needs the toggles.
-const hubShell = () => useShellStore.getState().shell === "hubs";
 
 export function goTo(target: NavTarget) {
-  if (hubShell()) useNavStore.getState().go(target.hub, target.view);
-  else useUiStore.getState().openView(target);
+  useNavStore.getState().go(target.hub, target.view);
 }
 
 export function openSystem(view: "homelab" | "activity") {
   if (view === "homelab") useNavStore.getState().setSub("system:homelab", "list");
-  if (hubShell()) return useNavStore.getState().go("system", view);
-  const ui = useUiStore.getState();
-  if (view === "activity") ui.toggleAudit();
-  else ui.toggleHomelab();
+  useNavStore.getState().go("system", view);
 }
 
-// Pages still read their item from uiStore's linkedX until their hub slice moves the reads to
-// navStore; each setter also calls navStore.openItem().
 export function openProject(slug: string) {
-  const ui = useUiStore.getState();
-  ui.setLinkedProject(slug);
-  if (!hubShell()) ui.toggleProjects();
+  useNavStore.getState().openItem({ kind: "project", id: slug });
 }
 
 export function openBacklogItem(id: string) {
-  const ui = useUiStore.getState();
-  ui.setLinkedBacklogItem(id);
-  if (!hubShell()) ui.toggleBacklog();
+  useNavStore.getState().openItem({ kind: "backlog", id });
 }
 
 export function openDispatch(plan: string) {
-  const ui = useUiStore.getState();
-  ui.setLinkedDispatchPlan(plan);
-  if (!hubShell()) ui.togglePlans();
+  useNavStore.getState().openItem({ kind: "dispatch", id: plan });
 }
 
 // Home's ask field always starts a new chat and answers in Chat: a question typed on Home must

@@ -1,16 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 
-import { TitleBar } from "@/components/layout/TitleBar";
 import { startNewChat, startSessionSync, useOpenChatTitle } from "@/features/chat/openSession";
 import { useSystemSummary } from "@/features/homelab/useSystemSummary";
 import { SettingsDialog } from "@/features/settings/SettingsPage";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useRunningCount } from "@/hooks/useRunningCount";
-import { isTauri } from "@/lib/isTauri";
 import { openPaletteFromTap, usePaletteStore } from "@/nav/paletteSources";
 import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore } from "@/store/navStore";
-import { useUiStore } from "@/store/uiStore";
 import { CommandPalette } from "./CommandPalette";
 import { DetailSlotContext } from "./detailSlot";
 import { HubBottomBar } from "./HubBottomBar";
@@ -55,14 +52,6 @@ export function HubFrame({ children, docked }: HubFrameProps) {
 
   useEffect(startSessionSync, []);
 
-  useEffect(
-    () =>
-      useNavStore.subscribe((s, prev) => {
-        if (s.hub !== prev.hub || s.view !== prev.view) useUiStore.getState().syncPage();
-      }),
-    []
-  );
-
   // Escape closes the palette, then a sheet or panel, then the reader, and never changes the hub.
   // The palette and every Base UI dialog take their own Escape; a reader is all that is left here.
   useEffect(() => {
@@ -91,7 +80,6 @@ export function HubFrame({ children, docked }: HubFrameProps) {
 
   return (
     <div className="fixed inset-x-0 top-[var(--app-offset-top,0px)] flex h-[var(--app-height,100dvh)] flex-col overflow-hidden bg-bg pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-ink sm:bg-sidebar">
-      {isTauri && <TitleBar />}
       <DetailSlotContext.Provider value={slot}>
         {isMobile ? (
           <PhoneFrame docked={dock} onSettings={openSettings}>

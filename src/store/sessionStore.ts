@@ -1,9 +1,7 @@
 import { create } from "zustand";
 import type { Session } from "../mock/data";
 import { listConversations } from "../api/conversations";
-import { useShellStore } from "../nav/shellFlag";
 import { useNavStore } from "./navStore";
-import { useUiStore } from "./uiStore";
 
 function daysAgo(d: Date): number {
   const now = new Date();
@@ -81,9 +79,6 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
   selectSession: (id: string) => {
     set({ activeSessionId: id });
-    // The old shell shows a loaded session on Home; the hub shell shows it only in Chat, and loads
-    // it from navStore.open.chat (startSessionSync), so its callers must not load it as well.
-    if (useShellStore.getState().shell === "hubs") useNavStore.getState().openItem({ kind: "session", id });
-    else useUiStore.getState().setHistoryOpen(false);
+    useNavStore.getState().openItem({ kind: "session", id });
   },
 }));

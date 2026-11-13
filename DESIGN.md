@@ -70,7 +70,9 @@ Sentence case everywhere; no uppercase eyebrows. Figures in monospace or `tabula
 
 ## 4. Layout and shell
 
-- Sidebar: labeled and grouped (Home, Chats / Watch / Work / Settings) from `md` (768px); an icon rail with tooltips between `sm` and `md`; the bottom tab bar on phones. The Activity entry shows how many jobs are waiting on you.
+The app has one hub shell. The desktop rail, compact rail, phone tab bar and More sheet are responsive presentations of the same navigation model; there is no legacy shell or runtime layout switch. Deep links and the command palette open hubs, views and items through `navStore`.
+
+- Navigation: labeled and grouped (Home, Chats / Watch / Work / Settings) from `md` (768px); an icon rail with tooltips between `sm` and `md`; the bottom tab bar on phones. The Activity entry shows how many jobs are waiting on you.
 - From `sm` up the page is an inset panel (8px gap, 12px radius, 1px `line`) on the shell. Phones are edge to edge.
 - The title bar only renders in the Tauri window (it's the drag region). The theme switch lives in Settings on desktop and in the More sheet on phones.
 - 4px spacing grid. Page gutter 16px on phones, 32px from `md`. `PageBody` is left-aligned with a 1024px max width.

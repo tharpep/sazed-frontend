@@ -1,5 +1,4 @@
 import type { PaletteItem } from "@/nav/paletteSources";
-import { useShellStore } from "@/nav/shellFlag";
 import { useChatStore } from "@/store/chatStore";
 import { useNavStore } from "@/store/navStore";
 import { useSessionStore } from "@/store/sessionStore";
@@ -23,7 +22,6 @@ function shownSession(): string | null {
 /** Opens a conversation in Chat, from anywhere. */
 export function openSession(id: string) {
   useSessionStore.getState().selectSession(id);
-  if (useShellStore.getState().shell === "old") void useChatStore.getState().loadSession(id);
 }
 
 /** Shows an empty conversation in Chat. */
@@ -79,10 +77,8 @@ export function useOpenChatTitle(): string | undefined {
   return useSessionStore((s) => (openId ? s.sessions.find((x) => x.id === openId)?.title : "New chat"));
 }
 
-/** Conversation titles for the command palette, from the same list the Chats page shows. Only the
- * hub shell loads a conversation from navStore.open.chat, so the old shell gets none. */
+/** Conversation titles for the command palette, from the same list the Chats page shows. */
 export async function conversationItems(): Promise<PaletteItem[]> {
-  if (useShellStore.getState().shell !== "hubs") return [];
   await useSessionStore.getState().loadSessions();
   return useSessionStore.getState().sessions.map((s) => ({
     ref: { kind: "session", id: s.id },
