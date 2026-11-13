@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { EmptyState, Page, PageBody, PageHeader, Segmented } from "@/components/system";
 import { errorText } from "@/api/homelab";
 import { listPlans, type PlanState, type PlanSummary } from "@/api/plans";
+import { ToolsRow } from "@/components/shell/ToolsRow";
+import { ViewPicker } from "@/components/shell/ViewPicker";
+import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 import { CompareView } from "./CompareView";
@@ -25,33 +28,21 @@ type Mode = "plans" | "dispatch";
 type Open = { slug: string; version: number | null; compare: [number, number] | null };
 
 export function PlansPage() {
-  const [open, setOpen] = useState<Open | null>(() => {
-    const linked = useUiStore.getState().linkedPlan;
-    return linked ? { ...linked, compare: null } : null;
-  });
-  const [dispatch, setDispatch] = useState<string | null>(() => useUiStore.getState().linkedDispatchPlan);
+  const hubs = useShellStore((s) => s.shell) === "hubs";
+  const navPlan = useNavStore((s) => s.read.work);
+  const hub = useNavStore((s) => s.hub);
+  const openRef = navPlan?.kind === "plan" ? navPlan : null;
+  const open: Open | null = openRef
+    ? { slug: openRef.id, version: openRef.version ?? null, compare: null }
+    : null;
+  const [compare, setCompare] = useState<[number, number] | null>(null);
+  const navDispatch = useNavStore((s) => s.read.agents);
+  const dispatch = navDispatch?.kind === "dispatch" ? navDispatch.id : null;
   // The tab is the nav view: work:plans is Plans, agents:runs is Dispatch runs.
   const mode = useNavStore((s): Mode => (s.hub === "agents" ? "dispatch" : "plans"));
   const [filter, setFilter] = useState<Filter>("active");
   const [plans, setPlans] = useState<PlanSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const linkedPlan = useUiStore((s) => s.linkedPlan);
-  const linkedDispatch = useUiStore((s) => s.linkedDispatchPlan);
-
-  // Links can arrive while the page is mounted (the palette's Recent, a project's Plans list), so
-  // react to each one rather than reading it once, and clear it so it never fires again later.
-  useEffect(() => {
-    if (!linkedPlan) return;
-    setOpen({ ...linkedPlan, compare: null });
-    useUiStore.getState().setLinkedPlan(null);
-  }, [linkedPlan]);
-
-  useEffect(() => {
-    if (!linkedDispatch) return;
-    setDispatch(linkedDispatch);
-    useUiStore.getState().setLinkedDispatchPlan(null);
-  }, [linkedDispatch]);
-
   function setMode(next: Mode) {
     useUiStore.getState().openView(next === "dispatch" ? { hub: "agents", view: "runs" } : { hub: "work", view: "plans" });
   }
@@ -83,50 +74,68 @@ export function PlansPage() {
 
   return (
     <Page>
-      <PageHeader title="Plans" />
+      {!hubs && <PageHeader title="Plans" />}
       <PageBody className={mode === "dispatch" && dispatch ? "max-w-none" : undefined}>
         {mode === "dispatch" && dispatch ? (
           <DispatchLive
             plan={dispatch}
-            onBack={() => setDispatch(null)}
+            onBack={() => useNavStore.getState().closeItem()}
             onOpenPlan={(slug) => useUiStore.getState().setLinkedPlan({ slug, version: null })}
           />
         ) : mode === "dispatch" ? (
           <>
-            {modeSwitch}
-            <DispatchRuns onOpen={setDispatch} />
+            {hubs && hub === "agents" ? modeSwitch : !hubs && modeSwitch}
+            <DispatchRuns onOpen={(plan) => useNavStore.getState().openItem({ kind: "dispatch", id: plan })} />
           </>
-        ) : open?.compare ? (
+        ) : compare ? (
           <CompareView
-            slug={open.slug}
-            a={open.compare[0]}
-            b={open.compare[1]}
-            onBack={() => setOpen({ ...open, compare: null })}
+            slug={open!.slug}
+            a={compare[0]}
+            b={compare[1]}
+            onBack={() => setCompare(null)}
           />
         ) : open ? (
           <PlanView
             slug={open.slug}
             version={open.version}
-            onBack={() => setOpen(null)}
-            onView={(version) => setOpen({ ...open, version })}
-            onCompare={(a, b) => setOpen({ ...open, compare: [a, b] })}
+            onBack={() => {
+              setCompare(null);
+              useNavStore.getState().closeItem();
+            }}
+            onView={(version) => useNavStore.getState().openItem({ kind: "plan", id: open.slug, ...(version !== null && { version }) })}
+            onCompare={(a, b) => setCompare([a, b])}
           />
         ) : (
           <>
-            {modeSwitch}
-            <Segmented
-              label="Plan state"
-              options={[...FILTERS]}
-              value={filter}
-              onChange={setFilter}
-              className="self-start"
-            />
+            {hubs ? (
+              <ToolsRow
+                picker={
+                  <ViewPicker
+                    title="Plan state"
+                    choices={FILTERS.map(({ value, label }) => ({ id: value, label }))}
+                    value={filter}
+                    onChange={(id) => setFilter(id as Filter)}
+                  />
+                }
+              />
+            ) : (
+              <>
+                {modeSwitch}
+                <Segmented
+                  label="Plan state"
+                  options={[...FILTERS]}
+                  value={filter}
+                  onChange={setFilter}
+                  className="self-start"
+                />
+              </>
+            )}
             {error && <p className="text-meta text-err">Couldn't load plans: {error}</p>}
             {plans ? (
               plans.length === 0 ? (
                 <EmptyState title="No plans here">Plans are versioned documents that cards are filed under.</EmptyState>
               ) : (
-                <PlanList plans={plans} onOpen={(p) => setOpen({ slug: p.slug, version: null, compare: null })} />
+                <PlanList plans={plans} onOpen={(p) => useNavStore.getState().openItem({ kind: "plan", id: p.slug })} />
               )
             ) : (
               !error && <p className="text-meta text-muted">Loading…</p>

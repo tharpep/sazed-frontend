@@ -3,6 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState, Page, PageBody, PageHeader } from "@/components/system";
 import { errorText } from "@/api/homelab";
 import { getProject, listProjects, type Project } from "@/api/projects";
+import { ToolsRow } from "@/components/shell/ToolsRow";
+import { useShellStore } from "@/nav/shellFlag";
+import { useNavStore } from "@/store/navStore";
 import { ProjectPlans } from "@/features/plans/ProjectPlans";
 import { Button } from "@/components/ui/button";
 import { ProjectDispatchRuns } from "./ProjectDispatchRuns";
@@ -15,7 +18,10 @@ import { ProjectsWidget } from "@/widgets/ProjectsWidget";
 const REFRESH_MS = 10_000;
 
 export function ProjectsPage() {
-  const [slug, setSlug] = useState<string | null>(() => useUiStore.getState().linkedProject);
+  const hubs = useShellStore((s) => s.shell) === "hubs";
+  const navProject = useNavStore((s) => s.open.work);
+  const [oldShellSlug, setOldShellSlug] = useState<string | null>(() => useUiStore.getState().linkedProject);
+  const slug = hubs ? (navProject?.kind === "project" ? navProject.id : null) : oldShellSlug;
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,9 +37,13 @@ export function ProjectsPage() {
     setProject(null);
     setEditing(false);
     setCreating(false);
-    setSlug(linkedProject);
+    if (hubs) {
+      useNavStore.getState().openItem({ kind: "project", id: linkedProject });
+    } else {
+      setOldShellSlug(linkedProject);
+    }
     useUiStore.getState().setLinkedProject(null);
-  }, [linkedProject]);
+  }, [hubs, linkedProject]);
 
   const load = useCallback(async () => {
     const id = ++requestId.current;
@@ -68,37 +78,60 @@ export function ProjectsPage() {
   function open(next: string, edit = false) {
     setProject(null);
     setEditing(edit);
-    setSlug(next);
+    if (hubs) {
+      useNavStore.getState().openItem({ kind: "project", id: next });
+    } else {
+      setOldShellSlug(next);
+    }
   }
 
   function back() {
     setEditing(false);
-    setSlug(null);
+    if (hubs) {
+      useNavStore.getState().closeItem();
+    } else {
+      setOldShellSlug(null);
+    }
   }
 
   const shown = project && project.slug === slug ? project : null;
 
   return (
     <Page>
-      <PageHeader
-        title="Projects"
-        actions={
-          slug ? (
-            shown && !editing && (
-              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                Edit
-              </Button>
+      {!hubs && (
+        <PageHeader
+          title="Projects"
+          actions={
+            slug ? (
+              shown && !editing && (
+                <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                  Edit
+                </Button>
+              )
+            ) : (
+              !creating && (
+                <Button size="sm" onClick={() => setCreating(true)}>
+                  New project
+                </Button>
+              )
             )
-          ) : (
-            !creating && (
-              <Button size="sm" onClick={() => setCreating(true)}>
-                New project
-              </Button>
-            )
-          )
-        }
-      />
+          }
+        />
+      )}
       <PageBody>
+        {hubs && (
+          <ToolsRow
+            action={
+              slug
+                ? shown && !editing
+                  ? { label: "Edit", onClick: () => setEditing(true) }
+                  : undefined
+                : !creating
+                  ? { label: "New project", onClick: () => setCreating(true) }
+                  : undefined
+            }
+          />
+        )}
         {error && <p className="text-meta text-err">Couldn't load projects: {error}</p>}
         {slug ? (
           shown ? (

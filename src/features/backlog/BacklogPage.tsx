@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { ChevronRight, Plus, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ToolsRow } from "@/components/shell/ToolsRow";
+import { ViewPicker } from "@/components/shell/ViewPicker";
 import { cn } from "@/lib/utils";
 import {
   createBacklogItem,
@@ -13,6 +15,8 @@ import {
 } from "@/api/backlog";
 import { errorText } from "@/api/homelab";
 import { JobSheet } from "@/features/jobs/JobSheet";
+import { useShellStore } from "@/nav/shellFlag";
+import { useNavStore } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 import { BacklogSheet } from "./BacklogSheet";
 import { STATUS_LABEL, TYPE_LABEL, ageLabel, sourceLabel, workLabel } from "./format";
@@ -29,6 +33,8 @@ const field =
   "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
 
 export function BacklogPage() {
+  const hubs = useShellStore((s) => s.shell) === "hubs";
+  const navItem = useNavStore((s) => s.open.work);
   const [view, setView] = useState<BacklogView>("open");
   const [type, setType] = useState<BacklogType | null>(null);
   const [items, setItems] = useState<BacklogItem[] | null>(null);
@@ -49,12 +55,17 @@ export function BacklogPage() {
   const setLinkedItem = useUiStore((s) => s.setLinkedBacklogItem);
 
   useEffect(() => {
-    if (!linkedItem) return;
-    setLinkedItem(null);
-    getBacklogItem(linkedItem)
+    const id = hubs
+      ? navItem?.kind === "backlog"
+        ? navItem.id
+        : null
+      : linkedItem;
+    if (!id) return;
+    if (!hubs) setLinkedItem(null);
+    getBacklogItem(id)
       .then(setOpenItem)
       .catch((err) => setError(errorText(err)));
-  }, [linkedItem, setLinkedItem]);
+  }, [hubs, linkedItem, navItem, setLinkedItem]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,51 +99,93 @@ export function BacklogPage() {
     }
   }
 
+  function open(id: string) {
+    if (hubs) {
+      useNavStore.getState().openItem({ kind: "backlog", id });
+    } else {
+      const item = items?.find((candidate) => candidate.id === id);
+      if (item) setOpenItem(item);
+    }
+  }
+
+  function close() {
+    setOpenItem(null);
+    if (hubs) useNavStore.getState().closeItem();
+  }
+
+  const viewChoices = VIEWS.map(([id, label]) => ({ id, label }));
+  const typeChoices = [
+    { id: "all", label: "All" },
+    ...(Object.keys(TYPE_LABEL) as BacklogType[]).map((id) => ({ id, label: TYPE_LABEL[id] })),
+  ];
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg">
-      <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div role="tablist" aria-label="Which items" className="flex gap-1 rounded-md bg-surface p-0.5">
-          {VIEWS.map(([v, label]) => (
+      {!hubs && (
+        <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+          <div role="tablist" aria-label="Which items" className="flex gap-1 rounded-md bg-surface p-0.5">
+            {VIEWS.map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={view === v}
+                onClick={() => setView(v)}
+                className={cn(
+                  "rounded px-3 py-1 text-sm transition-colors",
+                  view === v ? "bg-bg font-semibold text-ink shadow-sm" : "text-muted hover:text-ink"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
             <button
-              key={v}
               type="button"
-              role="tab"
-              aria-selected={view === v}
-              onClick={() => setView(v)}
-              className={cn(
-                "rounded px-3 py-1 text-sm transition-colors",
-                view === v ? "bg-bg font-semibold text-ink shadow-sm" : "text-muted hover:text-ink"
-              )}
+              onClick={load}
+              disabled={loading}
+              aria-label="Refresh"
+              title="Refresh"
+              className="flex size-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50"
             >
-              {label}
+              <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
             </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={load}
-            disabled={loading}
-            aria-label="Refresh"
-            title="Refresh"
-            className="flex size-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50"
-          >
-            <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdding((v) => !v)}
-            aria-label="Add an item"
-            title="Add an item"
-            className="flex size-9 items-center justify-center rounded-md bg-primary text-bg transition-opacity hover:opacity-90"
-          >
-            <Plus className="size-4" aria-hidden="true" />
-          </button>
-        </div>
-      </header>
+            <button
+              type="button"
+              onClick={() => setAdding((v) => !v)}
+              aria-label="Add an item"
+              title="Add an item"
+              className="flex size-9 items-center justify-center rounded-md bg-primary text-bg transition-opacity hover:opacity-90"
+            >
+              <Plus className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+        </header>
+      )}
 
-      {/* Scroll on a plain block: as a flex column it would shrink the list to fit (and the
-          list clips its overflow for the rounded corners), leaving nothing to scroll. */}
+      {hubs && (
+        <ToolsRow
+          picker={
+            <>
+              <ViewPicker
+                title="Board view"
+                choices={viewChoices}
+                value={view}
+                onChange={(id) => setView(id as BacklogView)}
+              />
+              <ViewPicker
+                title="Board type"
+                choices={typeChoices}
+                value={type ?? "all"}
+                onChange={(id) => setType(id === "all" ? null : (id as BacklogType))}
+              />
+            </>
+          }
+          action={{ label: "Add item", onClick: () => setAdding((v) => !v) }}
+        />
+      )}
+
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by type">
@@ -219,7 +272,7 @@ export function BacklogPage() {
                 <li key={i.id}>
                   <button
                     type="button"
-                    onClick={() => setOpenItem(i)}
+                    onClick={() => open(i.id)}
                     className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface"
                   >
                     {view === "open" && i.rank != null && (
@@ -253,7 +306,7 @@ export function BacklogPage() {
       <BacklogSheet
         item={openItem}
         rankedCount={(items ?? []).filter((i) => i.rank != null && (i.status === "new" || i.status === "shortlisted")).length}
-        onClose={() => setOpenItem(null)}
+        onClose={close}
         onChanged={(updated) => {
           setOpenItem(updated);
           load();

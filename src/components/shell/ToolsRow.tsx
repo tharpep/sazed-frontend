@@ -21,7 +21,7 @@ export function ToolsRow({ picker, action }: ToolsRowProps) {
         <button
           type="button"
           onClick={action.onClick}
-          className="inline-flex min-h-11 flex-none items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-meta text-muted transition-colors hover:bg-raised hover:text-ink sm:hidden"
+          className="inline-flex min-h-11 flex-none items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-meta text-muted transition-colors hover:bg-raised hover:text-ink sm:min-h-7"
         >
           <Plus className="size-4" aria-hidden="true" />
           {action.label}

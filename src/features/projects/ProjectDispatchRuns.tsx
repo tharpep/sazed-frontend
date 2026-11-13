@@ -2,15 +2,13 @@ import type { ProjectDispatchRun } from "@/api/projects";
 import { ListRow, ListSection } from "@/components/system";
 import { counts } from "@/features/plans/DispatchRuns";
 import { ago } from "@/features/plans/planParts";
-import { useUiStore } from "@/store/uiStore";
+import { useNavStore } from "@/store/navStore";
 
 export function ProjectDispatchRuns({ runs }: { runs: ProjectDispatchRun[] }) {
   if (runs.length === 0) return null;
 
   function open(plan: string) {
-    const ui = useUiStore.getState();
-    ui.setLinkedDispatchPlan(plan);
-    ui.togglePlans();
+    useNavStore.getState().openItem({ kind: "dispatch", id: plan });
   }
 
   return (

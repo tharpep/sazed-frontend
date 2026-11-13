@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { listPlans, type PlanSummary } from "@/api/plans";
-import { useUiStore } from "@/store/uiStore";
+import { useNavStore } from "@/store/navStore";
 import { PlanList } from "./PlanList";
 
 export function ProjectPlans({ project }: { project: string }) {
@@ -20,9 +20,7 @@ export function ProjectPlans({ project }: { project: string }) {
   if (plans.length === 0) return null;
 
   function open(plan: PlanSummary) {
-    const ui = useUiStore.getState();
-    ui.setLinkedPlan({ slug: plan.slug, version: null });
-    ui.togglePlans();
+    useNavStore.getState().openItem({ kind: "plan", id: plan.slug });
   }
 
   return (
