@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ChevronRight, Plus, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SwipeRow } from "@/components/shell/SwipeRow";
 import { ToolsRow } from "@/components/shell/ToolsRow";
 import { ViewPicker } from "@/components/shell/ViewPicker";
 import { cn } from "@/lib/utils";
@@ -9,6 +10,8 @@ import {
   createBacklogItem,
   getBacklogItem,
   listBacklog,
+  approveBacklogItem,
+  updateBacklogItem,
   type BacklogItem,
   type BacklogType,
   type BacklogView,
@@ -96,6 +99,32 @@ export function BacklogPage() {
       await load();
     } catch (err) {
       setAddError(errorText(err));
+    }
+  }
+
+  async function approve(item: BacklogItem) {
+    setLoading(true);
+    setError(null);
+    try {
+      await approveBacklogItem(item.id, item.repos[0], "");
+      await load();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function park(item: BacklogItem) {
+    setLoading(true);
+    setError(null);
+    try {
+      await updateBacklogItem(item.id, { status: "dismissed" });
+      await load();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -270,30 +299,47 @@ export function BacklogPage() {
               const work = workLabel(i);
               return (
                 <li key={i.id}>
-                  <button
-                    type="button"
-                    onClick={() => open(i.id)}
-                    className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface"
-                  >
-                    {view === "open" && i.rank != null && (
-                      <span className="w-6 shrink-0 text-right text-sm font-medium tabular-nums text-muted">
-                        {i.rank}
-                      </span>
-                    )}
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm text-ink">{i.title}</span>
-                      <span className="truncate text-xs text-muted">
-                        <span className={cn(i.status === "shortlisted" && "text-accent")}>
-                          {STATUS_LABEL[i.status]}
+                  <SwipeRow onSwipeLeft={() => park(i)}>
+                    <div className="flex min-h-[56px] items-center gap-2 px-3 py-2 transition-colors hover:bg-surface">
+                      <button
+                        type="button"
+                        onClick={() => open(i.id)}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      >
+                        {view === "open" && i.rank != null && (
+                          <span className="w-6 shrink-0 text-right text-sm font-medium tabular-nums text-muted">
+                            {i.rank}
+                          </span>
+                        )}
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="line-clamp-2 text-sm text-ink [overflow-wrap:anywhere]">{i.title}</span>
+                          <span className="truncate text-xs text-muted">
+                            <span className={cn(i.status === "shortlisted" && "text-accent")}>
+                              {STATUS_LABEL[i.status]}
+                            </span>
+                            {" · "}
+                            {[TYPE_LABEL[i.type], work, sourceLabel(i.source), ageLabel(i.created_at)]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
                         </span>
-                        {" · "}
-                        {[TYPE_LABEL[i.type], work, sourceLabel(i.source), ageLabel(i.created_at)]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
-                    </span>
-                    <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden="true" />
-                  </button>
+                        <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden="true" />
+                      </button>
+                      {(i.status === "new" || i.status === "shortlisted") && i.repos.length === 1 && (
+                        <button
+                          type="button"
+                          disabled={loading}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            approve(i);
+                          }}
+                          className="shrink-0 rounded-md border border-line px-2 py-1 text-caption text-primary transition-colors hover:bg-raised disabled:opacity-50"
+                        >
+                          Approve
+                        </button>
+                      )}
+                    </div>
+                  </SwipeRow>
                 </li>
               );
             })}
