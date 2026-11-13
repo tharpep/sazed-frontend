@@ -1,6 +1,9 @@
 import { create } from "zustand";
 
 import { fetchServices, type Service } from "@/api/homelab";
+import { listBacklog } from "@/api/backlog";
+import { listPlans } from "@/api/plans";
+import { listProjects } from "@/api/projects";
 import { conversationItems } from "@/features/chat/openSession";
 import { statusOf, visibleServices } from "@/features/homelab/format";
 import type { ItemKind, ItemRef } from "@/store/navStore";
@@ -253,3 +256,27 @@ export function serviceItems(services: Service[], privateRevealed: boolean): Pal
 itemProviders.push(async () => serviceItems((await fetchServices()).services, useUiStore.getState().privateRevealed));
 
 itemProviders.push(conversationItems);
+
+itemProviders.push(async () =>
+  (await listBacklog("open")).map((item) => ({
+    ref: { kind: "backlog", id: item.id },
+    label: item.title,
+    hint: `Board card · ${item.status}`,
+  }))
+);
+
+itemProviders.push(async () =>
+  (await listProjects()).map((project) => ({
+    ref: { kind: "project", id: project.slug },
+    label: project.title,
+    hint: `Project · ${project.slug}`,
+  }))
+);
+
+itemProviders.push(async () =>
+  (await listPlans()).map((plan) => ({
+    ref: { kind: "plan", id: plan.slug, version: plan.version },
+    label: plan.title,
+    hint: `Plan · ${plan.project_title ?? plan.slug} · v${plan.version}`,
+  }))
+);
