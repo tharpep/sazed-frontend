@@ -24,7 +24,7 @@ export function RunsPage() {
           <div className="flex flex-col gap-6">
             <section aria-label="Worker jobs">
               <h2 className="mb-2 px-1 text-sm font-medium text-ink">Worker jobs</h2>
-              <JobsPanel refreshKey={0} />
+              <JobsPanel refreshKey={0} grouped />
             </section>
             <section aria-label="Dispatch runs">
               <h2 className="mb-2 px-1 text-sm font-medium text-ink">Dispatch runs</h2>
