@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 import { errorText } from "@/api/homelab";
 import { getPlan, listPlanVersions, type Plan, type PlanSection, type PlanVersion } from "@/api/plans";
 import type { ProjectCard } from "@/api/projects";
+import { Reader } from "@/components/shell/Reader";
 import { Author, PlanMarkdown, PlanStatePill, STAGE_DOT, ago, stripId } from "./planParts";
 
 function CardRow({ card, changed }: { card: ProjectCard; changed?: boolean }) {
@@ -160,81 +159,74 @@ export function PlanView({ slug, version, onBack, onView, onCompare }: PlanViewP
     setChecked((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]));
   }
 
-  const back = (
-    <button
-      type="button"
-      onClick={onBack}
-      className="-ml-1 inline-flex items-center gap-1 self-start rounded-md px-1 py-0.5 text-meta text-ink-2 transition-colors hover:bg-raised hover:text-ink"
-    >
-      <ArrowLeft className="size-3.5" aria-hidden="true" />
-      Plans
-    </button>
-  );
-
   if (!plan) {
     return (
-      <div className="flex flex-col gap-3">
-        {back}
-        {error ? <p className="text-meta text-err">Couldn't load the plan: {error}</p> : <p className="text-meta text-muted">Loading…</p>}
-      </div>
+      <Reader back="Plans" context="Work › Plans" onBack={onBack}>
+        {error ? (
+          <p className="text-meta text-err">Couldn't load the plan: {error}</p>
+        ) : (
+          <p className="text-meta text-muted">Loading…</p>
+        )}
+      </Reader>
     );
   }
 
   const behind = plan.shown_version < plan.version;
 
   return (
-    <div className="flex flex-col gap-4">
-      {back}
-      <div className="flex flex-col gap-2">
-        <p className="text-caption text-muted">
-          {plan.project_title ?? "No project"} / Plans / <span className="text-ink-2">{plan.title}</span>
-        </p>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <h2 className="text-title font-semibold text-ink">{plan.title}</h2>
-          <span className="font-mono text-caption text-muted">v{plan.version}</span>
-          <PlanStatePill state={plan.state} />
+    <Reader back="Plans" context={`${plan.project_title ?? "Work"} › Plans`} onBack={onBack}>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <p className="text-caption text-muted">
+            {plan.project_title ?? "No project"} / Plans / <span className="text-ink-2">{plan.title}</span>
+          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <h2 className="text-title font-semibold text-ink">{plan.title}</h2>
+            <span className="font-mono text-caption text-muted">v{plan.version}</span>
+            <PlanStatePill state={plan.state} />
+          </div>
+        </div>
+        {behind && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line bg-raised px-3 py-2 text-meta text-ink-2">
+            <span>
+              Viewing v{plan.shown_version} · newest is v{plan.version}
+            </span>
+            <button type="button" onClick={() => onView(null)} className="text-primary hover:underline">
+              Back to v{plan.version}
+            </button>
+          </div>
+        )}
+        {error && <p className="text-meta text-err">{error}</p>}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
+          <article className="flex min-w-0 flex-col gap-5 rounded-lg border border-line bg-surface p-4 md:p-5">
+            {plan.preamble && <PlanMarkdown>{plan.preamble}</PlanMarkdown>}
+            {plan.sections.map((s) => (
+              <Section key={s.id} section={s} />
+            ))}
+            {plan.unlinked_cards.length > 0 && (
+              <section className="flex flex-col gap-2">
+                <h3 className="text-meta text-muted">Cards not tied to a section</h3>
+                <ul className="flex flex-col gap-1.5">
+                  {plan.unlinked_cards.map((c) => (
+                    <CardRow key={c.id} card={c} />
+                  ))}
+                </ul>
+              </section>
+            )}
+          </article>
+          <HistoryRail
+            versions={versions}
+            shown={plan.shown_version}
+            checked={checked}
+            onToggle={toggle}
+            onView={(v) => onView(v === plan.version ? null : v)}
+            onCompare={() => {
+              const [a, b] = [...checked].sort((x, y) => x - y);
+              onCompare(a, b);
+            }}
+          />
         </div>
       </div>
-      {behind && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line bg-raised px-3 py-2 text-meta text-ink-2">
-          <span>
-            Viewing v{plan.shown_version} · newest is v{plan.version}
-          </span>
-          <button type="button" onClick={() => onView(null)} className="text-primary hover:underline">
-            Back to v{plan.version}
-          </button>
-        </div>
-      )}
-      {error && <p className="text-meta text-err">{error}</p>}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
-        <article className="flex min-w-0 flex-col gap-5 rounded-lg border border-line bg-surface p-4 md:p-5">
-          {plan.preamble && <PlanMarkdown>{plan.preamble}</PlanMarkdown>}
-          {plan.sections.map((s) => (
-            <Section key={s.id} section={s} />
-          ))}
-          {plan.unlinked_cards.length > 0 && (
-            <section className="flex flex-col gap-2">
-              <h3 className="text-meta text-muted">Cards not tied to a section</h3>
-              <ul className="flex flex-col gap-1.5">
-                {plan.unlinked_cards.map((c) => (
-                  <CardRow key={c.id} card={c} />
-                ))}
-              </ul>
-            </section>
-          )}
-        </article>
-        <HistoryRail
-          versions={versions}
-          shown={plan.shown_version}
-          checked={checked}
-          onToggle={toggle}
-          onView={(v) => onView(v === plan.version ? null : v)}
-          onCompare={() => {
-            const [a, b] = [...checked].sort((x, y) => x - y);
-            onCompare(a, b);
-          }}
-        />
-      </div>
-    </div>
+    </Reader>
   );
 }
