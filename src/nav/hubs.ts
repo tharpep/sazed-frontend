@@ -12,7 +12,7 @@ import { HomelabPage } from "@/features/homelab/HomelabPage";
 import { JournalPage } from "@/features/journal/JournalPage";
 import { KnowledgePage } from "@/features/kb/KnowledgePage";
 import { PlansPage } from "@/features/plans/PlansPage";
-import { DispatchRunsPage } from "@/features/plans/DispatchRunsPage";
+import { RunsPage } from "@/features/plans/RunsPage";
 import { ProfilesPage } from "@/features/profiles/ProfilesPage";
 import { ProjectsPage } from "@/features/projects/ProjectsPage";
 import { HUB_VIEWS, type HubId, type ViewKey } from "./hubViews";
@@ -24,7 +24,7 @@ const COMPONENTS: Record<ViewKey, ComponentType> = {
   "work:projects": ProjectsPage,
   "work:board": BacklogPage,
   "work:plans": PlansPage,
-  "agents:runs": DispatchRunsPage,
+  "agents:runs": RunsPage,
   "agents:automations": AutomationsPage,
   "agents:profiles": ProfilesPage,
   "agents:mcp": ProfilesPage,

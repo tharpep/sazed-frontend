@@ -1,14 +1,20 @@
 import type { KeyboardEvent, MouseEvent } from "react";
 
 import { cn } from "@/lib/utils";
+import { useShellStore } from "@/nav/shellFlag";
+import { useNavStore } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 
 export function ProfileLink({ name, className }: { name: string; className?: string }) {
   function open(e: MouseEvent | KeyboardEvent) {
     e.stopPropagation();
-    const ui = useUiStore.getState();
-    ui.setLinkedProfile(name);
-    ui.toggleProfiles();
+    if (useShellStore.getState().shell === "hubs") {
+      useNavStore.getState().openItem({ kind: "profile", id: name });
+    } else {
+      const ui = useUiStore.getState();
+      ui.setLinkedProfile(name);
+      ui.toggleProfiles();
+    }
   }
   return (
     <span
