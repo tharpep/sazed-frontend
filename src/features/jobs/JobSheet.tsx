@@ -3,8 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/useIsMobile";
+import { DetailPanel } from "@/components/shell/DetailPanel";
 import { cn } from "@/lib/utils";
 import {
   ACTIVE_STATUSES,
@@ -33,7 +32,6 @@ const followField =
   "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
 
 export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
-  const isMobile = useIsMobile();
   const [job, setJob] = useState<JobDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -116,22 +114,23 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
     : [];
 
   return (
-    <Sheet open={jobId !== null} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side={isMobile ? "bottom" : "right"} className={cn("gap-0", isMobile ? "max-h-[90dvh]" : "w-full sm:max-w-xl")}>
-        <SheetHeader className="border-b border-border">
-          <SheetTitle className="pr-8 text-base">{job?.title ?? "Job"}</SheetTitle>
-          {job && (
-            <p className="text-xs text-muted">
-              <span className={cn(statusTone(job.status), job.status === "succeeded" && "text-ink")}>
-                {STATUS_LABEL[job.status]}
-              </span>
-              {" · "}
-              {facts.join(" · ")}
-            </p>
-          )}
-        </SheetHeader>
-
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+    <DetailPanel
+      open={jobId !== null}
+      title={job?.title ?? "Job"}
+      description={
+        job && (
+          <>
+            <span className={cn(statusTone(job.status), job.status === "succeeded" && "text-ink")}>
+              {STATUS_LABEL[job.status]}
+            </span>
+            {" · "}
+            {facts.join(" · ")}
+          </>
+        )
+      }
+      onClose={onClose}
+    >
+      <div className="flex flex-col gap-5">
           {error && <p className="text-sm text-destructive">{error}</p>}
           {!job && !error && <p className="text-sm text-muted">Loading…</p>}
 
@@ -296,8 +295,7 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
               )}
             </section>
           )}
-        </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </DetailPanel>
   );
 }

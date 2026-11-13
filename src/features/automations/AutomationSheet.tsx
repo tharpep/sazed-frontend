@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DetailPanel } from "@/components/shell/DetailPanel";
 import {
   Dialog,
   DialogContent,
@@ -9,9 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import {
   createAutomation,
@@ -38,7 +37,6 @@ const BLANK = { name: "", cron: "0 8 * * *", timezone: "America/New_York", promp
 const field = "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
 
 export function AutomationSheet({ target, onClose, onChanged }: Props) {
-  const isMobile = useIsMobile();
   const isNew = target === "new";
   const [detail, setDetail] = useState<AutomationDetail | null>(null);
   const [form, setForm] = useState(BLANK);
@@ -135,13 +133,12 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
-    <Sheet open={target !== null} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side={isMobile ? "bottom" : "right"} className={cn("gap-0", isMobile ? "max-h-[90dvh]" : "w-full sm:max-w-md")}>
-        <SheetHeader className="border-b border-border">
-          <SheetTitle className="text-base">{isNew ? "New automation" : form.name || "Automation"}</SheetTitle>
-        </SheetHeader>
-
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+    <DetailPanel
+      open={target !== null}
+      title={isNew ? "New automation" : form.name || "Automation"}
+      onClose={onClose}
+    >
+      <div className="flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm text-ink">
             Name
             <input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Morning brief" className={field} />
@@ -226,21 +223,20 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
               <RunHistory runs={detail.runs} timezone={detail.trigger.timezone} onOpenSession={openSession} />
             </section>
           )}
-        </div>
+      </div>
 
-        <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete “{form.name}”?</DialogTitle>
-              <DialogDescription>Its run history is deleted too. This can't be undone.</DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={() => { setConfirmDelete(false); act("Deleted", () => deleteAutomation(target!), true); }}>Delete</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </SheetContent>
-    </Sheet>
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete “{form.name}”?</DialogTitle>
+            <DialogDescription>Its run history is deleted too. This can't be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => { setConfirmDelete(false); act("Deleted", () => deleteAutomation(target!), true); }}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </DetailPanel>
   );
 }
