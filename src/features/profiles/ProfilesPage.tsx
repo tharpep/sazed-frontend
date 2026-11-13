@@ -103,7 +103,8 @@ export function ProfilesPage() {
 
   const inServers = section === "servers";
   const selectedName = hubs && navProfile?.kind === "profile" ? navProfile.id : name;
-  const open = inServers ? server : selectedName;
+  const selectedServer = hubs && navProfile?.kind === "mcp" ? navProfile.id : server;
+  const open = inServers ? selectedServer : selectedName;
 
   return (
     <Page>
@@ -132,8 +133,12 @@ export function ProfilesPage() {
           />
         )}
         {inServers ? (
-          server ? (
-            <McpServerView name={server} onBack={() => setServer(null)} onChanged={() => (loadServers(), load())} />
+          selectedServer ? (
+            <McpServerView
+              name={selectedServer}
+              onBack={() => (hubs ? useNavStore.getState().closeItem() : setServer(null))}
+              onChanged={() => (loadServers(), load())}
+            />
           ) : (
             <>
               {creating && (
@@ -145,11 +150,19 @@ export function ProfilesPage() {
                     await saveMcpServer(newName, values, reason, null);
                     setCreating(false);
                     await loadServers();
-                    setServer(newName);
+                    if (hubs) useNavStore.getState().openItem({ kind: "mcp", id: newName });
+                    else setServer(newName);
                   }}
                 />
               )}
-              <McpServers servers={servers} profiles={profiles} error={serverError} onOpen={setServer} />
+              <McpServers
+                servers={servers}
+                profiles={profiles}
+                error={serverError}
+                onOpen={(next) =>
+                  hubs ? useNavStore.getState().openItem({ kind: "mcp", id: next }) : setServer(next)
+                }
+              />
             </>
           )
         ) : name ? (
