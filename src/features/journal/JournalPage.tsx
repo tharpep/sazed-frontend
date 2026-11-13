@@ -4,6 +4,10 @@ import remarkGfm from "remark-gfm";
 import { ArrowLeft, Plus, Star, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Reader } from "@/components/shell/Reader";
+import { ToolsRow } from "@/components/shell/ToolsRow";
+import { useShellStore } from "@/nav/shellFlag";
+import { useNavStore } from "@/store/navStore";
 import {
   createEntry,
   deleteEntry,
@@ -429,6 +433,8 @@ function Editor({
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export function JournalPage() {
+  const hubs = useShellStore((s) => s.shell) === "hubs";
+  const navJournal = useNavStore((s) => s.read.library);
   const [category] = useState<JournalCategory>(ACTIVE_CATEGORY);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -441,6 +447,7 @@ export function JournalPage() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<JournalEntry | null>(null);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [defaultSub, setDefaultSub] = useState<string>(() => getDefaultSubcategory(ACTIVE_CATEGORY));
   const [lastSavedId, setLastSavedId] = useState<string | null>(null);
 
@@ -484,6 +491,16 @@ export function JournalPage() {
     void reload();
   }, [reload]);
 
+  useEffect(() => {
+    if (!hubs || navJournal?.kind !== "journal") return;
+    const entry = entries.find((item) => item.id === navJournal.id);
+    if (entry) {
+      setSelected(entry);
+      setCreating(false);
+      setEditing(false);
+    }
+  }, [entries, hubs, navJournal]);
+
   async function loadMore() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
@@ -507,11 +524,14 @@ export function JournalPage() {
   function handleNew() {
     setSelected(null);
     setCreating(true);
+    setEditing(true);
   }
 
   function handleBack() {
     setSelected(null);
     setCreating(false);
+    setEditing(false);
+    if (hubs) useNavStore.getState().closeItem();
   }
 
   function handleSaved(saved: JournalEntry, wasNew: boolean, explicit: boolean) {
@@ -538,6 +558,7 @@ export function JournalPage() {
     if (wasNew) {
       setSelected(saved);
       setCreating(false);
+      setEditing(true);
     }
   }
 
@@ -545,6 +566,8 @@ export function JournalPage() {
     setEntries((prev) => prev.filter((e) => e.id !== id));
     setSelected(null);
     setCreating(false);
+    setEditing(false);
+    if (hubs) useNavStore.getState().closeItem();
   }
 
   function handlePinDefault(value: string) {
@@ -573,20 +596,34 @@ export function JournalPage() {
   }, []);
 
   const grouped = groupByDate(entries);
-  const view = creating || selected ? "editor" : "list";
+  const view = !hubs
+    ? creating || selected
+      ? "editor"
+      : "list"
+    : creating || (selected && editing)
+      ? "editor"
+      : selected
+        ? "reader"
+        : "list";
 
   // The editor key forces remount when switching between entries or to "new",
   // so internal state (title/body/etc.) resets cleanly.
   const editorKey = creating ? "new" : selected?.id ?? "none";
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-1 overflow-hidden bg-bg min-[900px]:grid-cols-[340px_1fr]">
-      <aside
-        className={cn(
-          "relative min-h-0 flex-col overflow-hidden border-r border-border min-[900px]:flex",
-          view === "list" ? "flex" : "hidden"
-        )}
-      >
+    <div className="flex h-full min-h-0 flex-col bg-bg">
+      {hubs && (
+        <div className="px-4 pt-3 sm:px-8">
+          <ToolsRow action={{ label: "New entry", onClick: handleNew }} />
+        </div>
+      )}
+      <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden bg-bg min-[900px]:grid-cols-[340px_1fr]">
+        <aside
+          className={cn(
+            "relative min-h-0 flex-col overflow-hidden border-r border-border min-[900px]:flex",
+            view === "list" || view === "reader" ? "flex" : "hidden"
+          )}
+        >
         <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
           <input
             id="journal-search"
@@ -659,6 +696,8 @@ export function JournalPage() {
                       onClick={() => {
                         setCreating(false);
                         setSelected(entry);
+                        setEditing(hubs ? false : true);
+                        if (hubs) useNavStore.getState().openItem({ kind: "journal", id: entry.id });
                       }}
                       className={cn(
                         "relative flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-surface",
@@ -698,12 +737,12 @@ export function JournalPage() {
         </div>
       </aside>
 
-      <main
-        className={cn(
-          "min-h-0 flex-col overflow-hidden min-[900px]:flex",
-          view === "editor" ? "flex" : "hidden"
-        )}
-      >
+        <main
+          className={cn(
+            "min-h-0 flex-col overflow-hidden min-[900px]:flex",
+            view !== "list" ? "flex" : "hidden"
+          )}
+        >
         {view === "editor" ? (
           <Editor
             key={editorKey}
@@ -716,6 +755,31 @@ export function JournalPage() {
             onBack={handleBack}
             onPinDefault={handlePinDefault}
           />
+        ) : view === "reader" && selected ? (
+          <Reader
+            back="Journal"
+            context="Library › Journal"
+            onBack={handleBack}
+            actions={
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="inline-flex min-h-11 items-center rounded-lg border border-line bg-surface px-3 text-sm text-ink transition-colors hover:bg-raised"
+              >
+                Edit
+              </button>
+            }
+          >
+            <div className="flex flex-col gap-3">
+              <p className="text-caption text-muted">
+                {fmtDateLabel(selected.entry_date)} · {selected.subcategory}
+              </p>
+              <h2 className="text-title font-semibold text-ink">{selected.title}</h2>
+              <div className="prose-journal">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selected.body}</ReactMarkdown>
+              </div>
+            </div>
+          </Reader>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
             <p className="text-sm text-ink">Select an entry</p>
@@ -724,7 +788,8 @@ export function JournalPage() {
             </p>
           </div>
         )}
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

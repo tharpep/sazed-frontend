@@ -20,6 +20,8 @@ import {
   type KbSource,
 } from "@/api/kb";
 import { errorText } from "@/api/homelab";
+import { DetailPanel } from "@/components/shell/DetailPanel";
+import { useShellStore } from "@/nav/shellFlag";
 import { ORIGIN_LABEL, addedAgo } from "./format";
 
 interface Props {
@@ -30,6 +32,7 @@ interface Props {
 }
 
 export function SourceSheet({ fileId, source, onClose, onDeleted }: Props) {
+  const hubs = useShellStore((s) => s.shell) === "hubs";
   const isMobile = useIsMobile();
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +96,63 @@ export function SourceSheet({ fileId, source, onClose, onDeleted }: Props) {
       ].filter(Boolean)
     : [];
 
+  const body = (
+    <>
+      {source?.summary && source.summary !== "[unavailable]" && (
+        <p className="text-sm text-ink">{source.summary}</p>
+      )}
+
+      <section aria-label="Stored text" className="flex flex-col gap-1">
+        <h3 className="text-sm font-medium text-ink">Stored text</h3>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {!error && content === null && <p className="text-sm text-muted">Loading…</p>}
+        {content !== null && (
+          <pre className="max-h-[50dvh] overflow-auto rounded-md border border-border bg-surface p-3 font-sans text-xs whitespace-pre-wrap text-ink">
+            {content || "(empty)"}
+          </pre>
+        )}
+      </section>
+
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => download("md")}>
+          Download .md
+        </Button>
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => download("txt")}>
+          Download .txt
+        </Button>
+        <Button size="sm" variant="destructive" disabled={busy} onClick={() => setConfirmDelete(true)}>
+          Delete
+        </Button>
+      </div>
+    </>
+  );
+
+  if (hubs) {
+    return (
+      <DetailPanel open={fileId !== null} title={name} description={facts.join(" · ")} onClose={onClose}>
+        {body}
+        <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete “{name}”?</DialogTitle>
+              <DialogDescription>
+                Its chunks and stored text are removed from the knowledge base. This can't be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmDelete(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={remove}>
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </DetailPanel>
+    );
+  }
+
   return (
     <Sheet open={fileId !== null} onOpenChange={(o) => !o && onClose()}>
       <SheetContent
@@ -105,32 +165,7 @@ export function SourceSheet({ fileId, source, onClose, onDeleted }: Props) {
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          {source?.summary && source.summary !== "[unavailable]" && (
-            <p className="text-sm text-ink">{source.summary}</p>
-          )}
-
-          <section aria-label="Stored text" className="flex flex-col gap-1">
-            <h3 className="text-sm font-medium text-ink">Stored text</h3>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            {!error && content === null && <p className="text-sm text-muted">Loading…</p>}
-            {content !== null && (
-              <pre className="max-h-[50dvh] overflow-auto rounded-md border border-border bg-surface p-3 font-sans text-xs whitespace-pre-wrap text-ink">
-                {content || "(empty)"}
-              </pre>
-            )}
-          </section>
-
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => download("md")}>
-              Download .md
-            </Button>
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => download("txt")}>
-              Download .txt
-            </Button>
-            <Button size="sm" variant="destructive" disabled={busy} onClick={() => setConfirmDelete(true)}>
-              Delete
-            </Button>
-          </div>
+          {body}
         </div>
 
         <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
