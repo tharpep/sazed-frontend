@@ -29,40 +29,55 @@ export function DispatchRuns({ onOpen }: { onOpen: (plan: string) => void }) {
   if (!plans) return <p className="text-meta text-muted">Loading…</p>;
   if (plans.length === 0)
     return <EmptyState title="No dispatch runs">Runs show up here once dispatch posts its first task row.</EmptyState>;
+  const groups = [
+    ["Running", plans.filter((p) => (p.states.running ?? 0) + (p.states.waiting ?? 0) > 0)],
+    ["Failed", plans.filter((p) => ["failed", "conflict", "blocked"].some((state) => (p.states[state] ?? 0) > 0))],
+    ["Done", plans.filter((p) => ["done", "landed", "cleaned"].some((state) => (p.states[state] ?? 0) > 0))],
+  ] as const;
+
   return (
-    <ListSection>
-      {plans.map((p) => {
-        const landed = p.states.landed ?? 0;
-        return (
-          <ListRow
-            key={p.plan}
-            onClick={() => onOpen(p.plan)}
-            title={<span className="font-mono">{p.plan}</span>}
-            description={
-              <>
-                {p.repo} · {p.host}
-                <span className="mt-1 flex items-center gap-2">
-                  <span aria-hidden="true" className="h-1 w-24 overflow-hidden rounded-full bg-raised">
-                    <span
-                      className="block h-full bg-ok"
-                      style={{ width: `${p.tasks_total ? (100 * landed) / p.tasks_total : 0}%` }}
-                    />
-                  </span>
-                  <span className="font-mono text-caption">
-                    {landed}/{p.tasks_total} landed
-                  </span>
-                </span>
-              </>
-            }
-            meta={
-              <>
-                <span>{ago(p.updated_at)}</span>
-                <span>{counts(p.states)}</span>
-              </>
-            }
-          />
-        );
-      })}
-    </ListSection>
+    <div className="flex flex-col gap-4">
+      {groups.map(([label, items]) =>
+        items.length > 0 ? (
+          <section key={label} aria-label={label} className="flex flex-col gap-2">
+            <h2 className="px-1 text-sm font-medium text-ink">{label}</h2>
+            <ListSection>
+              {items.map((p) => {
+                const landed = p.states.landed ?? 0;
+                return (
+                  <ListRow
+                    key={p.plan}
+                    onClick={() => onOpen(p.plan)}
+                    title={<span className="font-mono">{p.plan}</span>}
+                    description={
+                      <>
+                        {p.repo} · {p.host}
+                        <span className="mt-1 flex items-center gap-2">
+                          <span aria-hidden="true" className="h-1 w-24 overflow-hidden rounded-full bg-raised">
+                            <span
+                              className="block h-full bg-ok"
+                              style={{ width: `${p.tasks_total ? (100 * landed) / p.tasks_total : 0}%` }}
+                            />
+                          </span>
+                          <span className="font-mono text-caption">
+                            {landed}/{p.tasks_total} landed
+                          </span>
+                        </span>
+                      </>
+                    }
+                    meta={
+                      <>
+                        <span>{ago(p.updated_at)}</span>
+                        <span>{counts(p.states)}</span>
+                      </>
+                    }
+                  />
+                );
+              })}
+            </ListSection>
+          </section>
+        ) : null
+      )}
+    </div>
   );
 }

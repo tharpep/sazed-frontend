@@ -21,7 +21,7 @@ const field =
 
 type Mode = "research" | "second_opinion" | "code_review";
 
-export function JobsPanel({ refreshKey }: { refreshKey: number }) {
+export function JobsPanel({ refreshKey, grouped = false }: { refreshKey: number; grouped?: boolean }) {
   const [jobs, setJobs] = useState<JobSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -33,6 +33,13 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
   const [makePr, setMakePr] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const jobGroups: Array<[string, JobSummary[]]> = grouped
+    ? [
+        ["Running", (jobs ?? []).filter((j) => ACTIVE_STATUSES.includes(j.status))],
+        ["Failed", (jobs ?? []).filter((j) => ["failed", "timed_out", "paused"].includes(j.status))],
+        ["Done", (jobs ?? []).filter((j) => ["succeeded", "cancelled"].includes(j.status))],
+      ]
+    : [["Recent jobs", jobs ?? []]];
 
   const load = useCallback(async () => {
     try {
@@ -166,29 +173,38 @@ export function JobsPanel({ refreshKey }: { refreshKey: number }) {
           <p className="px-1 text-sm text-muted">No jobs yet. Ask Sazed to research something, or start one above.</p>
         )}
         {jobs && jobs.length > 0 && (
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-            {jobs.map((j) => (
-              <li key={j.id}>
-                <button
-                  type="button"
-                  onClick={() => setOpen(j.id)}
-                  className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface"
-                >
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-sm text-ink">{j.title}</span>
-                    <span className="truncate text-xs text-muted">
-                      <span className={cn(statusTone(j.status))}>{STATUS_LABEL[j.status]}</span>
-                      {" · "}
-                      {[KIND_LABEL[j.kind] ?? j.kind, requesterLabel(j.requested_by), duration(j.started_at, j.finished_at)]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </span>
-                  <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="flex flex-col gap-4">
+            {jobGroups.map(([label, items]) =>
+              items.length > 0 ? (
+                <section key={label} aria-label={label} className="flex flex-col gap-2">
+                  {grouped && <h3 className="px-1 text-sm font-medium text-ink">{label}</h3>}
+                  <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+                    {items.map((j) => (
+                      <li key={j.id}>
+                        <button
+                          type="button"
+                          onClick={() => setOpen(j.id)}
+                          className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface"
+                        >
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="truncate text-sm text-ink">{j.title}</span>
+                            <span className="truncate text-xs text-muted">
+                              <span className={cn(statusTone(j.status))}>{STATUS_LABEL[j.status]}</span>
+                              {" · "}
+                              {[KIND_LABEL[j.kind] ?? j.kind, requesterLabel(j.requested_by), duration(j.started_at, j.finished_at)]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                          </span>
+                          <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null
+            )}
+          </div>
         )}
       </section>
 
