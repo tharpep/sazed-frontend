@@ -8,7 +8,7 @@ import { MiniRow, SystemBox, TaskCard } from "./DispatchCards";
 import { DispatchEdges } from "./DispatchEdges";
 import { DispatchPanel } from "./DispatchPanel";
 import { columnOf, costOf, dollars, isSettled, stateOf, type Column } from "./dispatchRun";
-import { useUiStore } from "@/store/uiStore";
+import { useNavStore } from "@/store/navStore";
 import { syncServerClock } from "./useNow";
 
 const POLL_MS = 3000;
@@ -52,9 +52,7 @@ function ColumnHead({ label, count }: { label: string; count?: number }) {
 }
 
 function openProject(slug: string) {
-  const ui = useUiStore.getState();
-  ui.setLinkedProject(slug);
-  ui.toggleProjects();
+  useNavStore.getState().openItem({ kind: "project", id: slug });
 }
 
 const Empty = ({ children }: { children: string }) => <p className="text-caption text-muted">{children}</p>;
