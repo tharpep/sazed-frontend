@@ -81,13 +81,13 @@ export function KnowledgePage() {
         </button>
       </header>}
 
+      {hubs && (
+        <div className="px-4 pt-3 sm:px-8">
+          <ToolsRow action={{ label: "Add source", onClick: () => setAdding((value) => !value) }} />
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-4 pb-8">
-          {hubs && (
-            <ToolsRow
-              action={{ label: "Add source", onClick: () => setAdding((value) => !value) }}
-            />
-          )}
           {(!hubs || adding) && <AddContent categories={categories} onAdded={load} />}
 
           <SearchPanel onOpenSource={openSource} />
