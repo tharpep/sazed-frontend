@@ -9,9 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/useIsMobile";
-import { cn } from "@/lib/utils";
 import {
   deleteKbSource,
   exportKbSource,
@@ -21,7 +18,6 @@ import {
 } from "@/api/kb";
 import { errorText } from "@/api/homelab";
 import { DetailPanel } from "@/components/shell/DetailPanel";
-import { useShellStore } from "@/nav/shellFlag";
 import { ORIGIN_LABEL, addedAgo } from "./format";
 
 interface Props {
@@ -31,9 +27,9 @@ interface Props {
   onDeleted: () => void;
 }
 
+const FOOTER_BUTTON = "h-11 px-4 sm:h-8";
+
 export function SourceSheet({ fileId, source, onClose, onDeleted }: Props) {
-  const hubs = useShellStore((s) => s.shell) === "hubs";
-  const isMobile = useIsMobile();
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -96,8 +92,28 @@ export function SourceSheet({ fileId, source, onClose, onDeleted }: Props) {
       ].filter(Boolean)
     : [];
 
-  const body = (
+  const footer = (
     <>
+      <Button variant="outline" className={FOOTER_BUTTON} disabled={busy} onClick={() => download("md")}>
+        Download .md
+      </Button>
+      <Button variant="outline" className={FOOTER_BUTTON} disabled={busy} onClick={() => download("txt")}>
+        Download .txt
+      </Button>
+      <Button variant="destructive" className={FOOTER_BUTTON} disabled={busy} onClick={() => setConfirmDelete(true)}>
+        Delete
+      </Button>
+    </>
+  );
+
+  return (
+    <DetailPanel
+      open={fileId !== null}
+      title={name}
+      description={facts.join(" · ")}
+      onClose={onClose}
+      footer={footer}
+    >
       {source?.summary && source.summary !== "[unavailable]" && (
         <p className="text-sm text-ink">{source.summary}</p>
       )}
@@ -106,88 +122,33 @@ export function SourceSheet({ fileId, source, onClose, onDeleted }: Props) {
         <h3 className="text-sm font-medium text-ink">Stored text</h3>
         {error && <p className="text-sm text-destructive">{error}</p>}
         {!error && content === null && <p className="text-sm text-muted">Loading…</p>}
+        {/* The panel body is the one scroller, so long text wraps here instead of scrolling inside it. */}
         {content !== null && (
-          <pre className="max-h-[50dvh] overflow-auto rounded-md border border-border bg-surface p-3 font-sans text-xs whitespace-pre-wrap text-ink">
+          <pre className="rounded-md border border-border bg-surface p-3 font-sans text-xs whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
             {content || "(empty)"}
           </pre>
         )}
       </section>
 
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => download("md")}>
-          Download .md
-        </Button>
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => download("txt")}>
-          Download .txt
-        </Button>
-        <Button size="sm" variant="destructive" disabled={busy} onClick={() => setConfirmDelete(true)}>
-          Delete
-        </Button>
-      </div>
-    </>
-  );
-
-  if (hubs) {
-    return (
-      <DetailPanel open={fileId !== null} title={name} description={facts.join(" · ")} onClose={onClose}>
-        {body}
-        <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete “{name}”?</DialogTitle>
-              <DialogDescription>
-                Its chunks and stored text are removed from the knowledge base. This can't be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmDelete(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={remove}>
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </DetailPanel>
-    );
-  }
-
-  return (
-    <Sheet open={fileId !== null} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent
-        side={isMobile ? "bottom" : "right"}
-        className={cn("gap-0", isMobile ? "max-h-[90dvh]" : "w-full sm:max-w-lg")}
-      >
-        <SheetHeader className="border-b border-border">
-          <SheetTitle className="truncate pr-8 text-base">{name}</SheetTitle>
-          {facts.length > 0 && <p className="text-xs text-muted">{facts.join(" · ")}</p>}
-        </SheetHeader>
-
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          {body}
-        </div>
-
-        <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete “{name}”?</DialogTitle>
-              <DialogDescription>
-                Its chunks and stored text are removed from the knowledge base. This can't be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmDelete(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={remove}>
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </SheetContent>
-    </Sheet>
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete “{name}”?</DialogTitle>
+            <DialogDescription>
+              Its chunks and stored text are removed from the knowledge base. This can't be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={remove}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </DetailPanel>
   );
 }
 
