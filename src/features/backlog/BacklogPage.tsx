@@ -181,8 +181,9 @@ export function BacklogPage() {
       <PageBody className="gap-4">
         <ToolsRow
           picker={
-            // The two pickers scroll sideways at 360 so the action keeps its place on the row.
-            <div className="flex min-w-0 items-center gap-2 overflow-x-auto [scrollbar-width:none]">
+            // Two pickers and the action need about 345px, more than a 360 phone has, so the pickers
+            // stack there rather than push the action off the row or hide behind it.
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <ViewPicker
                 title="Board view"
                 choices={VIEW_CHOICES}
