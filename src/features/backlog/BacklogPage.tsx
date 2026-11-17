@@ -139,7 +139,7 @@ export function BacklogPage() {
 
   function close() {
     setOpenItem(null);
-    if (hubs) useNavStore.getState().closeItem();
+    if (hubs) useNavStore.getState().closeItem("backlog");
   }
 
   const viewChoices = VIEWS.map(([id, label]) => ({ id, label }));

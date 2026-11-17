@@ -7,6 +7,19 @@ import { hasViewTabs, hubDef, type ShellAction } from "./hubMeta";
 interface HubTitleRowProps {
   onSearch: () => void;
   action?: ShellAction;
+  onActionSlot: (el: HTMLElement | null) => void;
+}
+
+export function TitleAction({ action }: { action: ShellAction }) {
+  return (
+    <button
+      type="button"
+      onClick={action.onClick}
+      className="h-7 flex-none rounded-[7px] border border-line bg-surface px-2.5 text-meta whitespace-nowrap text-ink transition-colors hover:bg-raised"
+    >
+      {action.label}
+    </button>
+  );
 }
 
 const MOD_KEY = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K";
@@ -31,7 +44,7 @@ function SearchField({ onSearch, className }: { onSearch: () => void; className?
 
 /** The desktop page's 48px title row: hub name, view tabs, primary action and search. Home has no
  * row, only the search field in the corner. */
-export function HubTitleRow({ onSearch, action }: HubTitleRowProps) {
+export function HubTitleRow({ onSearch, action, onActionSlot }: HubTitleRowProps) {
   const hub = useNavStore((s) => s.hub);
   const view = useNavStore((s) => s.view[s.hub]);
   const go = useNavStore((s) => s.go);
@@ -69,15 +82,8 @@ export function HubTitleRow({ onSearch, action }: HubTitleRowProps) {
         </div>
       )}
       <span className="flex-1" />
-      {action && (
-        <button
-          type="button"
-          onClick={action.onClick}
-          className="h-7 flex-none rounded-[7px] border border-line bg-surface px-2.5 text-meta whitespace-nowrap text-ink transition-colors hover:bg-raised"
-        >
-          {action.label}
-        </button>
-      )}
+      {action && <TitleAction action={action} />}
+      <div ref={onActionSlot} className="contents" />
       <SearchField onSearch={onSearch} />
     </header>
   );

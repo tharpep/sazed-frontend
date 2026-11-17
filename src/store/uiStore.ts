@@ -3,7 +3,6 @@ import { create } from "zustand";
 import { useNavStore, type ItemRef } from "./navStore";
 
 interface UiState {
-  online: boolean;
   privateRevealed: boolean;
   togglePrivate: () => void;
   hidePrivate: () => void;
@@ -17,7 +16,6 @@ interface UiState {
   setLinkedDispatchPlan: (plan: string | null) => void;
   linkedProfile: string | null;
   setLinkedProfile: (name: string | null) => void;
-  setOnline: (value: boolean) => void;
 }
 
 function link(ref: ItemRef | null) {
@@ -25,7 +23,6 @@ function link(ref: ItemRef | null) {
 }
 
 export const useUiStore = create<UiState>((set) => ({
-  online: false,
   privateRevealed: false,
   togglePrivate: () => set((state) => ({ privateRevealed: !state.privateRevealed })),
   hidePrivate: () => set({ privateRevealed: false }),
@@ -54,5 +51,4 @@ export const useUiStore = create<UiState>((set) => ({
     link(name ? { kind: "profile", id: name } : null);
     set({ linkedProfile: name });
   },
-  setOnline: (value) => set({ online: value }),
 }));

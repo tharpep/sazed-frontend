@@ -13,7 +13,8 @@ export function SwipeRow({ children, onSwipeLeft }: SwipeRowProps) {
   const ignoreClick = useRef(false);
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // A mouse drag on a row is text selection, never a swipe.
+    if (e.pointerType === "mouse") return;
     gesture.current = { startX: e.clientX, startY: e.clientY, horizontal: false };
     ignoreClick.current = false;
   }
@@ -27,7 +28,12 @@ export function SwipeRow({ children, onSwipeLeft }: SwipeRowProps) {
       setOffset(0);
       return;
     }
-    if (Math.abs(dx) > 8) gesture.current.horizontal = true;
+    // Capture only once the swipe is sure: a capture taken on pointerdown retargets the click to
+    // this row, so a tap on the row's own buttons would never reach them.
+    if (!gesture.current.horizontal && Math.abs(dx) > 8) {
+      gesture.current.horizontal = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
     if (gesture.current.horizontal) setOffset(Math.min(0, dx));
   }
 

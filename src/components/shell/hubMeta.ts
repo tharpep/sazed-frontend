@@ -3,12 +3,14 @@ import { Bot, House, LayoutGrid, Library, MessageSquare, Server, SquareKanban } 
 
 import { HUB_VIEWS, type HubId } from "@/nav/hubViews";
 
+type Icon = ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" }>;
+
 export interface ShellAction {
   label: string;
   onClick: () => void;
+  /** The phone icon beside the label; Plus when absent. */
+  icon?: Icon;
 }
-
-type Icon =ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" }>;
 
 export const HUB_ICON: Record<HubId, Icon> = {
   home: House,

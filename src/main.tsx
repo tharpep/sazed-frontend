@@ -2,7 +2,7 @@ import "./styles/globals.css";
 import "./styles/legacy-compat.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App";
 import { AuthGate } from "./features/auth/AuthGate";
@@ -22,6 +22,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
               <Routes>
                 <Route path="/" element={<App />} />
                 <Route path="/display" element={<DisplayPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </AuthGate>
           </GoogleOAuthProvider>
