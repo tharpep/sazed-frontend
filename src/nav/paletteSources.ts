@@ -4,8 +4,16 @@ import { fetchServices, type Service } from "@/api/homelab";
 import { listBacklog } from "@/api/backlog";
 import { listPlans } from "@/api/plans";
 import { listProjects } from "@/api/projects";
+import { listAutomations } from "@/api/automations";
+import { listDispatchPlans } from "@/api/dispatch";
+import { listJobs } from "@/api/jobs";
+import { listMcpServers } from "@/api/mcpServers";
+import { listProfiles } from "@/api/profiles";
+import { describeCron } from "@/features/automations/format";
 import { conversationItems } from "@/features/chat/openSession";
 import { statusOf, visibleServices } from "@/features/homelab/format";
+import { STATUS_LABEL as JOB_STATUS } from "@/features/jobs/format";
+import { outcomeOf } from "@/features/plans/dispatchRun";
 import type { ItemKind, ItemRef } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 import { HUBS } from "./hubs";
@@ -266,5 +274,45 @@ itemProviders.push(async () =>
     ref: { kind: "plan", id: plan.slug, version: plan.version },
     label: plan.title,
     hint: `Plan · ${plan.project_title ?? plan.slug} · v${plan.version}`,
+  }))
+);
+
+itemProviders.push(async () =>
+  (await listJobs()).map((job) => ({
+    ref: { kind: "job", id: job.id },
+    label: job.title,
+    hint: `Job · ${JOB_STATUS[job.status]}`,
+  }))
+);
+
+itemProviders.push(async () =>
+  (await listDispatchPlans()).map((plan) => ({
+    ref: { kind: "dispatch", id: plan.plan },
+    label: plan.plan,
+    hint: `Dispatch run · ${outcomeOf(plan)} · ${plan.repo}`,
+  }))
+);
+
+itemProviders.push(async () =>
+  (await listAutomations()).map((automation) => ({
+    ref: { kind: "automation", id: automation.id },
+    label: automation.name,
+    hint: `Automation · ${describeCron(automation.trigger.cron)}`,
+  }))
+);
+
+itemProviders.push(async () =>
+  (await listProfiles()).map((profile) => ({
+    ref: { kind: "profile", id: profile.name },
+    label: profile.name,
+    hint: `Profile · ${profile.model}`,
+  }))
+);
+
+itemProviders.push(async () =>
+  (await listMcpServers()).map((server) => ({
+    ref: { kind: "mcp", id: server.name },
+    label: server.name,
+    hint: "MCP server",
   }))
 );

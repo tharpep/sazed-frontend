@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -17,7 +17,7 @@ import {
 } from "@/api/jobs";
 import { errorText } from "@/api/homelab";
 import { jobCardId } from "@/api/command";
-import { CardActions } from "@/features/home/CardActions";
+import { CardActions, TOUCH_BUTTON } from "@/features/home/CardActions";
 import { Timeline } from "./Timeline";
 import { KIND_LABEL, PAUSE_REASON, STATUS_LABEL, duration, requesterLabel, statusTone, stepsFromEvents } from "./format";
 
@@ -28,6 +28,8 @@ interface Props {
   onOpenJob: (id: string) => void;
 }
 
+const FOOTER_BUTTON = "h-11 min-w-24 px-4 sm:h-8";
+
 const followField =
   "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
 
@@ -37,22 +39,31 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
   const [busy, setBusy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [followUp, setFollowUp] = useState("");
+  // The job on screen now; a response or action started for another job must not land here.
+  const shown = useRef(jobId);
 
   const load = useCallback(async () => {
     if (!jobId) return;
     try {
-      setJob(await getJob(jobId));
+      const next = await getJob(jobId);
+      if (shown.current !== jobId) return;
+      setJob(next);
       setError(null);
     } catch (err) {
-      setError(errorText(err));
+      if (shown.current === jobId) setError(errorText(err));
     }
   }, [jobId]);
 
+  // On close the last job stays for the panel's exit animation.
   useEffect(() => {
+    shown.current = jobId;
+    if (!jobId) return;
     setJob(null);
+    setError(null);
+    setFollowUp("");
     setShowPrompt(false);
     load();
-  }, [load]);
+  }, [jobId, load]);
 
   // Follow a running job live.
   useEffect(() => {
@@ -62,46 +73,36 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
   }, [job, load]);
 
   async function act(fn: () => Promise<unknown>) {
+    const id = jobId;
     setBusy(true);
     try {
       await fn();
       await load();
       onChanged();
     } catch (err) {
-      setError(errorText(err));
+      if (shown.current === id) setError(errorText(err));
     } finally {
       setBusy(false);
     }
   }
 
-  async function resume() {
-    if (!jobId) return;
+  async function startChild(fn: (id: string) => Promise<JobDetail>) {
+    const id = jobId;
+    if (!id) return;
     setBusy(true);
     try {
-      const child = await resumeJob(jobId);
+      const child = await fn(id);
       onChanged();
-      onOpenJob(child.id);
+      if (shown.current === id) onOpenJob(child.id);
     } catch (err) {
-      setError(errorText(err));
+      if (shown.current === id) setError(errorText(err));
     } finally {
       setBusy(false);
     }
   }
 
-  async function sendFollowUp() {
-    if (!jobId) return;
-    setBusy(true);
-    try {
-      const child = await continueJob(jobId, followUp.trim());
-      setFollowUp("");
-      onChanged();
-      onOpenJob(child.id);
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const resume = () => startChild(resumeJob);
+  const sendFollowUp = () => startChild((id) => continueJob(id, followUp.trim()));
 
   const steps = stepsFromEvents(job?.events);
   const facts = job
@@ -112,6 +113,27 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
         duration(job.started_at, job.finished_at),
       ].filter(Boolean)
     : [];
+
+  const active = !!job && ACTIVE_STATUSES.includes(job.status);
+  const paused = job?.status === "paused";
+  const footer =
+    job && (active || paused) ? (
+      <>
+        {job.status === "needs_approval" && (
+          <Button className={FOOTER_BUTTON} disabled={busy} onClick={() => act(() => approveJob(job.id))}>
+            Approve
+          </Button>
+        )}
+        {paused && (
+          <Button className={FOOTER_BUTTON} disabled={busy} onClick={resume}>
+            Resume
+          </Button>
+        )}
+        <Button variant="outline" className={FOOTER_BUTTON} disabled={busy} onClick={() => act(() => cancelJob(job.id))}>
+          Cancel
+        </Button>
+      </>
+    ) : undefined;
 
   return (
     <DetailPanel
@@ -129,39 +151,29 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
         )
       }
       onClose={onClose}
+      footer={footer}
     >
       <div className="flex flex-col gap-5">
           {error && <p className="text-sm text-destructive">{error}</p>}
           {!job && !error && <p className="text-sm text-muted">Loading…</p>}
 
-          {job && ACTIVE_STATUSES.includes(job.status) && (
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted">
-                {job.status === "queued"
-                  ? "Waiting for the worker…"
-                  : job.status === "needs_approval"
-                    ? "Waiting for your approval."
-                    : job.status === "needs_input"
-                      ? "Waiting for your answer."
-                      : `Working: ${steps.length} steps so far…`}
-              </p>
-              <div className="flex gap-2">
-                {job.status === "needs_approval" && (
-                  <Button size="sm" disabled={busy} onClick={() => act(() => approveJob(job.id))}>
-                    Approve
-                  </Button>
-                )}
-                <Button size="sm" variant="outline" disabled={busy} onClick={() => act(() => cancelJob(job.id))}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
+          {job && active && (
+            <p className="text-sm text-muted">
+              {job.status === "queued"
+                ? "Waiting for the worker…"
+                : job.status === "needs_approval"
+                  ? "Waiting for your approval."
+                  : job.status === "needs_input"
+                    ? "Waiting for your answer."
+                    : `Working: ${steps.length} steps so far…`}
+            </p>
           )}
 
           {job?.status === "running" && (
             <CardActions
               cardId={jobCardId(job.id)}
               actions={[{ id: "steer", label: "Steer", takes_text: true }]}
+              touch
               onDone={() => {
                 load();
                 onChanged();
@@ -169,21 +181,11 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
             />
           )}
 
-          {job?.status === "paused" && (
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted">
-                Paused: {PAUSE_REASON[job.meta.pause_reason ?? ""] ?? "it was stopped"}.{" "}
-                {job.meta.pr_url ? "Its work so far is on the draft PR." : "It hadn't changed any files yet."}
-              </p>
-              <div className="flex gap-2">
-                <Button size="sm" disabled={busy} onClick={resume}>
-                  Resume
-                </Button>
-                <Button size="sm" variant="outline" disabled={busy} onClick={() => act(() => cancelJob(job.id))}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
+          {job && paused && (
+            <p className="text-sm text-muted">
+              Paused: {PAUSE_REASON[job.meta.pause_reason ?? ""] ?? "it was stopped"}.{" "}
+              {job.meta.pr_url ? "Its work so far is on the draft PR." : "It hadn't changed any files yet."}
+            </p>
           )}
 
           {job?.status === "needs_input" && job.question && (
@@ -205,7 +207,7 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
               href={job.meta.pr_url}
               target="_blank"
               rel="noreferrer"
-              className="self-start rounded-md border border-border px-3 py-1.5 text-sm text-primary hover:bg-surface"
+              className="inline-flex min-h-11 items-center self-start rounded-md border border-border px-3 py-1.5 text-sm text-primary hover:bg-surface sm:min-h-0"
             >
               Open {job.meta.pr_draft ? "draft " : ""}pull request #{job.meta.pr_number} on GitHub
             </a>
@@ -255,7 +257,7 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
                 }
                 className={cn(followField, "resize-y")}
               />
-              <Button size="sm" className="self-end" disabled={busy || followUp.trim().length < 2} onClick={sendFollowUp}>
+              <Button size="sm" className={cn("self-end", TOUCH_BUTTON)} disabled={busy || followUp.trim().length < 2} onClick={sendFollowUp}>
                 {job.status === "needs_input" ? "Answer" : job.status === "succeeded" ? "Continue" : "Redirect"}
               </Button>
             </section>
@@ -284,7 +286,7 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
               <button
                 type="button"
                 onClick={() => setShowPrompt((v) => !v)}
-                className="self-start text-xs text-primary hover:underline"
+                className="self-start text-xs text-primary hover:underline max-sm:min-h-11"
               >
                 {showPrompt ? "Hide the prompt" : "Show the prompt sent to the agent"}
               </button>

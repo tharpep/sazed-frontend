@@ -5,6 +5,7 @@ import { listMcpServers, type McpServer } from "@/api/mcpServers";
 import { Button } from "@/components/ui/button";
 import { field } from "@/features/projects/fields";
 import { cn } from "@/lib/utils";
+import { TOUCH, TOUCH_ICON } from "./format";
 
 export interface GrantRow {
   server: string;
@@ -94,7 +95,7 @@ export function GrantsEditor({ rows, onChange }: EditorProps) {
             size="sm"
             variant="ghost"
             aria-label="Remove grant"
-            className="md:order-last"
+            className={cn("md:order-last", TOUCH_ICON)}
             onClick={() => onChange(rows.filter((_, j) => j !== i))}
           >
             <X aria-hidden="true" />
@@ -112,7 +113,7 @@ export function GrantsEditor({ rows, onChange }: EditorProps) {
         type="button"
         size="sm"
         variant="outline"
-        className="self-start"
+        className={cn("self-start", TOUCH)}
         disabled={servers !== null && safe.length === 0}
         onClick={() => onChange([...rows, { server: "", tools: "*" }])}
       >

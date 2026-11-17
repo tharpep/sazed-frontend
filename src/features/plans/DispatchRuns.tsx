@@ -3,20 +3,13 @@ import { useEffect, useState } from "react";
 import { listDispatchPlans, type DispatchPlanSummary } from "@/api/dispatch";
 import { errorText } from "@/api/homelab";
 import { EmptyState, ListRow, ListSection } from "@/components/system";
+import { outcomeOf } from "./dispatchRun";
 import { ago } from "./planParts";
 
 const ORDER = ["running", "waiting", "failed", "conflict", "blocked", "done", "landed", "cleaned"];
 
 export function counts(states: Record<string, number>) {
   return ORDER.filter((s) => states[s]).map((s) => `${states[s]} ${s}`).join(" · ");
-}
-
-export type RunOutcome = "Running" | "Failed" | "Done";
-
-export function outcomeOf(plan: DispatchPlanSummary): RunOutcome {
-  if ((plan.states.running ?? 0) + (plan.states.waiting ?? 0) > 0) return "Running";
-  if (["failed", "conflict", "blocked"].some((state) => (plan.states[state] ?? 0) > 0)) return "Failed";
-  return "Done";
 }
 
 export function DispatchRuns({ onOpen }: { onOpen: (plan: string) => void }) {
@@ -47,7 +40,7 @@ export function DispatchRuns({ onOpen }: { onOpen: (plan: string) => void }) {
       {groups.map(([label, items]) =>
         items.length > 0 ? (
           <section key={label} aria-label={label} className="flex flex-col gap-2">
-            <h2 className="px-1 text-sm font-medium text-ink">{label}</h2>
+            <h3 className="px-1 text-sm font-medium text-ink">{label}</h3>
             <ListSection>
               {items.map((p) => {
                 const landed = p.states.landed ?? 0;

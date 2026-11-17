@@ -7,6 +7,7 @@ import { profileError } from "@/api/profiles";
 import { Button } from "@/components/ui/button";
 import { field } from "@/features/projects/fields";
 import { cn } from "@/lib/utils";
+import { TOUCH, TOUCH_ICON } from "./format";
 
 export const BLANK_SERVER: McpServerValues = {
   transport: "http",
@@ -125,7 +126,7 @@ export function McpServerForm({ initial, name: fixedName, submitLabel, onSubmit,
                   size="sm"
                   variant="ghost"
                   aria-label="Remove header"
-                  className="md:order-last"
+                  className={cn("md:order-last", TOUCH_ICON)}
                   onClick={() => setHeaders(headers.filter((_, j) => j !== i))}
                 >
                   <X aria-hidden="true" />
@@ -139,7 +140,7 @@ export function McpServerForm({ initial, name: fixedName, submitLabel, onSubmit,
                 />
               </div>
             ))}
-            <Button type="button" size="sm" variant="outline" className="self-start" onClick={() => setHeaders([...headers, ["", ""]])}>
+            <Button type="button" size="sm" variant="outline" className={cn("self-start", TOUCH)} onClick={() => setHeaders([...headers, ["", ""]])}>
               <Plus aria-hidden="true" />
               Add header
             </Button>
@@ -193,11 +194,11 @@ export function McpServerForm({ initial, name: fixedName, submitLabel, onSubmit,
       {error && <p className="text-caption text-err">{error}</p>}
       <div className="flex justify-end gap-2">
         {onCancel && (
-          <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+          <Button type="button" size="sm" variant="ghost" className={TOUCH} onClick={onCancel}>
             Cancel
           </Button>
         )}
-        <Button type="submit" size="sm" disabled={!ready}>
+        <Button type="submit" size="sm" className={TOUCH} disabled={!ready}>
           {submitLabel}
         </Button>
       </div>

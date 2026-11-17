@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { errorText } from "@/api/homelab";
 import { deleteMcpServer, getMcpServer, saveMcpServer, type McpServerDetail, type McpServerValues } from "@/api/mcpServers";
 import { Author, ago } from "@/features/plans/planParts";
+import { TOUCH_BACK } from "./format";
 import { DeleteBox, History } from "./ProfileView";
 import { McpServerForm } from "./McpServerForm";
 
@@ -56,7 +57,7 @@ export function McpServerView({ name, onBack, onChanged }: Props) {
     <button
       type="button"
       onClick={onBack}
-      className="-ml-1 inline-flex items-center gap-1 self-start rounded-md px-1 py-0.5 text-meta text-ink-2 transition-colors hover:bg-raised hover:text-ink"
+      className={`-ml-1 inline-flex items-center gap-1 self-start rounded-md px-1 py-0.5 text-meta text-ink-2 transition-colors hover:bg-raised hover:text-ink ${TOUCH_BACK}`}
     >
       <ArrowLeft className="size-3.5" aria-hidden="true" />
       MCP servers

@@ -1,5 +1,15 @@
-import type { DispatchRow, DispatchStep, DispatchTask } from "@/api/dispatch";
+import type { DispatchPlanSummary, DispatchRow, DispatchStep, DispatchTask } from "@/api/dispatch";
 import type { Tone } from "@/components/system";
+
+export type RunOutcome = "Running" | "Failed" | "Done";
+
+/** A plan is Done only once every task has landed; a task with no row yet is still to come. */
+export function outcomeOf(plan: DispatchPlanSummary): RunOutcome {
+  const states = (...names: string[]) => names.reduce((sum, s) => sum + (plan.states[s] ?? 0), 0);
+  if (states("running", "waiting") > 0) return "Running";
+  if (states("failed", "conflict", "blocked") > 0) return "Failed";
+  return states("landed", "cleaned") >= plan.tasks_total ? "Done" : "Running";
+}
 
 export type Column = "landed" | "working" | "landing" | "next";
 export type TaskState = DispatchRow["state"] | "next";

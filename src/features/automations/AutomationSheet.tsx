@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DetailPanel } from "@/components/shell/DetailPanel";
@@ -33,34 +33,44 @@ interface Props {
   onChanged: () => void;
 }
 
+const FOOTER_BUTTON = "h-11 min-w-24 px-4 sm:h-8";
 const BLANK = { name: "", cron: "0 8 * * *", timezone: "America/New_York", prompt: "", notify: true, journal: false, skip: false, enabled: true };
 const field = "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
 
 export function AutomationSheet({ target, onClose, onChanged }: Props) {
-  const isNew = target === "new";
+  // The last target opened, kept after close so the title and footer hold during the exit.
+  const [last, setLast] = useState(target);
+  const shownTarget = target ?? last;
+  const isNew = shownTarget === "new";
   const [detail, setDetail] = useState<AutomationDetail | null>(null);
   const [form, setForm] = useState(BLANK);
   const [preview, setPreview] = useState<{ upcoming?: string[]; error?: string }>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The automation on screen now; a response or action started for another must not land here.
+  const shown = useRef(target);
 
   const load = useCallback(async () => {
     if (!target || target === "new") return;
     const d = await getAutomation(target);
+    if (shown.current !== target) return;
     setDetail(d);
     return d;
   }, [target]);
 
-  // Reset the form whenever a different automation (or the create form) opens.
+  // A different automation (or the create form) starts from a blank form, so nothing of the last
+  // one can be saved over this one before its own detail arrives. On close the last content stays
+  // for the panel's exit animation.
   useEffect(() => {
+    shown.current = target;
+    if (!target) return;
+    setLast(target);
     setMessage(null);
     setDetail(null);
-    if (!target) return;
-    if (target === "new") {
-      setForm(BLANK);
-      return;
-    }
+    setConfirmDelete(false);
+    setForm(BLANK);
+    if (target === "new") return;
     load().then((d) => {
       if (!d) return;
       setForm({
@@ -73,7 +83,7 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
         skip: d.outputs.skip_if_nothing,
         enabled: d.enabled,
       });
-    }).catch((err) => setMessage({ text: errorText(err), error: true }));
+    }).catch((err) => shown.current === target && setMessage({ text: errorText(err), error: true }));
   }, [target, load]);
 
   // While a run is in flight, poll so its result appears without a manual refresh.
@@ -96,7 +106,8 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
 
   // Gateway calls and worker jobs are edited through the API; the sheet keeps them as they are.
   const isGateway = !!detail && detail.action.type !== "sazed_prompt";
-  const canSave = form.name.trim() && (isGateway || form.prompt.trim()) && !preview.error && !busy;
+  const loaded = isNew || detail?.id === shownTarget;
+  const canSave = loaded && form.name.trim() && (isGateway || form.prompt.trim()) && !preview.error && !busy;
 
   function input(): AutomationInput {
     return {
@@ -113,18 +124,20 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
   }
 
   async function act(label: string, fn: () => Promise<unknown>, close = false) {
+    const pressedOn = target;
     setBusy(true);
     setMessage(null);
     try {
       await fn();
       onChanged();
+      if (shown.current !== pressedOn) return;
       if (close) onClose();
       else {
         setMessage({ text: label, error: false });
         await load();
       }
     } catch (err) {
-      setMessage({ text: errorText(err), error: true });
+      if (shown.current === pressedOn) setMessage({ text: errorText(err), error: true });
     } finally {
       setBusy(false);
     }
@@ -132,11 +145,27 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
 
+  const footer = shownTarget && (
+    <>
+      <Button className={FOOTER_BUTTON} disabled={!canSave}
+        onClick={() => isNew ? act("Created", () => createAutomation(input()), true) : act("Saved", () => updateAutomation(shownTarget, input()))}>
+        {isNew ? "Create" : "Save"}
+      </Button>
+      {!isNew && (
+        <>
+          <Button variant="outline" className={FOOTER_BUTTON} disabled={busy || !loaded} onClick={() => act("Run started", () => runAutomation(shownTarget))}>Run now</Button>
+          <Button variant="destructive" className={FOOTER_BUTTON} disabled={busy || !loaded} onClick={() => setConfirmDelete(true)}>Delete</Button>
+        </>
+      )}
+    </>
+  );
+
   return (
     <DetailPanel
       open={target !== null}
       title={isNew ? "New automation" : form.name || "Automation"}
       onClose={onClose}
+      footer={footer}
     >
       <div className="flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm text-ink">
@@ -195,24 +224,11 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
 
           <div className="flex flex-col gap-2.5 text-sm text-ink">
             {([["enabled", "On"], ["notify", "Send to Pushover"], ["journal", "Save to journal"], ["skip", "Stay quiet when there's nothing to report"]] as const).map(([k, label]) => (
-              <label key={k} className="flex items-center justify-between gap-3">
+              <label key={k} className="flex min-h-11 items-center justify-between gap-3 sm:min-h-0">
                 {label}
                 <Switch aria-label={label} checked={form[k]} onCheckedChange={(v) => set(k, v)} />
               </label>
             ))}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" disabled={!canSave}
-              onClick={() => isNew ? act("Created", () => createAutomation(input()), true) : act("Saved", () => updateAutomation(target!, input()))}>
-              {isNew ? "Create" : "Save"}
-            </Button>
-            {!isNew && (
-              <>
-                <Button size="sm" variant="outline" disabled={busy} onClick={() => act("Run started", () => runAutomation(target!))}>Run now</Button>
-                <Button size="sm" variant="destructive" disabled={busy} onClick={() => setConfirmDelete(true)}>Delete</Button>
-              </>
-            )}
           </div>
 
           {message && <p role="status" className={cn("text-sm", message.error ? "text-destructive" : "text-muted")}>{message.text}</p>}
