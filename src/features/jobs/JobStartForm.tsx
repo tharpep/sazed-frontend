@@ -57,7 +57,7 @@ export function JobStartForm({ open, onClose, onStarted, onChanged }: Props) {
       onClose={onClose}
       footer={
         <Button
-          className="h-11 min-w-28 px-4 sm:h-8"
+          className="h-11 min-w-24 px-4 sm:h-8"
           disabled={busy || text.trim().length < 3 || (mode === "code_review" && !repo.trim())}
           onClick={submit}
         >

@@ -33,7 +33,7 @@ interface Props {
   onChanged: () => void;
 }
 
-const FOOTER_BUTTON = "h-11 min-w-28 px-4 sm:h-8";
+const FOOTER_BUTTON = "h-11 min-w-24 px-4 sm:h-8";
 const BLANK = { name: "", cron: "0 8 * * *", timezone: "America/New_York", prompt: "", notify: true, journal: false, skip: false, enabled: true };
 const field = "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
 
@@ -57,14 +57,16 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
   }, [target]);
 
   // A different automation (or the create form) starts from a blank form, so nothing of the last
-  // one can be saved over this one before its own detail arrives.
+  // one can be saved over this one before its own detail arrives. On close the last content stays
+  // for the panel's exit animation.
   useEffect(() => {
     shown.current = target;
+    if (!target) return;
     setMessage(null);
     setDetail(null);
     setConfirmDelete(false);
     setForm(BLANK);
-    if (!target || target === "new") return;
+    if (target === "new") return;
     load().then((d) => {
       if (!d) return;
       setForm({

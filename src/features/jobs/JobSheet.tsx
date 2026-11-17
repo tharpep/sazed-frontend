@@ -28,7 +28,7 @@ interface Props {
   onOpenJob: (id: string) => void;
 }
 
-const FOOTER_BUTTON = "h-11 min-w-28 px-4 sm:h-8";
+const FOOTER_BUTTON = "h-11 min-w-24 px-4 sm:h-8";
 
 const followField =
   "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
@@ -54,8 +54,10 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
     }
   }, [jobId]);
 
+  // On close the last job stays for the panel's exit animation.
   useEffect(() => {
     shown.current = jobId;
+    if (!jobId) return;
     setJob(null);
     setError(null);
     setFollowUp("");
