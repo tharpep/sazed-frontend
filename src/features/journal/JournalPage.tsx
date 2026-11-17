@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowLeft, Plus, Star, Trash2 } from "lucide-react";
+import { ArrowLeft, Star, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Reader } from "@/components/shell/Reader";
 import { ToolsRow } from "@/components/shell/ToolsRow";
-import { useShellStore } from "@/nav/shellFlag";
+import { ViewPicker } from "@/components/shell/ViewPicker";
 import { useNavStore } from "@/store/navStore";
 import {
   createEntry,
   deleteEntry,
+  getEntry,
   listEntries,
   listSubcategories,
   updateEntry,
@@ -22,14 +23,10 @@ import type {
   JournalEntryCreate,
   JournalEntryUpdate,
 } from "@/api/journal";
+import { ACTIVE_CATEGORY, PAGE_SIZE } from "./journalItems";
 
 // ── Constants ────────────────────────────────────────────────────────────
 
-// Active category. Personal is schema-ready on the backend but the UI surface
-// for switching stays off until we explicitly enable it.
-const ACTIVE_CATEGORY: JournalCategory = "career";
-
-const PAGE_SIZE = 30;
 const AUTOSAVE_MS = 2000;
 const SAVED_FLASH_MS = 1500;
 
@@ -42,6 +39,9 @@ const DEFAULT_SUBCATEGORIES: Record<JournalCategory, string[]> = {
 };
 
 const ADD_NEW_VALUE = "__add_new__";
+const ALL_SUBS = "__all__";
+
+const ICON_BUTTON = "flex size-11 shrink-0 items-center justify-center rounded-md transition-colors sm:size-7";
 
 // ── localStorage helpers ─────────────────────────────────────────────────
 
@@ -92,7 +92,8 @@ interface EditorProps {
   category: JournalCategory;
   subcategories: string[]; // merged defaults ∪ existing
   defaultSubcategory: string;
-  onSaved: (entry: JournalEntry, wasNew: boolean, explicit: boolean) => void;
+  /** `closing`: the editor is closing (save & close, or a flush on unmount), not autosaving. */
+  onSaved: (entry: JournalEntry, wasNew: boolean, closing: boolean) => void;
   onDeleted: (id: string) => void;
   onBack: () => void;
   onPinDefault: (value: string) => void;
@@ -120,14 +121,29 @@ function Editor({
   const [currentId, setCurrentId] = useState<string | null>(entry?.id ?? null);
 
   const dirtyRef = useRef(false);
+  // Counts edits, so a save that finishes after newer typing leaves the editor dirty.
+  const editsRef = useRef(0);
   const inFlightRef = useRef(false);
+  const closingRef = useRef(false);
+  // The id a create returned, before the re-render that puts it in state, so a save right after
+  // a create patches instead of creating the entry twice.
+  const idRef = useRef<string | null>(entry?.id ?? null);
   const saveTimer = useRef<number | null>(null);
   const titleRef = useRef<HTMLInputElement | null>(null);
+  // Timers and the unmount flush outlive the render that set them, so they call the latest save.
+  const saveRef = useRef<(opts?: { explicit: boolean }) => Promise<void>>(async () => {});
+
+  const scheduleSave = useCallback(() => {
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      saveTimer.current = null;
+      void saveRef.current({ explicit: false });
+    }, AUTOSAVE_MS);
+  }, []);
 
   // Focus title when opening a brand-new entry.
   useEffect(() => {
     if (isNew) titleRef.current?.focus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const tags = useMemo(
@@ -162,9 +178,13 @@ function Editor({
         saveTimer.current = null;
       }
       inFlightRef.current = true;
+      const edits = editsRef.current;
       setStatus("saving");
+      let succeeded = false;
       try {
-        if (currentId) {
+        let saved: JournalEntry;
+        const id = idRef.current;
+        if (id) {
           const patch: JournalEntryUpdate = {
             title: title.trim() || "Untitled",
             body,
@@ -172,10 +192,7 @@ function Editor({
             entry_date: entryDate,
             tags,
           };
-          const updated = await updateEntry(currentId, patch);
-          dirtyRef.current = false;
-          setStatus("saved");
-          onSaved(updated, false, opts.explicit);
+          saved = await updateEntry(id, patch);
         } else {
           const payload: JournalEntryCreate = {
             category,
@@ -185,40 +202,52 @@ function Editor({
             entry_date: entryDate,
             tags,
           };
-          const created = await createEntry(payload);
-          dirtyRef.current = false;
-          setCurrentId(created.id);
-          setStatus("saved");
-          onSaved(created, true, opts.explicit);
+          saved = await createEntry(payload);
+          idRef.current = saved.id;
+          setCurrentId(saved.id);
         }
+        if (editsRef.current === edits) dirtyRef.current = false;
+        succeeded = true;
+        setStatus("saved");
+        // Read after the request: an editor closed while it was in flight must not reopen.
+        onSaved(saved, id === null, opts.explicit || closingRef.current);
       } catch (err) {
         console.error(err);
         setStatus("error");
       } finally {
         inFlightRef.current = false;
       }
+      // Typing during the request was skipped by the guard above: save it on the usual delay, or
+      // now if the editor has closed meanwhile.
+      if (succeeded && dirtyRef.current) {
+        if (closingRef.current) void saveRef.current({ explicit: false });
+        else scheduleSave();
+      }
     },
-    [canSave, currentId, title, body, subcategory, entryDate, tags, category, onSaved],
+    [canSave, title, body, subcategory, entryDate, tags, category, onSaved, scheduleSave],
   );
+
+  useEffect(() => {
+    saveRef.current = save;
+  }, [save]);
 
   function markDirty() {
     dirtyRef.current = true;
+    editsRef.current += 1;
     setStatus("idle");
-    if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => {
-      void save({ explicit: false });
-    }, AUTOSAVE_MS);
+    scheduleSave();
   }
 
-  // Flush pending save on unmount.
+  // Flush a pending save on unmount only: a cleanup tied to `save` would run on every keystroke.
   useEffect(() => {
+    // StrictMode runs this cleanup once on mount, then the effect again.
+    closingRef.current = false;
     return () => {
+      closingRef.current = true;
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
-      if (dirtyRef.current && !inFlightRef.current) {
-        void save({ explicit: false });
-      }
+      if (dirtyRef.current && !inFlightRef.current) void saveRef.current({ explicit: false });
     };
-  }, [save]);
+  }, []);
 
   // Keyboard: cmd/ctrl+enter saves and closes (explicit).
   useEffect(() => {
@@ -276,12 +305,12 @@ function Editor({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+      <div className="flex items-center gap-2 border-b border-border px-2 py-0.5 sm:px-4 sm:py-3">
         <button
           onClick={onBack}
           aria-label="Back to list"
           title="Back"
-          className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink"
+          className={cn(ICON_BUTTON, "text-muted hover:bg-surface hover:text-ink")}
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
         </button>
@@ -294,7 +323,7 @@ function Editor({
             markDirty();
           }}
           onBlur={() => dirtyRef.current && save({ explicit: false })}
-          className="min-w-0 flex-1 bg-transparent text-lg font-medium text-ink outline-none placeholder:text-muted"
+          className="min-h-11 min-w-0 flex-1 bg-transparent text-lg font-medium text-ink outline-none placeholder:text-muted sm:min-h-0"
         />
         <span className="shrink-0 text-xs text-muted" aria-live="polite">
           {status === "saving" ? "saving…" : status === "saved" ? "saved" : status === "error" ? "error" : ""}
@@ -304,19 +333,19 @@ function Editor({
             onClick={handleDelete}
             aria-label="Delete entry"
             title="Delete entry"
-            className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-destructive/10 hover:text-destructive"
+            className={cn(ICON_BUTTON, "text-muted hover:bg-destructive/10 hover:text-destructive")}
           >
             <Trash2 className="size-4" aria-hidden="true" />
           </button>
         )}
       </div>
 
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+      <div className="flex items-center gap-2 border-b border-border px-2 py-0.5 sm:px-4 sm:py-2">
         <select
           value={subOptions.includes(subcategory) ? subcategory : ""}
           onChange={(e) => handleSubChange(e.target.value)}
           onBlur={() => dirtyRef.current && save({ explicit: false })}
-          className="rounded-md border border-border bg-bg px-2 py-1 text-sm text-ink outline-none focus-visible:border-primary"
+          className="min-h-11 rounded-md border border-border bg-bg px-2 py-1 text-sm text-ink sm:min-h-0 outline-none focus-visible:border-primary"
         >
           <option value="" disabled>
             — pick subcategory —
@@ -334,7 +363,8 @@ function Editor({
           title={isDefault ? "Default for this category" : "Set as default for this category"}
           aria-pressed={isDefault}
           className={cn(
-            "flex size-7 items-center justify-center rounded-md transition-colors disabled:opacity-40",
+            ICON_BUTTON,
+            "disabled:opacity-40",
             isDefault ? "text-accent" : "text-muted hover:text-ink"
           )}
         >
@@ -343,7 +373,7 @@ function Editor({
         <button
           onClick={() => setShowMeta((v) => !v)}
           aria-expanded={showMeta}
-          className="ml-auto rounded-md px-2 py-1 text-xs text-muted transition-colors hover:text-ink"
+          className="ml-auto min-h-11 rounded-md px-3 py-1 text-xs text-muted transition-colors hover:text-ink sm:min-h-0 sm:px-2"
         >
           {showMeta ? "less" : "more"}
         </button>
@@ -361,7 +391,7 @@ function Editor({
                 markDirty();
               }}
               onBlur={() => dirtyRef.current && save({ explicit: false })}
-              className="rounded-md border border-border bg-bg px-2 py-1 text-ink outline-none focus-visible:border-primary"
+              className="min-h-11 rounded-md border border-border bg-bg px-2 py-1 text-ink sm:min-h-0 outline-none focus-visible:border-primary"
             />
           </label>
           <label className="flex flex-1 items-center gap-2 text-sm">
@@ -374,7 +404,7 @@ function Editor({
                 markDirty();
               }}
               onBlur={() => dirtyRef.current && save({ explicit: false })}
-              className="min-w-0 flex-1 rounded-md border border-border bg-bg px-2 py-1 text-ink outline-none placeholder:text-muted focus-visible:border-primary"
+              className="min-h-11 min-w-0 flex-1 rounded-md border border-border bg-bg px-2 py-1 text-ink sm:min-h-0 outline-none placeholder:text-muted focus-visible:border-primary"
             />
           </label>
         </div>
@@ -417,11 +447,11 @@ function Editor({
         )}
       </div>
 
-      <div className="flex items-center justify-end border-t border-border px-4 py-3">
+      <div className="flex items-center justify-end border-t border-border px-4 py-2 sm:py-3">
         <button
           onClick={handleExplicitSave}
           disabled={!canSave || status === "saving"}
-          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-bg transition-opacity disabled:opacity-40"
+          className="min-h-11 rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-bg transition-opacity disabled:opacity-40 sm:min-h-0 sm:px-3"
         >
           {status === "saving" ? "saving…" : "save & close"}
         </button>
@@ -433,8 +463,8 @@ function Editor({
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export function JournalPage() {
-  const hubs = useShellStore((s) => s.shell) === "hubs";
-  const navJournal = useNavStore((s) => s.read.library);
+  const readRef = useNavStore((s) => s.read.library);
+  const selectedId = readRef?.kind === "journal" ? readRef.id : null;
   const [category] = useState<JournalCategory>(ACTIVE_CATEGORY);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -445,11 +475,22 @@ export function JournalPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<JournalEntry | null>(null);
+  // The open entry's latest copy, fetched when the loaded page lacks it. It keeps the entry on
+  // screen when a search or filter reloads the list without it, so its editor is never remounted.
+  const [kept, setKept] = useState<JournalEntry | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
+  // A new entry's editor keeps this key after its first save gives it an id, so it is not remounted.
+  const [draftKey, setDraftKey] = useState<string | null>(null);
   const [defaultSub, setDefaultSub] = useState<string>(() => getDefaultSubcategory(ACTIVE_CATEGORY));
   const [lastSavedId, setLastSavedId] = useState<string | null>(null);
+  // The id a new entry's first save opened, so that open keeps its editor.
+  const adoptedId = useRef<string | null>(null);
+
+  const listed = selectedId ? entries.find((e) => e.id === selectedId) : undefined;
+  if (listed && listed !== kept) setKept(listed);
+  const selected = listed ?? (kept && kept.id === selectedId ? kept : null);
+  const isListed = listed !== undefined;
 
   // Subcategory dropdown options: curated defaults ∪ existing-in-DB, deduped.
   const editorSubOptions = useMemo(() => {
@@ -491,15 +532,33 @@ export function JournalPage() {
     void reload();
   }, [reload]);
 
+  // Opening an entry from anywhere (a row, Recent, the palette) shows it in the reader, except the
+  // open a new entry's own first save makes.
   useEffect(() => {
-    if (!hubs || navJournal?.kind !== "journal") return;
-    const entry = entries.find((item) => item.id === navJournal.id);
-    if (entry) {
-      setSelected(entry);
-      setCreating(false);
-      setEditing(false);
+    if (!selectedId) return;
+    if (adoptedId.current === selectedId) {
+      adoptedId.current = null;
+      return;
     }
-  }, [entries, hubs, navJournal]);
+    setCreating(false);
+    setEditing(false);
+    setDraftKey(null);
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!selectedId || loading || isListed || kept?.id === selectedId) return;
+    let live = true;
+    getEntry(selectedId)
+      .then((entry) => live && setKept(entry))
+      .catch((err) => {
+        if (!live) return;
+        setError(`Couldn't open that entry: ${String(err)}`);
+        useNavStore.getState().closeItem("journal");
+      });
+    return () => {
+      live = false;
+    };
+  }, [selectedId, loading, isListed, kept]);
 
   async function loadMore() {
     if (!nextCursor || loadingMore) return;
@@ -522,30 +581,38 @@ export function JournalPage() {
   }
 
   function handleNew() {
-    setSelected(null);
+    setDraftKey(`new-${Date.now()}`);
     setCreating(true);
     setEditing(true);
+    useNavStore.getState().closeItem("journal");
+  }
+
+  function openEntry(id: string) {
+    setCreating(false);
+    setEditing(false);
+    setDraftKey(null);
+    useNavStore.getState().openItem({ kind: "journal", id });
   }
 
   function handleBack() {
-    setSelected(null);
     setCreating(false);
     setEditing(false);
-    if (hubs) useNavStore.getState().closeItem("journal");
+    setDraftKey(null);
+    useNavStore.getState().closeItem("journal");
   }
 
-  function handleSaved(saved: JournalEntry, wasNew: boolean, explicit: boolean) {
+  function handleSaved(saved: JournalEntry, wasNew: boolean, closing: boolean) {
     setEntries((prev) => {
       if (wasNew) return [saved, ...prev];
       return prev.map((e) => (e.id === saved.id ? saved : e));
     });
+    setKept((prev) => (prev?.id === saved.id ? saved : prev));
     if (saved.subcategory && !subcategories.includes(saved.subcategory)) {
       setSubcategories((prev) => [...prev, saved.subcategory].sort());
     }
 
-    if (explicit) {
-      // Editor closes itself; flash the row briefly so it's obvious where
-      // the entry landed in the list.
+    if (closing) {
+      // The editor is gone; flash the row briefly so it's obvious where the entry landed.
       setLastSavedId(saved.id);
       window.setTimeout(() => {
         setLastSavedId((id) => (id === saved.id ? null : id));
@@ -553,21 +620,18 @@ export function JournalPage() {
       return;
     }
 
-    // Silent (autosave / blur) path: keep the user in the editor, but make
-    // sure a newly-created entry has its id so subsequent autosaves PATCH.
+    // Autosave of a new entry: keep the user in its editor, now as that entry.
     if (wasNew) {
-      setSelected(saved);
+      adoptedId.current = saved.id;
       setCreating(false);
       setEditing(true);
+      useNavStore.getState().openItem({ kind: "journal", id: saved.id });
     }
   }
 
   function handleDeleted(id: string) {
     setEntries((prev) => prev.filter((e) => e.id !== id));
-    setSelected(null);
-    setCreating(false);
-    setEditing(false);
-    if (hubs) useNavStore.getState().closeItem("journal");
+    handleBack();
   }
 
   function handlePinDefault(value: string) {
@@ -596,32 +660,34 @@ export function JournalPage() {
   }, []);
 
   const grouped = groupByDate(entries);
-  const view = !hubs
-    ? creating || selected
-      ? "editor"
-      : "list"
-    : creating || (selected && editing)
-      ? "editor"
-      : selected
-        ? "reader"
-        : "list";
-
-  // The editor key forces remount when switching between entries or to "new",
-  // so internal state (title/body/etc.) resets cleanly.
-  const editorKey = creating ? "new" : selected?.id ?? "none";
+  const view = creating || (selected && editing) ? "editor" : selectedId ? "reader" : "list";
+  const editorKey = draftKey ?? selected?.id ?? "none";
+  const subChoices = [{ id: ALL_SUBS, label: "All" }, ...subcategories.map((s) => ({ id: s, label: s }))];
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg">
-      {hubs && (
-        <div className="px-4 pt-3 sm:px-8">
-          <ToolsRow action={{ label: "New entry", onClick: handleNew }} />
-        </div>
-      )}
+      <div className="px-4 pt-3 sm:px-8">
+        <ToolsRow
+          picker={
+            subcategories.length > 0 && (
+              <ViewPicker
+                title="Subcategory"
+                choices={subChoices}
+                value={subFilter ?? ALL_SUBS}
+                onChange={(id) => setSubFilter(id === ALL_SUBS ? null : id)}
+              />
+            )
+          }
+          action={{ label: "New entry", onClick: handleNew }}
+        />
+      </div>
       <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden bg-bg min-[900px]:grid-cols-[340px_1fr]">
+        {/* Phones keep the list under the full-screen reader, so Back finds it where it was. From
+            640px the reader sits in the page, so below two panes it replaces the list. */}
         <aside
           className={cn(
             "relative min-h-0 flex-col overflow-hidden border-r border-border min-[900px]:flex",
-            view === "list" || view === "reader" ? "flex" : "hidden"
+            view === "list" ? "flex" : view === "reader" ? "hidden max-sm:flex" : "hidden"
           )}
         >
         <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
@@ -631,47 +697,9 @@ export function JournalPage() {
             placeholder="Search entries…"
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary"
+            className="min-h-11 min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary sm:min-h-0"
           />
-          <button
-            onClick={handleNew}
-            aria-label="New entry"
-            title="New entry (n)"
-            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-bg transition-opacity hover:opacity-90"
-          >
-            <Plus className="size-4" aria-hidden="true" />
-          </button>
         </div>
-
-        {subcategories.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 border-b border-border px-3 py-2">
-            <button
-              onClick={() => setSubFilter(null)}
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-xs transition-colors",
-                subFilter === null
-                  ? "border-primary/40 bg-primary/10 text-primary"
-                  : "border-border text-muted hover:text-ink"
-              )}
-            >
-              all
-            </button>
-            {subcategories.map((s) => (
-              <button
-                key={s}
-                onClick={() => setSubFilter(s)}
-                className={cn(
-                  "rounded-full border px-2.5 py-1 text-xs transition-colors",
-                  subFilter === s
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-border text-muted hover:text-ink"
-                )}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
           {loading && <p className="px-2 py-1 text-sm text-muted">Loading…</p>}
@@ -679,7 +707,7 @@ export function JournalPage() {
 
           {!loading && !error && entries.length === 0 && (
             <p className="px-2 py-1 text-sm text-muted">
-              {q ? `No entries match "${q}".` : "No entries yet. Tap + to start logging."}
+              {q ? `No entries match "${q}".` : "No entries yet. Tap New entry to start logging."}
             </p>
           )}
 
@@ -693,15 +721,11 @@ export function JournalPage() {
                   {group.map((entry) => (
                     <button
                       key={entry.id}
-                      onClick={() => {
-                        setCreating(false);
-                        setSelected(entry);
-                        setEditing(hubs ? false : true);
-                        if (hubs) useNavStore.getState().openItem({ kind: "journal", id: entry.id });
-                      }}
+                      onClick={() => openEntry(entry.id)}
+                      aria-current={selectedId === entry.id ? "true" : undefined}
                       className={cn(
                         "relative flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-surface",
-                        selected?.id === entry.id && "bg-surface",
+                        selectedId === entry.id && "bg-surface",
                         lastSavedId === entry.id && "bg-primary/10"
                       )}
                     >
@@ -727,7 +751,7 @@ export function JournalPage() {
                 <button
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="w-full rounded-md px-2 py-1.5 text-xs text-muted transition-colors hover:text-ink disabled:opacity-50"
+                  className="min-h-11 w-full rounded-md px-2 py-1.5 text-xs text-muted transition-colors hover:text-ink disabled:opacity-50 sm:min-h-0"
                 >
                   {loadingMore ? "loading…" : "load more"}
                 </button>
@@ -740,13 +764,13 @@ export function JournalPage() {
         <main
           className={cn(
             "min-h-0 flex-col overflow-hidden min-[900px]:flex",
-            view !== "list" ? "flex" : "hidden"
+            view === "editor" ? "flex" : view === "reader" ? "hidden sm:flex" : "hidden"
           )}
         >
         {view === "editor" ? (
           <Editor
             key={editorKey}
-            entry={selected}
+            entry={creating ? null : selected}
             category={category}
             subcategories={editorSubOptions}
             defaultSubcategory={defaultSub}
@@ -755,31 +779,39 @@ export function JournalPage() {
             onBack={handleBack}
             onPinDefault={handlePinDefault}
           />
-        ) : view === "reader" && selected ? (
-          <Reader
-            back="Journal"
-            context="Library › Journal"
-            onBack={handleBack}
-            actions={
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="inline-flex min-h-11 items-center rounded-lg border border-line bg-surface px-3 text-sm text-ink transition-colors hover:bg-raised"
+        ) : view === "reader" ? (
+          // Below 640px the Reader is a full-screen layer of its own; from there it needs this
+          // scroller and gutter.
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-8">
+            {selected ? (
+              <Reader
+                back="Journal"
+                context="Library › Journal"
+                onBack={handleBack}
+                actions={
+                  <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    className="inline-flex min-h-11 items-center rounded-lg border border-line bg-surface px-3 text-sm text-ink transition-colors hover:bg-raised sm:min-h-8"
+                  >
+                    Edit
+                  </button>
+                }
               >
-                Edit
-              </button>
-            }
-          >
-            <div className="flex flex-col gap-3">
-              <p className="text-caption text-muted">
-                {fmtDateLabel(selected.entry_date)} · {selected.subcategory}
-              </p>
-              <h2 className="text-title font-semibold text-ink">{selected.title}</h2>
-              <div className="prose-journal">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selected.body}</ReactMarkdown>
-              </div>
-            </div>
-          </Reader>
+                <div className="flex flex-col gap-3">
+                  <p className="text-caption text-muted">
+                    {fmtDateLabel(selected.entry_date)} · {selected.subcategory}
+                  </p>
+                  <h2 className="text-title font-semibold text-ink">{selected.title}</h2>
+                  <div className="prose-journal">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{selected.body}</ReactMarkdown>
+                  </div>
+                </div>
+              </Reader>
+            ) : (
+              <p className="text-sm text-muted">Loading…</p>
+            )}
+          </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
             <p className="text-sm text-ink">Select an entry</p>

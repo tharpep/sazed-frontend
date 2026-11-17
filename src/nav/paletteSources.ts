@@ -14,6 +14,8 @@ import { conversationItems } from "@/features/chat/openSession";
 import { statusOf, visibleServices } from "@/features/homelab/format";
 import { STATUS_LABEL as JOB_STATUS } from "@/features/jobs/format";
 import { outcomeOf } from "@/features/plans/dispatchRun";
+import { journalItems } from "@/features/journal/journalItems";
+import { sourceItems } from "@/features/kb/sourceItems";
 import type { ItemKind, ItemRef } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 import { HUBS } from "./hubs";
@@ -316,3 +318,7 @@ itemProviders.push(async () =>
     hint: "MCP server",
   }))
 );
+
+itemProviders.push(journalItems);
+
+itemProviders.push(sourceItems);
