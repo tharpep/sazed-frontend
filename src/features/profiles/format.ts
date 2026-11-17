@@ -1,3 +1,8 @@
+/** Phone tap targets for the small buttons in the profile and server forms. */
+export const TOUCH = "max-sm:h-11 max-sm:px-4";
+export const TOUCH_ICON = "max-sm:size-11";
+export const TOUCH_BACK = "max-sm:min-h-11 max-sm:px-2";
+
 export function budget(usd: number): string {
   return `$${usd < 1 ? usd.toFixed(2) : String(Number(usd.toFixed(2)))}`;
 }

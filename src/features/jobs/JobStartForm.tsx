@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { DetailPanel } from "@/components/shell/DetailPanel";
 import { cn } from "@/lib/utils";
 import { errorText } from "@/api/homelab";
 import { startCodeTask, startResearch, startSecondOpinion } from "@/api/jobs";
@@ -11,7 +12,15 @@ const field =
 
 type Mode = "research" | "second_opinion" | "code_review";
 
-export function JobStartForm({ onStarted, onChanged }: { onStarted: (id: string) => void; onChanged: () => Promise<void> }) {
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  onStarted: (id: string) => void;
+  onChanged: () => Promise<void>;
+}
+
+/** "Start a job" in a DetailPanel, with Start in the footer. */
+export function JobStartForm({ open, onClose, onStarted, onChanged }: Props) {
   const [mode, setMode] = useState<Mode>("research");
   const [text, setText] = useState("");
   const [repo, setRepo] = useState("");
@@ -19,11 +28,11 @@ export function JobStartForm({ onStarted, onChanged }: { onStarted: (id: string)
   const [saveToKb, setSaveToKb] = useState(false);
   const [makePr, setMakePr] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function submit() {
     setBusy(true);
-    setMessage(null);
+    setError(null);
     try {
       const job =
         mode === "research"
@@ -32,18 +41,30 @@ export function JobStartForm({ onStarted, onChanged }: { onStarted: (id: string)
             ? await startCodeTask(repo.trim(), text.trim(), makePr ? "change" : "review")
             : await startSecondOpinion(text.trim());
       setText("");
-      setMessage({ text: "Started. It shows below; tap it to follow along.", error: false });
       await onChanged();
       onStarted(job.id);
     } catch (err) {
-      setMessage({ text: errorText(err), error: true });
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <section aria-label="Start a job" className="flex flex-col gap-3 rounded-lg border border-border p-3">
+    <DetailPanel
+      open={open}
+      title="Start a job"
+      onClose={onClose}
+      footer={
+        <Button
+          className="h-11 min-w-28 px-4 sm:h-8"
+          disabled={busy || text.trim().length < 3 || (mode === "code_review" && !repo.trim())}
+          onClick={submit}
+        >
+          {busy ? "Starting…" : "Start"}
+        </Button>
+      }
+    >
       <div role="tablist" aria-label="Job type" className="flex gap-1 rounded-md bg-surface p-0.5">
         {([["research", "Research"], ["second_opinion", "Second opinion"], ["code_review", "Code review"]] as const).map(([m, label]) => (
           <button
@@ -53,7 +74,7 @@ export function JobStartForm({ onStarted, onChanged }: { onStarted: (id: string)
             aria-selected={mode === m}
             onClick={() => setMode(m)}
             className={cn(
-              "flex-1 rounded px-2 py-1.5 text-sm transition-colors",
+              "min-h-11 flex-1 rounded px-2 py-1.5 text-sm transition-colors sm:min-h-0",
               mode === m ? "bg-bg text-ink shadow-sm" : "text-muted hover:text-ink"
             )}
           >
@@ -85,44 +106,35 @@ export function JobStartForm({ onStarted, onChanged }: { onStarted: (id: string)
         className={cn(field, "resize-y")}
       />
       {mode === "code_review" && (
-        <label className="flex items-center justify-between gap-3 text-sm text-ink">
+        <label className="flex min-h-11 items-center justify-between gap-3 text-sm text-ink sm:min-h-0">
           Make the change as a PR (you review and merge)
           <Switch aria-label="Make the change as a PR" checked={makePr} onCheckedChange={setMakePr} />
         </label>
       )}
       {mode === "research" && (
         <div className="flex flex-col gap-2 text-sm text-ink">
-          <label className="flex items-center justify-between gap-3">
+          <label className="flex min-h-11 items-center justify-between gap-3 sm:min-h-0">
             Deep (several minutes, full report)
             <Switch aria-label="Deep research" checked={deep} onCheckedChange={setDeep} />
           </label>
-          <label className="flex items-center justify-between gap-3">
+          <label className="flex min-h-11 items-center justify-between gap-3 sm:min-h-0">
             Save to knowledge base
             <Switch aria-label="Save to knowledge base" checked={saveToKb} onCheckedChange={setSaveToKb} />
           </label>
         </div>
       )}
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted">
-          {mode === "code_review"
-            ? makePr
-              ? "Claude Code (Sonnet 5.5) edits a copy; the bot opens a PR"
-              : "Claude Code (Sonnet 5.5), read-only"
-            : "Gemini 3.8 Flash (High) on the worker"}
-        </p>
-        <Button
-          size="sm"
-          disabled={busy || text.trim().length < 3 || (mode === "code_review" && !repo.trim())}
-          onClick={submit}
-        >
-          {busy ? "Starting…" : "Start"}
-        </Button>
-      </div>
-      {message && (
-        <p role="status" className={cn("text-sm", message.error ? "text-destructive" : "text-muted")}>
-          {message.text}
+      <p className="text-xs text-muted">
+        {mode === "code_review"
+          ? makePr
+            ? "Claude Code (Sonnet 5.5) edits a copy; the bot opens a PR"
+            : "Claude Code (Sonnet 5.5), read-only"
+          : "Gemini 3.8 Flash (High) on the worker"}
+      </p>
+      {error && (
+        <p role="status" className="text-sm text-destructive">
+          {error}
         </p>
       )}
-    </section>
+    </DetailPanel>
   );
 }

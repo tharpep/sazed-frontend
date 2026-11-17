@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { EmptyState, ListRow, ListSection, Page, PageBody, PageHeader, Segmented } from "@/components/system";
+import { EmptyState, ListRow, ListSection, Page, PageBody } from "@/components/system";
+import { ToolsRow } from "@/components/shell/ToolsRow";
 import { errorText } from "@/api/homelab";
 import { listMcpServers, saveMcpServer, type McpServer } from "@/api/mcpServers";
 import { listProfiles, saveProfile, type Profile } from "@/api/profiles";
-import { Button } from "@/components/ui/button";
 import { Author, ago } from "@/features/plans/planParts";
-import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore } from "@/store/navStore";
-import { useUiStore } from "@/store/uiStore";
 import { budget, timeout } from "./format";
 import { BLANK_SERVER, McpServerForm } from "./McpServerForm";
 import { McpServerView } from "./McpServerView";
@@ -49,35 +47,33 @@ function Row({ profile, onOpen }: { profile: Profile; onOpen: () => void }) {
   );
 }
 
-type Section = "profiles" | "servers";
+function openProfile(name: string) {
+  useNavStore.getState().openItem({ kind: "profile", id: name });
+}
 
+function openServer(name: string) {
+  useNavStore.getState().openItem({ kind: "mcp", id: name });
+}
+
+/** The Profiles and MCP servers views; the open profile or server is navStore's, like any item. */
 export function ProfilesPage() {
-  const hubs = useShellStore((s) => s.shell) === "hubs";
-  // The section is the nav view: agents:mcp is MCP servers, agents:profiles is Profiles.
-  const section = useNavStore((s): Section => (s.hub === "agents" && s.view.agents === "mcp" ? "servers" : "profiles"));
-  const navProfile = useNavStore((s) => s.open.agents);
-  const [server, setServer] = useState<string | null>(null);
+  const inServers = useNavStore((s) => s.view.agents === "mcp");
+  const navItem = useNavStore((s) => s.open.agents);
   const [servers, setServers] = useState<McpServer[] | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [name, setName] = useState<string | null>(() => useUiStore.getState().linkedProfile);
   const [profiles, setProfiles] = useState<Profile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const linkedProfile = useUiStore((s) => s.linkedProfile);
 
-  // A link can arrive while the page is mounted (the palette's Recent), so react to each one and
-  // clear it so it never fires again on a later mount.
+  const selectedProfile = navItem?.kind === "profile" ? navItem.id : null;
+  const selectedServer = navItem?.kind === "mcp" ? navItem.id : null;
+  const open = inServers ? selectedServer : selectedProfile;
+
+  // An item opened from anywhere (a row, a link, the palette) or a switch of view drops the
+  // create form.
   useEffect(() => {
-    if (!linkedProfile) return;
     setCreating(false);
-    setName(linkedProfile);
-    useUiStore.getState().setLinkedProfile(null);
-  }, [linkedProfile]);
-
-  function setSection(next: Section) {
-    setCreating(false);
-    useNavStore.getState().go("agents", next === "servers" ? "mcp" : "profiles");
-  }
+  }, [open, inServers]);
 
   const load = useCallback(
     () =>
@@ -100,42 +96,21 @@ export function ProfilesPage() {
     loadServers();
   }, [load, loadServers]);
 
-  const inServers = section === "servers";
-  const selectedName = hubs && navProfile?.kind === "profile" ? navProfile.id : name;
-  const selectedServer = hubs && navProfile?.kind === "mcp" ? navProfile.id : server;
-  const open = inServers ? selectedServer : selectedName;
-
   return (
     <Page>
-      <PageHeader
-        title="Profiles"
-        actions={
-          !open &&
-          !creating && (
-            <Button size="sm" onClick={() => setCreating(true)}>
-              {inServers ? "New server" : "New profile"}
-            </Button>
-          )
-        }
-      />
       <PageBody>
-        {!open && (
-          <Segmented
-            label="Section"
-            className="self-start"
-            options={[
-              { value: "profiles", label: "Profiles" },
-              { value: "servers", label: "MCP servers" },
-            ]}
-            value={section}
-            onChange={setSection}
-          />
-        )}
+        <ToolsRow
+          action={
+            open || creating
+              ? undefined
+              : { label: inServers ? "New server" : "New profile", onClick: () => setCreating(true) }
+          }
+        />
         {inServers ? (
           selectedServer ? (
             <McpServerView
               name={selectedServer}
-              onBack={() => (hubs ? useNavStore.getState().closeItem("mcp") : setServer(null))}
+              onBack={() => useNavStore.getState().closeItem("mcp")}
               onChanged={() => (loadServers(), load())}
             />
           ) : (
@@ -149,25 +124,17 @@ export function ProfilesPage() {
                     await saveMcpServer(newName, values, reason, null);
                     setCreating(false);
                     await loadServers();
-                    if (hubs) useNavStore.getState().openItem({ kind: "mcp", id: newName });
-                    else setServer(newName);
+                    openServer(newName);
                   }}
                 />
               )}
-              <McpServers
-                servers={servers}
-                profiles={profiles}
-                error={serverError}
-                onOpen={(next) =>
-                  hubs ? useNavStore.getState().openItem({ kind: "mcp", id: next }) : setServer(next)
-                }
-              />
+              <McpServers servers={servers} profiles={profiles} error={serverError} onOpen={openServer} />
             </>
           )
-        ) : name ? (
+        ) : selectedProfile ? (
           <ProfileView
-            name={selectedName!}
-            onBack={() => (hubs ? useNavStore.getState().closeItem("profile") : setName(null))}
+            name={selectedProfile}
+            onBack={() => useNavStore.getState().closeItem("profile")}
             onChanged={load}
           />
         ) : (
@@ -184,7 +151,7 @@ export function ProfilesPage() {
                   await saveProfile(newName, values, reason, null);
                   setCreating(false);
                   await load();
-                  setName(newName);
+                  openProfile(newName);
                 }}
               />
             )}
@@ -195,7 +162,7 @@ export function ProfilesPage() {
               ) : (
                 <ListSection>
                   {profiles.map((p) => (
-                    <Row key={p.name} profile={p} onOpen={() => setName(p.name)} />
+                    <Row key={p.name} profile={p} onOpen={() => openProfile(p.name)} />
                   ))}
                 </ListSection>
               )

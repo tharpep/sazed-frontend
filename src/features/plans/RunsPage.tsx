@@ -1,18 +1,24 @@
-import { Page, PageBody, PageHeader } from "@/components/system";
-import { useShellStore } from "@/nav/shellFlag";
+import { useState } from "react";
+
+import { Page, PageBody } from "@/components/system";
+import { ToolsRow } from "@/components/shell/ToolsRow";
+import { JobsPanel } from "@/features/jobs/JobsPanel";
 import { useNavStore } from "@/store/navStore";
 import { DispatchLive } from "./DispatchLive";
 import { DispatchRuns } from "./DispatchRuns";
-import { JobsPanel } from "@/features/jobs/JobsPanel";
+
+function startJob(setStarting: (starting: boolean) => void) {
+  useNavStore.getState().closeItem("job");
+  setStarting(true);
+}
 
 export function RunsPage() {
-  const hubs = useShellStore((s) => s.shell) === "hubs";
-  const navDispatch = useNavStore((s) => s.read.agents);
-  const dispatch = navDispatch?.kind === "dispatch" ? navDispatch.id : null;
+  const navRead = useNavStore((s) => s.read.agents);
+  const dispatch = navRead?.kind === "dispatch" ? navRead.id : null;
+  const [starting, setStarting] = useState(false);
 
   return (
     <Page>
-      {!hubs && <PageHeader title="Runs" />}
       <PageBody className={dispatch ? "max-w-none" : undefined}>
         {dispatch ? (
           <DispatchLive
@@ -21,16 +27,21 @@ export function RunsPage() {
             onOpenPlan={(slug) => useNavStore.getState().openItem({ kind: "plan", id: slug })}
           />
         ) : (
-          <div className="flex flex-col gap-6">
-            <section aria-label="Worker jobs">
-              <h2 className="mb-2 px-1 text-sm font-medium text-ink">Worker jobs</h2>
-              <JobsPanel refreshKey={0} grouped startInPanel />
+          <>
+            <ToolsRow action={{ label: "Start a job", onClick: () => startJob(setStarting) }} />
+            <section aria-labelledby="runs-jobs" className="flex flex-col gap-2">
+              <h2 id="runs-jobs" className="px-1 text-sm font-medium text-ink">
+                Worker jobs
+              </h2>
+              <JobsPanel starting={starting} onStartingChange={setStarting} />
             </section>
-            <section aria-label="Dispatch runs">
-              <h2 className="mb-2 px-1 text-sm font-medium text-ink">Dispatch runs</h2>
+            <section aria-labelledby="runs-dispatch" className="flex flex-col gap-2">
+              <h2 id="runs-dispatch" className="px-1 text-sm font-medium text-ink">
+                Dispatch runs
+              </h2>
               <DispatchRuns onOpen={(plan) => useNavStore.getState().openItem({ kind: "dispatch", id: plan })} />
             </section>
-          </div>
+          </>
         )}
       </PageBody>
     </Page>

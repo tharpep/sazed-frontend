@@ -14,6 +14,7 @@ import { ApiError } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { field } from "@/features/projects/fields";
+import { TOUCH } from "./format";
 import { GrantsEditor, grantsProblem, mcpToRows, rowsToMcp, type GrantRow } from "./McpGrants";
 
 export const BLANK: ProfileValues = {
@@ -174,11 +175,11 @@ export function ProfileForm({ initial, name: fixedName, submitLabel, onSubmit, o
       {error && <p className="text-caption text-err">{error}</p>}
       <div className="flex justify-end gap-2">
         {onCancel && (
-          <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+          <Button type="button" size="sm" variant="ghost" className={TOUCH} onClick={onCancel}>
             Cancel
           </Button>
         )}
-        <Button type="submit" size="sm" disabled={!ready}>
+        <Button type="submit" size="sm" className={TOUCH} disabled={!ready}>
           {submitLabel}
         </Button>
       </div>

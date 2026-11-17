@@ -4,6 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { getDispatchPlan, type DispatchPlan } from "@/api/dispatch";
 import { errorText } from "@/api/homelab";
 import { StatusPill } from "@/components/system";
+import { Reader } from "@/components/shell/Reader";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { MiniRow, SystemBox, TaskCard } from "./DispatchCards";
 import { DispatchEdges } from "./DispatchEdges";
 import { DispatchPanel } from "./DispatchPanel";
@@ -58,6 +60,7 @@ function openProject(slug: string) {
 const Empty = ({ children }: { children: string }) => <p className="text-caption text-muted">{children}</p>;
 
 export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBack: () => void; onOpenPlan: (slug: string) => void }) {
+  const isMobile = useIsMobile();
   const { data, error } = usePlan(plan);
   const hostRef = useRef<HTMLDivElement>(null);
   const [picked, setPicked] = useState<string | null>(null);
@@ -84,18 +87,22 @@ export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBac
   const spent = tasks.reduce((sum, t) => sum + costOf(t), 0);
   const select = (id: string) => setPicked(id);
 
-  return (
+  const body = (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1 text-meta text-muted hover:text-ink"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden="true" /> Dispatch runs
-        </button>
-        <span className="text-muted">/</span>
-        <h2 className="font-mono text-title font-semibold text-ink">{plan}</h2>
+        {!isMobile && (
+          <>
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-1 text-meta text-muted hover:text-ink"
+            >
+              <ArrowLeft className="size-3.5" aria-hidden="true" /> Runs
+            </button>
+            <span className="text-muted">/</span>
+          </>
+        )}
+        <h2 className="font-mono text-title font-semibold [overflow-wrap:anywhere] text-ink">{plan}</h2>
         {data && (
           <StatusPill tone={allLanded ? "ok" : "accent"} pulse={!allLanded}>
             {allLanded ? "all landed" : "running"}
@@ -197,5 +204,14 @@ export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBac
         </>
       )}
     </div>
+  );
+
+  // Phones read Plan Live full screen with Back in the toolbar. From 640px it stays in the page:
+  // Reader holds its body to 68ch there, too narrow for the four columns and the task panel.
+  if (!isMobile) return body;
+  return (
+    <Reader back="Runs" context="Agents › Runs" onBack={onBack}>
+      {body}
+    </Reader>
   );
 }

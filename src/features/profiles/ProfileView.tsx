@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Author, ago } from "@/features/plans/planParts";
 import { field } from "@/features/projects/fields";
-import { budget, timeout } from "./format";
+import { TOUCH, TOUCH_BACK, budget, timeout } from "./format";
 import { GrantsList } from "./McpGrants";
 import { ProfileForm } from "./ProfileForm";
 
@@ -116,7 +116,7 @@ export function DeleteBox({ name, noun, consequence, remove, onDeleted }: Delete
 
   if (!open) {
     return (
-      <Button size="sm" variant="outline" className="self-start text-err" onClick={() => setOpen(true)}>
+      <Button size="sm" variant="outline" className={cn("self-start text-err", TOUCH)} onClick={() => setOpen(true)}>
         Delete {noun}
       </Button>
     );
@@ -135,10 +135,10 @@ export function DeleteBox({ name, noun, consequence, remove, onDeleted }: Delete
       />
       {error && <p className="text-caption text-err">{error}</p>}
       <div className="flex justify-end gap-2">
-        <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+        <Button size="sm" variant="ghost" className={TOUCH} onClick={() => setOpen(false)}>
           Cancel
         </Button>
-        <Button size="sm" variant="destructive" disabled={busy || !reason.trim()} onClick={confirm}>
+        <Button size="sm" variant="destructive" className={TOUCH} disabled={busy || !reason.trim()} onClick={confirm}>
           Delete
         </Button>
       </div>
@@ -173,7 +173,7 @@ export function ProfileView({ name, onBack, onChanged }: Props) {
     <button
       type="button"
       onClick={onBack}
-      className="-ml-1 inline-flex items-center gap-1 self-start rounded-md px-1 py-0.5 text-meta text-ink-2 transition-colors hover:bg-raised hover:text-ink"
+      className={`-ml-1 inline-flex items-center gap-1 self-start rounded-md px-1 py-0.5 text-meta text-ink-2 transition-colors hover:bg-raised hover:text-ink ${TOUCH_BACK}`}
     >
       <ArrowLeft className="size-3.5" aria-hidden="true" />
       Profiles
