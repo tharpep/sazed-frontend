@@ -6,8 +6,11 @@ import { useNavStore } from "@/store/navStore";
 // explicitly enable it.
 export const ACTIVE_CATEGORY: JournalCategory = "career";
 
-// The backend's largest page.
-const PALETTE_LIMIT = 200;
+export const PAGE_SIZE = 30;
+
+// Recent ids whose fetch failed (a deleted entry), so the palette does not ask again each time it
+// opens.
+const failedIds = new Set<string>();
 
 function journalItem(entry: JournalEntry): PaletteItem {
   return {
@@ -17,14 +20,21 @@ function journalItem(entry: JournalEntry): PaletteItem {
   };
 }
 
-/** The latest entries, plus any recently opened entry older than that page, so Recent shows its
- * title rather than its id. */
+/** The latest page of entries, plus any recently opened entry older than that page, so Recent
+ * shows its title rather than its id. */
 export async function journalItems(): Promise<PaletteItem[]> {
-  const { entries } = await listEntries({ category: ACTIVE_CATEGORY, limit: PALETTE_LIMIT });
+  const { entries } = await listEntries({ category: ACTIVE_CATEGORY, limit: PAGE_SIZE });
   const loaded = new Set(entries.map((e) => e.id));
   const missing = useNavStore
     .getState()
-    .recent.filter((ref) => ref.kind === "journal" && !loaded.has(ref.id));
-  const older = await Promise.all(missing.map((ref) => getEntry(ref.id).catch(() => null)));
+    .recent.filter((ref) => ref.kind === "journal" && !loaded.has(ref.id) && !failedIds.has(ref.id));
+  const older = await Promise.all(
+    missing.map((ref) =>
+      getEntry(ref.id).catch(() => {
+        failedIds.add(ref.id);
+        return null;
+      })
+    )
+  );
   return [...entries, ...older.filter((e): e is JournalEntry => e !== null)].map(journalItem);
 }

@@ -38,7 +38,7 @@ describe("journalItems: journal entries as palette items", () => {
     expect(api.getEntry).not.toHaveBeenCalled();
   });
 
-  it("fetches a recent entry older than the page, so Recent shows its title, and drops one that fails", async () => {
+  it("fetches a recent entry older than the page, drops one that fails and never asks for it again", async () => {
     useNavStore.setState({
       recent: [
         { kind: "journal", id: "a" },
@@ -54,5 +54,15 @@ describe("journalItems: journal entries as palette items", () => {
     const items = await journalItems();
     expect(api.getEntry.mock.calls.map(([id]) => id)).toEqual(["old", "gone"]);
     expect(items.map((i) => i.label)).toEqual(["Shipped the board", "First week notes"]);
+
+    api.getEntry.mockClear();
+    await journalItems();
+    expect(api.getEntry.mock.calls.map(([id]) => id)).toEqual(["old"]);
+  });
+
+  it("asks for one page, the size the Journal list loads", async () => {
+    useNavStore.setState({ recent: [] });
+    await journalItems();
+    expect(api.listEntries).toHaveBeenCalledWith({ category: "career", limit: 30 });
   });
 });

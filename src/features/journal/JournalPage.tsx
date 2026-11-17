@@ -23,11 +23,10 @@ import type {
   JournalEntryCreate,
   JournalEntryUpdate,
 } from "@/api/journal";
-import { ACTIVE_CATEGORY } from "./journalItems";
+import { ACTIVE_CATEGORY, PAGE_SIZE } from "./journalItems";
 
 // ── Constants ────────────────────────────────────────────────────────────
 
-const PAGE_SIZE = 30;
 const AUTOSAVE_MS = 2000;
 const SAVED_FLASH_MS = 1500;
 
@@ -42,7 +41,6 @@ const DEFAULT_SUBCATEGORIES: Record<JournalCategory, string[]> = {
 const ADD_NEW_VALUE = "__add_new__";
 const ALL_SUBS = "__all__";
 
-// Editor controls: 44px on phones, compact from 640px.
 const ICON_BUTTON = "flex size-11 shrink-0 items-center justify-center rounded-md transition-colors sm:size-7";
 
 // ── localStorage helpers ─────────────────────────────────────────────────
@@ -181,7 +179,6 @@ function Editor({
       }
       inFlightRef.current = true;
       const edits = editsRef.current;
-      const closing = opts.explicit || closingRef.current;
       setStatus("saving");
       let succeeded = false;
       try {
@@ -212,7 +209,8 @@ function Editor({
         if (editsRef.current === edits) dirtyRef.current = false;
         succeeded = true;
         setStatus("saved");
-        onSaved(saved, id === null, closing);
+        // Read after the request: an editor closed while it was in flight must not reopen.
+        onSaved(saved, id === null, opts.explicit || closingRef.current);
       } catch (err) {
         console.error(err);
         setStatus("error");
@@ -477,8 +475,9 @@ export function JournalPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // An entry opened from Recent or the palette that the loaded page does not hold.
-  const [fetched, setFetched] = useState<JournalEntry | null>(null);
+  // The open entry's latest copy, fetched when the loaded page lacks it. It keeps the entry on
+  // screen when a search or filter reloads the list without it, so its editor is never remounted.
+  const [kept, setKept] = useState<JournalEntry | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
   // A new entry's editor keeps this key after its first save gives it an id, so it is not remounted.
@@ -489,7 +488,8 @@ export function JournalPage() {
   const adoptedId = useRef<string | null>(null);
 
   const listed = selectedId ? entries.find((e) => e.id === selectedId) : undefined;
-  const selected = listed ?? (fetched && fetched.id === selectedId ? fetched : null);
+  if (listed && listed !== kept) setKept(listed);
+  const selected = listed ?? (kept && kept.id === selectedId ? kept : null);
   const isListed = listed !== undefined;
 
   // Subcategory dropdown options: curated defaults ∪ existing-in-DB, deduped.
@@ -546,10 +546,10 @@ export function JournalPage() {
   }, [selectedId]);
 
   useEffect(() => {
-    if (!selectedId || loading || isListed || fetched?.id === selectedId) return;
+    if (!selectedId || loading || isListed || kept?.id === selectedId) return;
     let live = true;
     getEntry(selectedId)
-      .then((entry) => live && setFetched(entry))
+      .then((entry) => live && setKept(entry))
       .catch((err) => {
         if (!live) return;
         setError(`Couldn't open that entry: ${String(err)}`);
@@ -558,7 +558,7 @@ export function JournalPage() {
     return () => {
       live = false;
     };
-  }, [selectedId, loading, isListed, fetched]);
+  }, [selectedId, loading, isListed, kept]);
 
   async function loadMore() {
     if (!nextCursor || loadingMore) return;
@@ -606,7 +606,7 @@ export function JournalPage() {
       if (wasNew) return [saved, ...prev];
       return prev.map((e) => (e.id === saved.id ? saved : e));
     });
-    setFetched((prev) => (prev?.id === saved.id ? saved : prev));
+    setKept((prev) => (prev?.id === saved.id ? saved : prev));
     if (saved.subcategory && !subcategories.includes(saved.subcategory)) {
       setSubcategories((prev) => [...prev, saved.subcategory].sort());
     }
