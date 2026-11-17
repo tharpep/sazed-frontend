@@ -4,6 +4,7 @@ import { errorText } from "@/api/homelab";
 import { getPlan, listPlanVersions, type Plan, type PlanSection, type PlanVersion } from "@/api/plans";
 import type { ProjectCard } from "@/api/projects";
 import { Reader } from "@/components/shell/Reader";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { Author, PlanMarkdown, PlanStatePill, STAGE_DOT, ago, stripId } from "./planParts";
 
 function CardRow({ card, changed }: { card: ProjectCard; changed?: boolean }) {
@@ -78,7 +79,7 @@ function HistoryRail({
           <button
             type="button"
             onClick={onCompare}
-            className="rounded-md bg-primary px-2.5 py-1 text-caption font-medium text-white transition-opacity hover:opacity-90"
+            className="min-h-11 rounded-md bg-primary px-3.5 text-caption font-medium text-white transition-opacity hover:opacity-90 sm:min-h-7 sm:px-2.5"
           >
             Compare
           </button>
@@ -90,15 +91,17 @@ function HistoryRail({
         {versions.map((ver) => (
           <li
             key={ver.version}
-            className={cn("flex items-start gap-1 pl-2", ver.version === shown && "shadow-[inset_2px_0_0_var(--color-primary)]")}
+            className={cn("flex items-start", ver.version === shown && "shadow-[inset_2px_0_0_var(--color-primary)]")}
           >
-            <input
-              type="checkbox"
-              checked={checked.includes(ver.version)}
-              onChange={() => onToggle(ver.version)}
-              aria-label={`Select v${ver.version} to compare`}
-              className="mt-3 size-3.5 shrink-0 accent-primary"
-            />
+            <label className="flex size-11 shrink-0 cursor-pointer items-center justify-center sm:h-10 sm:w-7 sm:justify-end">
+              <input
+                type="checkbox"
+                checked={checked.includes(ver.version)}
+                onChange={() => onToggle(ver.version)}
+                aria-label={`Select v${ver.version} to compare`}
+                className="size-4 accent-primary sm:size-3.5"
+              />
+            </label>
             <button
               type="button"
               onClick={() => onView(ver.version)}
@@ -129,6 +132,7 @@ interface PlanViewProps {
 }
 
 export function PlanView({ slug, version, onBack, onView, onCompare }: PlanViewProps) {
+  const isMobile = useIsMobile();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [versions, setVersions] = useState<PlanVersion[]>([]);
   const [checked, setChecked] = useState<number[]>([]);
@@ -173,60 +177,74 @@ export function PlanView({ slug, version, onBack, onView, onCompare }: PlanViewP
 
   const behind = plan.shown_version < plan.version;
 
-  return (
+  const history = (
+    <HistoryRail
+      versions={versions}
+      shown={plan.shown_version}
+      checked={checked}
+      onToggle={toggle}
+      onView={(v) => onView(v === plan.version ? null : v)}
+      onCompare={() => {
+        const [a, b] = [...checked].sort((x, y) => x - y);
+        onCompare(a, b);
+      }}
+    />
+  );
+
+  const reader = (
     <Reader back="Plans" context={`${plan.project_title ?? "Work"} › Plans`} onBack={onBack}>
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <p className="text-caption text-muted">
-            {plan.project_title ?? "No project"} / Plans / <span className="text-ink-2">{plan.title}</span>
-          </p>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h2 className="text-title font-semibold text-ink">{plan.title}</h2>
-            <span className="font-mono text-caption text-muted">v{plan.version}</span>
+        <div className="flex flex-col gap-1.5">
+          <h2 className="text-title font-semibold text-ink">{plan.title}</h2>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted">
+            <span>{plan.project_title ?? "No project"}</span>
+            <span aria-hidden="true">·</span>
+            <span className="font-mono">v{plan.version}</span>
             <PlanStatePill state={plan.state} />
-          </div>
+          </p>
         </div>
         {behind && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line bg-raised px-3 py-2 text-meta text-ink-2">
             <span>
               Viewing v{plan.shown_version} · newest is v{plan.version}
             </span>
-            <button type="button" onClick={() => onView(null)} className="text-primary hover:underline">
+            <button
+              type="button"
+              onClick={() => onView(null)}
+              className="inline-flex min-h-11 items-center text-primary hover:underline sm:min-h-0"
+            >
               Back to v{plan.version}
             </button>
           </div>
         )}
         {error && <p className="text-meta text-err">{error}</p>}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
-          <article className="flex min-w-0 flex-col gap-5 rounded-lg border border-line bg-surface p-4 md:p-5">
-            {plan.preamble && <PlanMarkdown>{plan.preamble}</PlanMarkdown>}
-            {plan.sections.map((s) => (
-              <Section key={s.id} section={s} />
-            ))}
-            {plan.unlinked_cards.length > 0 && (
-              <section className="flex flex-col gap-2">
-                <h3 className="text-meta text-muted">Cards not tied to a section</h3>
-                <ul className="flex flex-col gap-1.5">
-                  {plan.unlinked_cards.map((c) => (
-                    <CardRow key={c.id} card={c} />
-                  ))}
-                </ul>
-              </section>
-            )}
-          </article>
-          <HistoryRail
-            versions={versions}
-            shown={plan.shown_version}
-            checked={checked}
-            onToggle={toggle}
-            onView={(v) => onView(v === plan.version ? null : v)}
-            onCompare={() => {
-              const [a, b] = [...checked].sort((x, y) => x - y);
-              onCompare(a, b);
-            }}
-          />
-        </div>
+        <article className="flex min-w-0 flex-col gap-5 rounded-lg border border-line bg-surface p-4 md:p-5">
+          {plan.preamble && <PlanMarkdown>{plan.preamble}</PlanMarkdown>}
+          {plan.sections.map((s) => (
+            <Section key={s.id} section={s} />
+          ))}
+          {plan.unlinked_cards.length > 0 && (
+            <section className="flex flex-col gap-2">
+              <h3 className="text-meta text-muted">Cards not tied to a section</h3>
+              <ul className="flex flex-col gap-1.5">
+                {plan.unlinked_cards.map((c) => (
+                  <CardRow key={c.id} card={c} />
+                ))}
+              </ul>
+            </section>
+          )}
+        </article>
+        {isMobile && history}
       </div>
     </Reader>
+  );
+
+  if (isMobile) return reader;
+  // The reader holds the article to its 68ch measure, so the history sits beside it, not inside.
+  return (
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+      <div className="min-w-0 lg:flex-1">{reader}</div>
+      <div className="lg:w-[17rem] lg:shrink-0">{history}</div>
+    </div>
   );
 }

@@ -28,6 +28,11 @@ export const STATUS_LABEL: Record<BacklogStatus, string> = {
   stale: "Stale",
 };
 
+/** Still waiting on Pryce: the only cards that can be approved or parked. */
+export function isOpenStatus(status: BacklogStatus): boolean {
+  return status === "new" || status === "shortlisted";
+}
+
 /** Where the approved work stands, from its job: building, PR open, or failed. */
 export function workLabel(item: BacklogItem): string | null {
   if (!item.job_id) return null;

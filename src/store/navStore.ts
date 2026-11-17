@@ -45,12 +45,15 @@ const SUB_KEY = "sazed-nav-sub";
 const RECENT_KEY = "sazed-nav-recent";
 
 /** Each view's third-level choices (its ViewPicker), default first. A view with no entry has no
- * picker. */
+ * picker; a view with a second picker keys it `hub:view.name`. */
 export const SUB_CHOICES = {
   "system:homelab": ["map", "list", "storage", "links"],
   "system:activity": ["all", "needs", "errors"],
   "system:usage": ["overview", "claude_code", "worker", "sazed_api"],
-} as const satisfies Partial<Record<ViewKey, readonly [string, ...string[]]>>;
+  "work:board": ["open", "done", "dismissed"],
+  "work:board.type": ["all", "idea", "bug", "gap", "optimization", "planned", "known_issue"],
+  "work:plans": ["active", "draft", "done", "all"],
+} as const satisfies Partial<Record<ViewKey | `${ViewKey}.${string}`, readonly [string, ...string[]]>>;
 
 export type SubKey = keyof typeof SUB_CHOICES;
 export type SubValue<K extends SubKey> = (typeof SUB_CHOICES)[K][number];
