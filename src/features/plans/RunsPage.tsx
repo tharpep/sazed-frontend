@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Page, PageBody } from "@/components/system";
 import { ToolsRow } from "@/components/shell/ToolsRow";
 import { JobsPanel } from "@/features/jobs/JobsPanel";
-import { useNavStore } from "@/store/navStore";
+import { useNavStore, type ItemRef } from "@/store/navStore";
 import { DispatchLive } from "./DispatchLive";
 import { DispatchRuns } from "./DispatchRuns";
 
@@ -12,15 +12,30 @@ function startJob(setStarting: (starting: boolean) => void) {
   setStarting(true);
 }
 
+/** Which of an open job and an open dispatch run Runs shows: the one picked last, by Recent. */
+export function newerRunsItem(recent: ItemRef[], job: string | null, dispatch: string | null): "job" | "dispatch" | null {
+  if (!job || !dispatch) return job ? "job" : dispatch ? "dispatch" : null;
+  const first = recent.find((r) => (r.kind === "job" && r.id === job) || (r.kind === "dispatch" && r.id === dispatch));
+  return first?.kind === "job" ? "job" : "dispatch";
+}
+
 export function RunsPage() {
-  const navRead = useNavStore((s) => s.read.agents);
-  const dispatch = navRead?.kind === "dispatch" ? navRead.id : null;
+  const job = useNavStore((s) => (s.open.agents?.kind === "job" ? s.open.agents.id : null));
+  const dispatch = useNavStore((s) => (s.read.agents?.kind === "dispatch" ? s.read.agents.id : null));
+  const recent = useNavStore((s) => s.recent);
   const [starting, setStarting] = useState(false);
+  const shown = newerRunsItem(recent, job, dispatch);
+
+  // Plan Live covers the list, so a job and a dispatch run cannot both be open: the older pick
+  // closes, and Back never brings it back.
+  useEffect(() => {
+    if (job && dispatch) useNavStore.getState().closeItem(shown === "job" ? "dispatch" : "job");
+  }, [job, dispatch, shown]);
 
   return (
     <Page>
-      <PageBody className={dispatch ? "max-w-none" : undefined}>
-        {dispatch ? (
+      <PageBody className={shown === "dispatch" ? "max-w-none" : undefined}>
+        {shown === "dispatch" && dispatch ? (
           <DispatchLive
             plan={dispatch}
             onBack={() => useNavStore.getState().closeItem("dispatch")}

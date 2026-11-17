@@ -22,7 +22,6 @@ interface Props {
   onStartingChange: (starting: boolean) => void;
 }
 
-/** Worker jobs as Running, Failed and Done, the open job's sheet, and the start form's panel. */
 export function JobsPanel({ starting, onStartingChange }: Props) {
   const [jobs, setJobs] = useState<JobSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);

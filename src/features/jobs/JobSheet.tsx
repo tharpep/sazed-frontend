@@ -72,7 +72,6 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
     return () => clearTimeout(id);
   }, [job, load]);
 
-  // Every action names the job it was pressed on and opens a child only if that job is still shown.
   async function act(fn: () => Promise<unknown>) {
     const id = jobId;
     setBusy(true);

@@ -38,7 +38,10 @@ const BLANK = { name: "", cron: "0 8 * * *", timezone: "America/New_York", promp
 const field = "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
 
 export function AutomationSheet({ target, onClose, onChanged }: Props) {
-  const isNew = target === "new";
+  // The last target opened, kept after close so the title and footer hold during the exit.
+  const [last, setLast] = useState(target);
+  const shownTarget = target ?? last;
+  const isNew = shownTarget === "new";
   const [detail, setDetail] = useState<AutomationDetail | null>(null);
   const [form, setForm] = useState(BLANK);
   const [preview, setPreview] = useState<{ upcoming?: string[]; error?: string }>({});
@@ -62,6 +65,7 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
   useEffect(() => {
     shown.current = target;
     if (!target) return;
+    setLast(target);
     setMessage(null);
     setDetail(null);
     setConfirmDelete(false);
@@ -102,7 +106,7 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
 
   // Gateway calls and worker jobs are edited through the API; the sheet keeps them as they are.
   const isGateway = !!detail && detail.action.type !== "sazed_prompt";
-  const loaded = isNew || detail?.id === target;
+  const loaded = isNew || detail?.id === shownTarget;
   const canSave = loaded && form.name.trim() && (isGateway || form.prompt.trim()) && !preview.error && !busy;
 
   function input(): AutomationInput {
@@ -141,15 +145,15 @@ export function AutomationSheet({ target, onClose, onChanged }: Props) {
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-  const footer = target && (
+  const footer = shownTarget && (
     <>
       <Button className={FOOTER_BUTTON} disabled={!canSave}
-        onClick={() => isNew ? act("Created", () => createAutomation(input()), true) : act("Saved", () => updateAutomation(target, input()))}>
+        onClick={() => isNew ? act("Created", () => createAutomation(input()), true) : act("Saved", () => updateAutomation(shownTarget, input()))}>
         {isNew ? "Create" : "Save"}
       </Button>
       {!isNew && (
         <>
-          <Button variant="outline" className={FOOTER_BUTTON} disabled={busy || !loaded} onClick={() => act("Run started", () => runAutomation(target))}>Run now</Button>
+          <Button variant="outline" className={FOOTER_BUTTON} disabled={busy || !loaded} onClick={() => act("Run started", () => runAutomation(shownTarget))}>Run now</Button>
           <Button variant="destructive" className={FOOTER_BUTTON} disabled={busy || !loaded} onClick={() => setConfirmDelete(true)}>Delete</Button>
         </>
       )}

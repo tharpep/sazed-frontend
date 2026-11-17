@@ -19,7 +19,6 @@ interface Props {
   onChanged: () => Promise<void>;
 }
 
-/** "Start a job" in a DetailPanel, with Start in the footer. */
 export function JobStartForm({ open, onClose, onStarted, onChanged }: Props) {
   const [mode, setMode] = useState<Mode>("research");
   const [text, setText] = useState("");
