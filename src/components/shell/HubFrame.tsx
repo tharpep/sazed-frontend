@@ -70,7 +70,7 @@ export function HubFrame({ children, docked }: HubFrameProps) {
         usePaletteStore.getState().setOpen(true);
         return;
       }
-      if (e.key !== "Escape" || document.querySelector('[role="dialog"]')) return;
+      if (e.key !== "Escape" || isTyping(e.target) || document.querySelector('[role="dialog"]')) return;
       const nav = useNavStore.getState();
       // Chat's open session is the conversation on screen, not a sheet.
       if (nav.hub === "chat") return;
