@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Pencil } from "lucide-react";
 
 import { EmptyState, Page, PageBody, PageHeader } from "@/components/system";
 import { errorText } from "@/api/homelab";
@@ -88,7 +89,7 @@ export function ProjectsPage() {
   function back() {
     setEditing(false);
     if (hubs) {
-      useNavStore.getState().closeItem();
+      useNavStore.getState().closeItem("project");
     } else {
       setOldShellSlug(null);
     }
@@ -124,7 +125,7 @@ export function ProjectsPage() {
             action={
               slug
                 ? shown && !editing
-                  ? { label: "Edit", onClick: () => setEditing(true) }
+                  ? { label: "Edit", icon: Pencil, onClick: () => setEditing(true) }
                   : undefined
                 : !creating
                   ? { label: "New project", onClick: () => setCreating(true) }

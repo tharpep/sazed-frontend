@@ -54,7 +54,7 @@ export function KnowledgePage() {
   }
 
   function closeSource() {
-    if (hubs) useNavStore.getState().closeItem();
+    if (hubs) useNavStore.getState().closeItem("source");
     else setOldOpen(null);
   }
 

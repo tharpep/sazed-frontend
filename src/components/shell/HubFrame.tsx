@@ -5,9 +5,11 @@ import { useSystemSummary } from "@/features/homelab/useSystemSummary";
 import { SettingsDialog } from "@/features/settings/SettingsPage";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useRunningCount } from "@/hooks/useRunningCount";
+import { isTauri } from "@/lib/isTauri";
 import { openPaletteFromTap, usePaletteStore } from "@/nav/paletteSources";
 import { useShellStore } from "@/nav/shellFlag";
-import { useNavStore } from "@/store/navStore";
+import { shownItem, useNavStore } from "@/store/navStore";
+import { ActionSlotContext } from "./actionSlot";
 import { CommandPalette } from "./CommandPalette";
 import { DetailSlotContext } from "./detailSlot";
 import { HubBottomBar } from "./HubBottomBar";
@@ -15,6 +17,7 @@ import { HubMoreSheet } from "./HubMoreSheet";
 import { HubRail } from "./HubRail";
 import { HubTitleRow } from "./HubTitleRow";
 import { PhoneHeader } from "./PhoneHeader";
+import { WindowBar } from "./WindowBar";
 
 interface HubFrameProps {
   children: ReactNode;
@@ -46,6 +49,7 @@ export function HubFrame({ children, docked }: HubFrameProps) {
   const settingsOpen = useShellStore((s) => s.settingsOpen);
   const setSettingsOpen = useShellStore((s) => s.setSettingsOpen);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
   const inChat = useNavStore((s) => s.hub === "chat");
   // Chat docks its own composer inside the conversation pane, so it is never beside the list.
   const dock = inChat ? null : docked;
@@ -70,7 +74,8 @@ export function HubFrame({ children, docked }: HubFrameProps) {
       const nav = useNavStore.getState();
       // Chat's open session is the conversation on screen, not a sheet.
       if (nav.hub === "chat") return;
-      if (nav.open[nav.hub] || nav.read[nav.hub]) nav.closeItem();
+      const shown = shownItem(nav);
+      if (shown) nav.closeItem(shown.kind);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -80,20 +85,23 @@ export function HubFrame({ children, docked }: HubFrameProps) {
 
   return (
     <div className="fixed inset-x-0 top-[var(--app-offset-top,0px)] flex h-[var(--app-height,100dvh)] flex-col overflow-hidden bg-bg pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-ink sm:bg-sidebar">
+      {isTauri && <WindowBar />}
       <DetailSlotContext.Provider value={slot}>
         {isMobile ? (
           <PhoneFrame docked={dock} onSettings={openSettings}>
             {children}
           </PhoneFrame>
         ) : (
-          <div ref={setSlot} className="flex min-h-0 flex-1">
-            <HubRail onSettings={openSettings} />
-            <main className="relative my-2 mr-2 flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-line bg-bg">
-              <HubTitleRow onSearch={desktopSearch} action={inChat ? NEW_CHAT : undefined} />
-              {children}
-              {dock}
-            </main>
-          </div>
+          <ActionSlotContext.Provider value={actionSlot}>
+            <div ref={setSlot} className="flex min-h-0 flex-1">
+              <HubRail onSettings={openSettings} />
+              <main className="relative my-2 mr-2 flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-line bg-bg">
+                <HubTitleRow onSearch={desktopSearch} action={inChat ? NEW_CHAT : undefined} onActionSlot={setActionSlot} />
+                {children}
+                {dock}
+              </main>
+            </div>
+          </ActionSlotContext.Provider>
         )}
       </DetailSlotContext.Provider>
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />

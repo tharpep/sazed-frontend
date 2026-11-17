@@ -17,7 +17,7 @@ export function RunsPage() {
         {dispatch ? (
           <DispatchLive
             plan={dispatch}
-            onBack={() => useNavStore.getState().closeItem()}
+            onBack={() => useNavStore.getState().closeItem("dispatch")}
             onOpenPlan={(slug) => useNavStore.getState().openItem({ kind: "plan", id: slug })}
           />
         ) : (

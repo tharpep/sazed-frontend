@@ -65,7 +65,7 @@ export function PlansPage() {
             version={open.version}
             onBack={() => {
               setCompare(null);
-              useNavStore.getState().closeItem();
+              useNavStore.getState().closeItem("plan");
             }}
             onView={(version) => useNavStore.getState().openItem({ kind: "plan", id: open.slug, ...(version !== null && { version }) })}
             onCompare={(a, b) => setCompare([a, b])}

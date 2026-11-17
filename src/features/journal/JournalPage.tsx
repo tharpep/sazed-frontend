@@ -531,7 +531,7 @@ export function JournalPage() {
     setSelected(null);
     setCreating(false);
     setEditing(false);
-    if (hubs) useNavStore.getState().closeItem();
+    if (hubs) useNavStore.getState().closeItem("journal");
   }
 
   function handleSaved(saved: JournalEntry, wasNew: boolean, explicit: boolean) {
@@ -567,7 +567,7 @@ export function JournalPage() {
     setSelected(null);
     setCreating(false);
     setEditing(false);
-    if (hubs) useNavStore.getState().closeItem();
+    if (hubs) useNavStore.getState().closeItem("journal");
   }
 
   function handlePinDefault(value: string) {

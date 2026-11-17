@@ -78,7 +78,7 @@ interface NavState {
   setSub: <K extends SubKey>(key: K, value: SubValue<K>) => void;
   setScroll: (hubView: string, top: number) => void;
   openItem: (ref: ItemRef) => void;
-  closeItem: () => void;
+  closeItem: (kind: ItemKind) => void;
   clearItems: () => void;
 }
 
@@ -191,13 +191,23 @@ export const useNavStore = create<NavState>((set, get) => ({
     writeJson(() => sessionStorage, RECENT_KEY, recent);
     set({ [place.slot]: { ...s[place.slot], [place.hub]: ref }, recent });
   },
-  closeItem: () => {
-    const s = get();
-    if (s.open[s.hub]) set({ open: without(s.open, s.hub) });
-    else if (s.read[s.hub]) set({ read: without(s.read, s.hub) });
+  closeItem: (kind) => {
+    const { hub, slot } = ITEM_PLACE[kind];
+    const items = get()[slot];
+    if (items[hub]?.kind === kind) set({ [slot]: without(items, hub) });
   },
   clearItems: () => set({ open: {}, read: {} }),
 }));
+
+/** The item on screen in the current view: a reader covers its view's page, so it wins over a
+ * sheet or panel of the same view. An item kept for another view of the hub is not on screen. */
+export function shownItem(s: Pick<NavState, "hub" | "view" | "open" | "read">): ItemRef | null {
+  const view = s.view[s.hub];
+  for (const ref of [s.read[s.hub], s.open[s.hub]]) {
+    if (ref && ITEM_PLACE[ref.kind].view === view) return ref;
+  }
+  return null;
+}
 
 /** A view's third-level choice: the saved one, else its default. */
 export function useSub<K extends SubKey>(key: K): SubValue<K> {

@@ -135,7 +135,7 @@ export function ProfilesPage() {
           selectedServer ? (
             <McpServerView
               name={selectedServer}
-              onBack={() => (hubs ? useNavStore.getState().closeItem() : setServer(null))}
+              onBack={() => (hubs ? useNavStore.getState().closeItem("mcp") : setServer(null))}
               onChanged={() => (loadServers(), load())}
             />
           ) : (
@@ -167,7 +167,7 @@ export function ProfilesPage() {
         ) : name ? (
           <ProfileView
             name={selectedName!}
-            onBack={() => (hubs ? useNavStore.getState().closeItem() : setName(null))}
+            onBack={() => (hubs ? useNavStore.getState().closeItem("profile") : setName(null))}
             onChanged={load}
           />
         ) : (
