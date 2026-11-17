@@ -325,7 +325,7 @@ function Editor({
             markDirty();
           }}
           onBlur={() => dirtyRef.current && save({ explicit: false })}
-          className="min-w-0 flex-1 bg-transparent text-lg font-medium text-ink outline-none placeholder:text-muted"
+          className="min-h-11 min-w-0 flex-1 bg-transparent text-lg font-medium text-ink outline-none placeholder:text-muted sm:min-h-0"
         />
         <span className="shrink-0 text-xs text-muted" aria-live="polite">
           {status === "saving" ? "saving…" : status === "saved" ? "saved" : status === "error" ? "error" : ""}
@@ -687,7 +687,7 @@ export function JournalPage() {
         <aside
           className={cn(
             "relative min-h-0 flex-col overflow-hidden border-r border-border min-[900px]:flex",
-            view === "list" ? "flex" : view === "reader" ? "flex sm:hidden" : "hidden"
+            view === "list" ? "flex" : view === "reader" ? "hidden max-sm:flex" : "hidden"
           )}
         >
         <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">

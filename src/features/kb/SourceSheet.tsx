@@ -27,7 +27,8 @@ interface Props {
   onDeleted: () => void;
 }
 
-const FOOTER_BUTTON = "h-11 px-4 sm:h-8";
+// px-3 keeps all three on one row at 360px.
+const FOOTER_BUTTON = "h-11 px-3 sm:h-8";
 
 export function SourceSheet({ fileId, source, onClose, onDeleted }: Props) {
   const [content, setContent] = useState<string | null>(null);
