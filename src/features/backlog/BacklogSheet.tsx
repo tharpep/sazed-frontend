@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -31,24 +31,30 @@ export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The sheet stays mounted from card to card, so an action still running for the last card must
+  // not disable, fail or collapse the form of the card on screen now.
+  const shownId = useRef(item?.id);
   useEffect(() => {
+    shownId.current = item?.id;
     setRepo(item?.repos[0] ?? "");
     setNote("");
     setApproving(false);
+    setBusy(false);
     setError(null);
   }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function act(fn: () => Promise<BacklogItem>) {
+    const id = item?.id;
     setBusy(true);
     setError(null);
     try {
       const updated = await fn();
-      setApproving(false);
+      if (shownId.current === id) setApproving(false);
       onChanged(updated);
     } catch (err) {
-      setError(errorText(err));
+      if (shownId.current === id) setError(errorText(err));
     } finally {
-      setBusy(false);
+      if (shownId.current === id) setBusy(false);
     }
   }
 

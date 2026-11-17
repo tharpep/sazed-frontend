@@ -20,7 +20,7 @@ import { errorText } from "@/api/homelab";
 import { JobSheet } from "@/features/jobs/JobSheet";
 import { SUB_CHOICES, useNavStore, useSub } from "@/store/navStore";
 import { BacklogSheet } from "./BacklogSheet";
-import { STATUS_LABEL, TYPE_LABEL, ageLabel, isOpenStatus, sourceLabel, workLabel } from "./format";
+import { STATUS_LABEL, TYPE_LABEL, ageLabel, boardQuery, isOpenStatus, sourceLabel, workLabel } from "./format";
 
 const REFRESH_MS = 30_000;
 
@@ -40,7 +40,6 @@ export function BacklogPage() {
   const openId = navItem?.kind === "backlog" ? navItem.id : null;
   const view = useSub("work:board");
   const typeChoice = useSub("work:board.type");
-  const type = typeChoice === "all" ? undefined : typeChoice;
   const [items, setItems] = useState<BacklogItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -70,17 +69,20 @@ export function BacklogPage() {
   }, [openId]);
 
   // Only the newest request may land, so a slow answer for the last filter never replaces this one.
+  // The filters are read when the call starts, not when the caller rendered: an action that
+  // finishes after a picker change must reload the list the picker now shows.
   const load = useCallback(async () => {
     const id = ++requestId.current;
+    const query = boardQuery(useNavStore.getState().sub);
     try {
-      const next = await listBacklog(view, type);
+      const next = await listBacklog(query.view, query.type);
       if (id !== requestId.current) return;
       setItems(next);
       setError(null);
     } catch (err) {
       if (id === requestId.current) setError(errorText(err));
     }
-  }, [view, type]);
+  }, []);
 
   useEffect(() => {
     setItems(null);
@@ -89,7 +91,7 @@ export function BacklogPage() {
       if (!document.hidden) load();
     }, REFRESH_MS);
     return () => clearInterval(id);
-  }, [load]);
+  }, [load, view, typeChoice]);
 
   async function add() {
     setAddError(null);
