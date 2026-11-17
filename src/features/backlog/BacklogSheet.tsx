@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -7,7 +7,7 @@ import { DetailPanel } from "@/components/shell/DetailPanel";
 import { cn } from "@/lib/utils";
 import { approveBacklogItem, moveBacklogItem, updateBacklogItem, type BacklogItem } from "@/api/backlog";
 import { errorText } from "@/api/homelab";
-import { REPOS, STATUS_LABEL, TYPE_LABEL, ageLabel, sourceLabel, workLabel } from "./format";
+import { REPOS, STATUS_LABEL, TYPE_LABEL, ageLabel, isOpenStatus, sourceLabel, workLabel } from "./format";
 
 interface Props {
   item: BacklogItem | null;
@@ -21,6 +21,9 @@ interface Props {
 const field =
   "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
 
+const FOOTER_BUTTON = "h-11 min-w-24 flex-1 px-4 sm:h-8 sm:flex-none";
+const BODY_BUTTON = "h-11 px-3 sm:h-7 sm:px-2.5";
+
 export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob }: Props) {
   const [repo, setRepo] = useState("");
   const [note, setNote] = useState("");
@@ -28,29 +31,74 @@ export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The sheet stays mounted from card to card, so an action still running for the last card must
+  // not disable, fail or collapse the form of the card on screen now.
+  const shownId = useRef(item?.id);
   useEffect(() => {
+    shownId.current = item?.id;
     setRepo(item?.repos[0] ?? "");
     setNote("");
     setApproving(false);
+    setBusy(false);
     setError(null);
   }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function act(fn: () => Promise<BacklogItem>) {
+    const id = item?.id;
     setBusy(true);
     setError(null);
     try {
       const updated = await fn();
-      setApproving(false);
+      if (shownId.current === id) setApproving(false);
       onChanged(updated);
     } catch (err) {
-      setError(errorText(err));
+      if (shownId.current === id) setError(errorText(err));
     } finally {
-      setBusy(false);
+      if (shownId.current === id) setBusy(false);
     }
   }
 
-  const isOpen = item?.status === "new" || item?.status === "shortlisted";
+  const isOpen = item !== null && isOpenStatus(item.status);
   const work = item ? workLabel(item) : null;
+
+  function footerButton(label: string, onClick: () => void, opts: { primary?: boolean; disabled?: boolean } = {}) {
+    return (
+      <Button
+        key={label}
+        variant={opts.primary ? "default" : "outline"}
+        className={FOOTER_BUTTON}
+        disabled={busy || opts.disabled}
+        onClick={onClick}
+      >
+        {label}
+      </Button>
+    );
+  }
+
+  const footerButtons = !item
+    ? []
+    : isOpen && approving
+      ? [
+          footerButton("Back", () => setApproving(false)),
+          footerButton(busy ? "Starting…" : "Start the PR", () => act(() => approveBacklogItem(item.id, repo.trim(), note)), {
+            primary: true,
+            disabled: !repo.trim(),
+          }),
+        ]
+      : isOpen
+        ? [
+            footerButton("Dismiss", () => act(() => updateBacklogItem(item.id, { status: "dismissed" }))),
+            footerButton("Approve", () => setApproving(true), { primary: true }),
+          ]
+        : item.status === "approved"
+          ? [footerButton("Mark done", () => act(() => updateBacklogItem(item.id, { status: "done" })))]
+          : [footerButton("Restore", () => act(() => updateBacklogItem(item.id, { status: "new" })))];
+  const footer = footerButtons.length > 0 && (
+    <>
+      <span className="hidden flex-1 sm:block" />
+      {footerButtons}
+    </>
+  );
   const facts = item
     ? [
         TYPE_LABEL[item.type],
@@ -75,6 +123,7 @@ export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob 
         )
       }
       onClose={onClose}
+      footer={footer || undefined}
     >
       {item && (
         <>
@@ -117,12 +166,12 @@ export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob 
                   href={item.job_meta.pr_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-md border border-border px-3 py-1.5 text-sm text-primary hover:bg-surface"
+                  className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm text-primary hover:bg-surface sm:min-h-8"
                 >
                   Open PR #{item.job_meta.pr_number} on GitHub
                 </a>
               )}
-              <Button size="sm" variant="outline" onClick={() => onOpenJob(item.job_id!)}>
+              <Button size="sm" variant="outline" className={BODY_BUTTON} onClick={() => onOpenJob(item.job_id!)}>
                 Open the job
               </Button>
               {work && !item.job_meta?.pr_url && <span className="text-xs text-muted">{work}</span>}
@@ -159,18 +208,6 @@ export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob 
               <p className="text-xs text-muted">
                 Claude Code starts now on a copy of the repo; the bot opens a PR you review and merge.
               </p>
-              <div className="flex justify-end gap-2">
-                <Button size="sm" variant="outline" disabled={busy} onClick={() => setApproving(false)}>
-                  Back
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={busy || !repo.trim()}
-                  onClick={() => act(() => approveBacklogItem(item.id, repo.trim(), note))}
-                >
-                  {busy ? "Starting…" : "Start the PR"}
-                </Button>
-              </div>
             </section>
           )}
 
@@ -188,25 +225,25 @@ export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob 
               </span>
               {item.rank != null ? (
                 <>
-                  <Button size="sm" variant="ghost" disabled={busy || item.rank === 1} onClick={() => act(() => moveBacklogItem(item.id, 1))}>
+                  <Button size="sm" variant="ghost" className={BODY_BUTTON} disabled={busy || item.rank === 1} onClick={() => act(() => moveBacklogItem(item.id, 1))}>
                     Top
                   </Button>
-                  <Button size="sm" variant="ghost" disabled={busy || item.rank === 1} onClick={() => act(() => moveBacklogItem(item.id, item.rank! - 1))}>
+                  <Button size="sm" variant="ghost" className={BODY_BUTTON} disabled={busy || item.rank === 1} onClick={() => act(() => moveBacklogItem(item.id, item.rank! - 1))}>
                     Up
                   </Button>
-                  <Button size="sm" variant="ghost" disabled={busy || item.rank >= rankedCount} onClick={() => act(() => moveBacklogItem(item.id, item.rank! + 1))}>
+                  <Button size="sm" variant="ghost" className={BODY_BUTTON} disabled={busy || item.rank >= rankedCount} onClick={() => act(() => moveBacklogItem(item.id, item.rank! + 1))}>
                     Down
                   </Button>
-                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(() => moveBacklogItem(item.id, null))}>
+                  <Button size="sm" variant="ghost" className={BODY_BUTTON} disabled={busy} onClick={() => act(() => moveBacklogItem(item.id, null))}>
                     Remove
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(() => moveBacklogItem(item.id, 1))}>
+                  <Button size="sm" variant="ghost" className={BODY_BUTTON} disabled={busy} onClick={() => act(() => moveBacklogItem(item.id, 1))}>
                     Make next
                   </Button>
-                  <Button size="sm" variant="outline" disabled={busy} onClick={() => act(() => moveBacklogItem(item.id, 999))}>
+                  <Button size="sm" variant="outline" className={BODY_BUTTON} disabled={busy} onClick={() => act(() => moveBacklogItem(item.id, 999))}>
                     Prioritize
                   </Button>
                 </>
@@ -214,43 +251,6 @@ export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob 
             </section>
           )}
 
-          <div className="flex flex-wrap justify-end gap-2">
-            {isOpen && !approving && (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => act(() => updateBacklogItem(item.id, { status: "dismissed" }))}
-                >
-                  Dismiss
-                </Button>
-                <Button size="sm" disabled={busy} onClick={() => setApproving(true)}>
-                  Approve
-                </Button>
-              </>
-            )}
-            {item.status === "approved" && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                onClick={() => act(() => updateBacklogItem(item.id, { status: "done" }))}
-              >
-                Mark done
-              </Button>
-            )}
-            {(item.status === "dismissed" || item.status === "stale" || item.status === "done") && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                onClick={() => act(() => updateBacklogItem(item.id, { status: "new" }))}
-              >
-                Restore
-              </Button>
-            )}
-          </div>
           {item.status === "dismissed" && (
             <p className="text-xs text-muted">Kept on record so the scout won't suggest it again.</p>
           )}

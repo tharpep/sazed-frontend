@@ -1,4 +1,13 @@
-import type { BacklogItem, BacklogStatus, BacklogType } from "@/api/backlog";
+import type { BacklogItem, BacklogStatus, BacklogType, BacklogView } from "@/api/backlog";
+import { SUB_CHOICES, type SubValue } from "@/store/navStore";
+
+type BoardSubs = { "work:board"?: SubValue<"work:board">; "work:board.type"?: SubValue<"work:board.type"> };
+
+/** The board list request for the saved filters, defaults where none is saved. */
+export function boardQuery(sub: BoardSubs): { view: BacklogView; type: BacklogType | undefined } {
+  const type = sub["work:board.type"] ?? SUB_CHOICES["work:board.type"][0];
+  return { view: sub["work:board"] ?? SUB_CHOICES["work:board"][0], type: type === "all" ? undefined : type };
+}
 
 /** Suggestions for an approved item's PR target (mirrors SCOUT_REPOS in sazed's config). */
 export const REPOS = [
@@ -27,6 +36,11 @@ export const STATUS_LABEL: Record<BacklogStatus, string> = {
   dismissed: "Dismissed",
   stale: "Stale",
 };
+
+/** Still waiting on Pryce: the only cards that can be approved or parked. */
+export function isOpenStatus(status: BacklogStatus): boolean {
+  return status === "new" || status === "shortlisted";
+}
 
 /** Where the approved work stands, from its job: building, PR open, or failed. */
 export function workLabel(item: BacklogItem): string | null {

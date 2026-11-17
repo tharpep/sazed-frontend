@@ -1,43 +1,38 @@
 import { useEffect, useState } from "react";
 
-import { EmptyState, Page, PageBody, PageHeader, Segmented } from "@/components/system";
+import { EmptyState, Page, PageBody } from "@/components/system";
 import { errorText } from "@/api/homelab";
-import { listPlans, type PlanState, type PlanSummary } from "@/api/plans";
+import { listPlans, type PlanSummary } from "@/api/plans";
 import { ToolsRow } from "@/components/shell/ToolsRow";
 import { ViewPicker } from "@/components/shell/ViewPicker";
-import { useShellStore } from "@/nav/shellFlag";
-import { useNavStore } from "@/store/navStore";
+import { SUB_CHOICES, useNavStore, useSub } from "@/store/navStore";
 import { CompareView } from "./CompareView";
 import { PlanList } from "./PlanList";
 import { PlanView } from "./PlanView";
 
-type Filter = PlanState | "all";
+const FILTER_LABEL = { active: "Active", draft: "Draft", done: "Done", all: "All" } as const;
+const FILTER_CHOICES = SUB_CHOICES["work:plans"].map((id) => ({ id, label: FILTER_LABEL[id] }));
 
-const FILTERS = [
-  { value: "active", label: "Active" },
-  { value: "draft", label: "Draft" },
-  { value: "done", label: "Done" },
-  { value: "all", label: "All" },
-] as const;
-
-type Open = { slug: string; version: number | null; compare: [number, number] | null };
+// Tied to the plan and version it was picked on, so another plan opened from a link or the
+// palette never shows this one's comparison.
+type Compare = { slug: string; version: number | null; a: number; b: number };
 
 export function PlansPage() {
-  const hubs = useShellStore((s) => s.shell) === "hubs";
   const navPlan = useNavStore((s) => s.read.work);
-  const openRef = navPlan?.kind === "plan" ? navPlan : null;
-  const open: Open | null = openRef
-    ? { slug: openRef.id, version: openRef.version ?? null, compare: null }
-    : null;
-  const [compare, setCompare] = useState<[number, number] | null>(null);
-  const [filter, setFilter] = useState<Filter>("active");
+  const open = navPlan?.kind === "plan" ? { slug: navPlan.id, version: navPlan.version ?? null } : null;
+  const [picked, setPicked] = useState<Compare | null>(null);
+  const compare = picked && open && picked.slug === open.slug && picked.version === open.version ? picked : null;
+  const filter = useSub("work:plans");
   const [plans, setPlans] = useState<PlanSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    setCompare(null);
-  }, [openRef?.id, openRef?.version]);
+    if (picked && !compare) setPicked(null);
+  }, [picked, compare]);
+
+  const listing = open === null;
   useEffect(() => {
-    if (open) return;
+    if (!listing) return;
     let live = true;
     setPlans(null);
     listPlans(filter === "all" ? {} : { state: filter })
@@ -46,52 +41,36 @@ export function PlansPage() {
     return () => {
       live = false;
     };
-  }, [filter, open]);
+  }, [filter, listing]);
 
   return (
     <Page>
-      {!hubs && <PageHeader title="Plans" />}
       <PageBody>
         {compare ? (
-          <CompareView
-            slug={open!.slug}
-            a={compare[0]}
-            b={compare[1]}
-            onBack={() => setCompare(null)}
-          />
+          <CompareView slug={compare.slug} a={compare.a} b={compare.b} onBack={() => setPicked(null)} />
         ) : open ? (
           <PlanView
+            key={open.slug}
             slug={open.slug}
             version={open.version}
-            onBack={() => {
-              setCompare(null);
-              useNavStore.getState().closeItem("plan");
-            }}
-            onView={(version) => useNavStore.getState().openItem({ kind: "plan", id: open.slug, ...(version !== null && { version }) })}
-            onCompare={(a, b) => setCompare([a, b])}
+            onBack={() => useNavStore.getState().closeItem("plan")}
+            onView={(version) =>
+              useNavStore.getState().openItem({ kind: "plan", id: open.slug, ...(version !== null && { version }) })
+            }
+            onCompare={(a, b) => setPicked({ ...open, a, b })}
           />
         ) : (
           <>
-            {hubs ? (
-              <ToolsRow
-                picker={
-                  <ViewPicker
-                    title="Plan state"
-                    choices={FILTERS.map(({ value, label }) => ({ id: value, label }))}
-                    value={filter}
-                    onChange={(id) => setFilter(id as Filter)}
-                  />
-                }
-              />
-            ) : (
-              <Segmented
-                label="Plan state"
-                options={[...FILTERS]}
-                value={filter}
-                onChange={setFilter}
-                className="self-start"
-              />
-            )}
+            <ToolsRow
+              picker={
+                <ViewPicker
+                  title="Plan state"
+                  choices={FILTER_CHOICES}
+                  value={filter}
+                  onChange={(id) => useNavStore.getState().setSub("work:plans", id as typeof filter)}
+                />
+              }
+            />
             {error && <p className="text-meta text-err">Couldn't load plans: {error}</p>}
             {plans ? (
               plans.length === 0 ? (

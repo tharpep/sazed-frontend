@@ -1,50 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pencil } from "lucide-react";
 
-import { EmptyState, Page, PageBody, PageHeader } from "@/components/system";
+import { EmptyState, Page, PageBody } from "@/components/system";
 import { errorText } from "@/api/homelab";
 import { getProject, listProjects, type Project } from "@/api/projects";
 import { ToolsRow } from "@/components/shell/ToolsRow";
-import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore } from "@/store/navStore";
 import { ProjectPlans } from "@/features/plans/ProjectPlans";
-import { Button } from "@/components/ui/button";
 import { ProjectDispatchRuns } from "./ProjectDispatchRuns";
 import { NewProjectForm } from "./NewProjectForm";
 import { ProjectEditor } from "./ProjectEditor";
-import { useUiStore } from "@/store/uiStore";
 import { ProjectWidget } from "@/widgets/ProjectWidget";
 import { ProjectsWidget } from "@/widgets/ProjectsWidget";
 
 const REFRESH_MS = 10_000;
 
 export function ProjectsPage() {
-  const hubs = useShellStore((s) => s.shell) === "hubs";
   const navProject = useNavStore((s) => s.open.work);
-  const [oldShellSlug, setOldShellSlug] = useState<string | null>(() => useUiStore.getState().linkedProject);
-  const slug = hubs ? (navProject?.kind === "project" ? navProject.id : null) : oldShellSlug;
+  const slug = navProject?.kind === "project" ? navProject.id : null;
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
+  // Tied to the project it was started on, so a project opened from a link or the palette opens
+  // read-only even while another was being edited.
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
+  const editing = slug !== null && editingSlug === slug;
   const [creating, setCreating] = useState(false);
-  const requestId = useRef(0);
-  const linkedProject = useUiStore((s) => s.linkedProject);
-
-  // A link can arrive while the page is mounted (the palette's Recent), so react to each one and
-  // clear it so it never fires again on a later mount.
-  useEffect(() => {
-    if (!linkedProject) return;
-    setProject(null);
-    setEditing(false);
+  const [creatingOn, setCreatingOn] = useState(slug);
+  if (creatingOn !== slug) {
+    setCreatingOn(slug);
     setCreating(false);
-    if (hubs) {
-      useNavStore.getState().openItem({ kind: "project", id: linkedProject });
-    } else {
-      setOldShellSlug(linkedProject);
-    }
-    useUiStore.getState().setLinkedProject(null);
-  }, [hubs, linkedProject]);
+  }
+  const requestId = useRef(0);
 
   const load = useCallback(async () => {
     const id = ++requestId.current;
@@ -78,66 +65,36 @@ export function ProjectsPage() {
 
   function open(next: string, edit = false) {
     setProject(null);
-    setEditing(edit);
-    if (hubs) {
-      useNavStore.getState().openItem({ kind: "project", id: next });
-    } else {
-      setOldShellSlug(next);
-    }
+    setEditingSlug(edit ? next : null);
+    useNavStore.getState().openItem({ kind: "project", id: next });
   }
 
   function back() {
-    setEditing(false);
-    if (hubs) {
-      useNavStore.getState().closeItem("project");
-    } else {
-      setOldShellSlug(null);
-    }
+    setEditingSlug(null);
+    useNavStore.getState().closeItem("project");
   }
 
   const shown = project && project.slug === slug ? project : null;
 
   return (
     <Page>
-      {!hubs && (
-        <PageHeader
-          title="Projects"
-          actions={
-            slug ? (
-              shown && !editing && (
-                <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                  Edit
-                </Button>
-              )
-            ) : (
-              !creating && (
-                <Button size="sm" onClick={() => setCreating(true)}>
-                  New project
-                </Button>
-              )
-            )
+      <PageBody>
+        <ToolsRow
+          action={
+            slug
+              ? shown && !editing
+                ? { label: "Edit", icon: Pencil, onClick: () => setEditingSlug(slug) }
+                : undefined
+              : !creating
+                ? { label: "New project", onClick: () => setCreating(true) }
+                : undefined
           }
         />
-      )}
-      <PageBody>
-        {hubs && (
-          <ToolsRow
-            action={
-              slug
-                ? shown && !editing
-                  ? { label: "Edit", icon: Pencil, onClick: () => setEditing(true) }
-                  : undefined
-                : !creating
-                  ? { label: "New project", onClick: () => setCreating(true) }
-                  : undefined
-            }
-          />
-        )}
         {error && <p className="text-meta text-err">Couldn't load projects: {error}</p>}
         {slug ? (
           shown ? (
             editing ? (
-              <ProjectEditor project={shown} onChanged={load} onDone={() => setEditing(false)} />
+              <ProjectEditor project={shown} onChanged={load} onDone={() => setEditingSlug(null)} />
             ) : (
               <>
                 <ProjectWidget {...shown} onBack={back} />
@@ -169,7 +126,11 @@ export function ProjectsPage() {
           !error && <p className="text-meta text-muted">Loading…</p>
         )}
         {slug && error && (
-          <button type="button" onClick={back} className="self-start text-meta text-primary hover:underline">
+          <button
+            type="button"
+            onClick={back}
+            className="inline-flex min-h-11 items-center self-start text-meta text-primary hover:underline sm:min-h-0"
+          >
             Back to projects
           </button>
         )}
