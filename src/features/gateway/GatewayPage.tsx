@@ -10,9 +10,7 @@ import {
   type GatewayHealth,
   type Integrations,
 } from "@/api/gateway";
-import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore } from "@/store/navStore";
-import { modelName, tokens, usd } from "./format";
 
 // The four Google integrations share one OAuth client, so they're one row here.
 const INTEGRATIONS: { key: string; name: string; powers: string }[] = [
@@ -29,27 +27,21 @@ const INTEGRATIONS: { key: string; name: string; powers: string }[] = [
   { key: "database", name: "Postgres", powers: "Journal, finance, service history" },
 ];
 
-const RANGES = [
-  { hours: 24, label: "24h" },
-  { hours: 24 * 7, label: "7 days" },
-  { hours: 24 * 30, label: "30 days" },
-] as const;
+const METRIC_HOURS = 24;
 
 export function GatewayPage() {
-  const hubs = useShellStore((s) => s.shell) === "hubs";
   const [integrations, setIntegrations] = useState<Integrations | null>(null);
   const [health, setHealth] = useState<GatewayHealth | null>(null);
   const [metrics, setMetrics] = useState<AuditMetrics | null>(null);
-  const [hours, setHours] = useState<number>(24);
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const load = useCallback(async (sinceHours: number) => {
+  const load = useCallback(async () => {
     setLoading(true);
     const [i, h, m] = await Promise.allSettled([
       fetchIntegrations(),
       fetchGatewayHealth(),
-      getMetrics(sinceHours),
+      getMetrics(METRIC_HOURS),
     ]);
     const failed: string[] = [];
     if (i.status === "fulfilled") setIntegrations(i.value);
@@ -63,8 +55,8 @@ export function GatewayPage() {
   }, []);
 
   useEffect(() => {
-    load(hours);
-  }, [load, hours]);
+    load();
+  }, [load]);
 
   const rows = INTEGRATIONS.map((d) => ({ ...d, status: integrations?.[d.key] }));
   const missing = rows.filter((r) => r.status && !r.status.connected);
@@ -73,14 +65,11 @@ export function GatewayPage() {
   const refresh = (
     <button
       type="button"
-      onClick={() => load(hours)}
+      onClick={() => load()}
       disabled={loading}
       aria-label="Refresh"
       title="Refresh"
-      className={cn(
-        "flex items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50",
-        hubs ? "-my-2 size-11 sm:-my-1 sm:size-9" : "size-9"
-      )}
+      className="-my-2 flex size-11 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50 sm:-my-1 sm:size-9"
     >
       <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
     </button>
@@ -88,20 +77,13 @@ export function GatewayPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg">
-      {!hubs && (
-        <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-          <h1 className="text-base font-semibold text-ink">Gateway</h1>
-          {refresh}
-        </header>
-      )}
-
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-4 pb-8">
           {errors.length > 0 && (
             <p className="text-sm text-destructive">Couldn't load {errors.join("; ")}</p>
           )}
 
-          <Section title="Integrations" action={hubs ? refresh : undefined}>
+          <Section title="Integrations" action={refresh}>
             {integrations && (
               <p className="px-1 text-sm text-ink">
                 {known.length - missing.length} of {known.length} connected
@@ -136,79 +118,16 @@ export function GatewayPage() {
             </ul>
           </Section>
 
-          {/* Spend by model lives in Usage in the hub shell. */}
-          {!hubs && (
-            <Section
-              title="Model spend"
-              action={
-                <div className="flex gap-1" role="group" aria-label="Time range">
-                  {RANGES.map((r) => (
-                    <button
-                      key={r.hours}
-                      type="button"
-                      onClick={() => setHours(r.hours)}
-                      aria-pressed={hours === r.hours}
-                      className={cn(
-                        "rounded-md px-2 py-1 text-xs transition-colors",
-                        hours === r.hours ? "bg-surface text-primary" : "text-muted hover:text-ink"
-                      )}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
-              }
-            >
-              {metrics && (
-                <>
-                  <p className="px-1 text-sm text-ink">
-                    {usd(metrics.llm.total_cost_usd)}
-                    <span className="text-muted">
-                      {" "}· {metrics.llm.total_calls} model calls · {tokens(metrics.llm.total_input_tokens)} in,{" "}
-                      {tokens(metrics.llm.total_output_tokens)} out
-                    </span>
-                  </p>
-                  <Table
-                    rows={Object.entries(metrics.llm.by_model)
-                      .sort(([, a], [, b]) => b.cost_usd - a.cost_usd)
-                      .map(([model, u]) => [
-                        modelName(model),
-                        `${u.calls} call${u.calls === 1 ? "" : "s"}`,
-                        usd(u.cost_usd),
-                      ])}
-                    empty="No model calls in this range."
-                  />
-                  {Object.keys(metrics.llm.by_purpose).length > 0 && (
-                    <p className="px-1 text-xs text-muted">
-                      By use:{" "}
-                      {Object.entries(metrics.llm.by_purpose)
-                        .sort(([, a], [, b]) => b.cost_usd - a.cost_usd)
-                        .map(([p, u]) => `${p} ${usd(u.cost_usd)}`)
-                        .join(" · ")}
-                    </p>
-                  )}
-                </>
-              )}
-            </Section>
-          )}
-
           <Section
-            // The hub shell has no range control (it sat on the spend section), so it reads the last 24h.
-            title={hubs ? "Sazed tool calls, last 24 hours" : "Sazed tool calls"}
+            title="Sazed tool calls, last 24 hours"
             action={
-              hubs ? (
-                <button
-                  type="button"
-                  onClick={() => useNavStore.getState().go("system", "activity")}
-                  className="-my-3 min-h-11 text-xs text-primary hover:underline sm:my-0 sm:min-h-0"
-                >
-                  Open Activity
-                </button>
-              ) : (
-                <button type="button" onClick={() => useNavStore.getState().go("system", "activity")} className="text-xs text-primary hover:underline">
-                  Open tool log
-                </button>
-              )
+              <button
+                type="button"
+                onClick={() => useNavStore.getState().go("system", "activity")}
+                className="-my-3 min-h-11 text-xs text-primary hover:underline sm:my-0 sm:min-h-0"
+              >
+                Open Activity
+              </button>
             }
           >
             {metrics && (
@@ -223,8 +142,8 @@ export function GatewayPage() {
                   )}
                 </p>
                 <Table
-                  rows={metrics.tools.top_by_call_count.slice(0, 6).map((t) => [t.tool_name, `${t.count}`, ""])}
-                  empty={hubs ? "No tool calls in the last 24 hours." : "No tool calls in this range."}
+                  rows={metrics.tools.top_by_call_count.slice(0, 6).map((t) => [t.tool_name, `${t.count}`])}
+                  empty="No tool calls in the last 24 hours."
                 />
                 {metrics.tools.top_by_error_count.length > 0 && (
                   <p className="px-1 text-xs text-destructive">
@@ -269,15 +188,14 @@ function Section({ title, action, children }: { title: string; action?: React.Re
   );
 }
 
-function Table({ rows, empty }: { rows: [string, string, string][]; empty: string }) {
+function Table({ rows, empty }: { rows: [string, string][]; empty: string }) {
   if (rows.length === 0) return <p className="px-1 text-sm text-muted">{empty}</p>;
   return (
     <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border text-sm">
-      {rows.map(([a, b, c]) => (
+      {rows.map(([a, b]) => (
         <li key={a} className="flex items-center gap-3 px-3 py-2">
           <span className="min-w-0 flex-1 truncate text-ink">{a}</span>
           <span className="shrink-0 text-muted">{b}</span>
-          {c && <span className="w-16 shrink-0 text-right text-ink">{c}</span>}
         </li>
       ))}
     </ul>

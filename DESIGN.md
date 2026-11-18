@@ -31,7 +31,7 @@ How it was chosen: a review of the old console, a sweep of how Linear, Vercel, T
 
 **Key characteristics**
 - Mid-gray dark (not black) and a near-white light theme, each with steps: `shell` < `bg` < `surface` < `raised`.
-- The shell (sidebar, gaps) is darker and dimmer than the page, and the page sits on an inset panel, so content leads (Linear's 2026 refresh).
+- The shell (rail, gaps) is darker and dimmer than the page, and the page sits on an inset panel, so content leads (Linear's 2026 refresh).
 - One sans face (Geist) at five sizes; Geist Mono for figures, durations, costs and code.
 - One blue accent (`primary`) for actions, links, focus and selection.
 - State colors (`ok`, `warn`, `err`) only for state. Healthy is neutral unless the screen is about health.
@@ -43,9 +43,9 @@ All tokens live in `src/styles/globals.css` as Tailwind colors, light on `:root`
 
 | Token | Use |
 |---|---|
-| `shell` (`bg-sidebar`) | Sidebar, gaps around the page panel, Tauri title bar |
+| `shell` (`bg-sidebar`) | The rail and the gaps around the page panel, from 640px |
 | `bg` | The page panel |
-| `surface` | Panels, list groups, inputs, outline buttons, phone tab bar |
+| `surface` | Panels, list groups, inputs, outline buttons, the view picker |
 | `raised` | Hover, selected segment, menu highlight, icon tiles, active nav (dark) |
 | `line` | Borders and dividers (also shadcn's `--border`/`--input`) |
 | `ink` | Primary text |
@@ -63,36 +63,43 @@ Geist everywhere. New UI uses only the five-step scale (`text-caption`, `text-me
 | caption | 12 / 16 | Meta on rows, pills, counts |
 | meta | 13 / 18 | Descriptions, section labels, nav, segmented control, time column |
 | body | 14 / 20 | Row titles, body copy |
-| title | 15 / 22 | Page titles (`PageHeader`) |
+| title | 15 / 22 | The hub name in the title row, phone header titles |
 | heading | 22 / 28 | Rare: Home's greeting |
 
 Sentence case everywhere; no uppercase eyebrows. Figures in monospace or `tabular-nums`.
 
 ## 4. Layout and shell
 
-The app has one hub shell. The desktop rail, compact rail, phone tab bar and More sheet are responsive presentations of the same navigation model; there is no legacy shell or runtime layout switch. Deep links and the command palette open hubs, views and items through `navStore`.
+The app has one hub shell, designed phone first. Six hubs (Home, Chat, Work, Agents, System, Library) and Apps make up the navigation, held in `navStore`. Deep links and the command palette open hubs, views and items through `navStore`. The shell lives in `src/components/shell/`; its sizes are tokens in `globals.css` (`--rail-w`, `--title-h`, `--phone-head-h`, `--bar-h`, `--panel-w`).
 
-- Navigation: labeled and grouped (Home, Chats / Watch / Work / Settings) from `md` (768px); an icon rail with tooltips between `sm` and `md`; the bottom tab bar on phones. The Activity entry shows how many jobs are waiting on you.
-- From `sm` up the page is an inset panel (8px gap, 12px radius, 1px `line`) on the shell. Phones are edge to edge.
-- The title bar only renders in the Tauri window (it's the drag region). The theme switch lives in Settings on desktop and in the More sheet on phones.
+- Phones (below 640px): a 54px header, the page, the docked composer on Home and Chat, and a 56px hub bar. The hub bar holds Home, Chat, Work, Apps and More; More opens a sheet with Agents, System and Library and their views, then Settings and Search, and takes the name of the hub that is open.
+- Phone header tabs: on a hub with views, the header is that hub's view tabs (44px tall, the selected one underlined in `ink`), with Search at the end. Home shows the date with Settings and Search; Chat shows Chats, or Back and the conversation's title.
+- From 640px: a 64px icon rail (every hub and Apps, icon above label, the gear at the bottom) and the page as an inset panel (8px gap, 12px radius, 1px `line`) on the shell. The panel opens with a 48px title row: hub name, view tabs, the view's primary action and Search. Home has no row, only the search field in the corner. The Home entry, in the rail and the hub bar, shows how many things are waiting on you.
+- The window bar only renders in the Tauri window (window controls and the drag region). The theme switch lives in Settings and the palette.
+- Tap targets on phones are at least 44px. Desktop sizes come back from 640px.
 - 4px spacing grid. Page gutter 16px on phones, 32px from `md`. `PageBody` is left-aligned with a 1024px max width.
 - Radii: 6px controls, 8px rows and tiles, 10px panels, 12px the page panel.
 - Shadow only for things that float (menus, sheets, dialogs): `shadow-floating`.
 
 ## 5. Components
 
-Shared components live in `src/components/system/` (import from `@/components/system`). shadcn primitives in `src/components/ui/` stay the base for buttons, menus, sheets and dialogs.
+Shared components live in `src/components/system/` (import from `@/components/system`) and, for the shell's parts that pages use, `src/components/shell/`. shadcn primitives in `src/components/ui/` stay the base for buttons, menus, sheets and dialogs.
 
 | Component | What it is |
 |---|---|
-| `Page`, `PageHeader`, `PageBody` | Page frame: title + status + actions on one line, then a scrolling body |
+| `Page`, `PageBody` | Page frame and its scrolling body; the shell's header or title row names the page |
+| `ToolsRow` | The top of a view's content: its `ViewPicker` and, on phones, its primary action. From 640px the action moves into the title row |
+| `ViewPicker` | A view's third-level choice (a filter, or Homelab's Map, List, Storage, Links): one 44px button reading "Show <choice>", which opens a bottom sheet of choices. Choices can carry a count and a hint; `compact` is the 28px form |
+| `DetailPanel` | An item's detail: a bottom sheet on phones, a 400px right-hand panel from 640px, over a scrim until 1180px and inline beside the page from there. Its actions go in `footer` |
+| Sheet detents | A phone sheet opens at the medium detent (64% of the visible height, leaving at least 72px above). Dragging the handle up 40px takes it to full height (10px below the safe area); dragging down 70px drops it back to medium, then closes it. The keyboard shrinks both |
+| `Reader` | Long text (plans, journal entries). On phones a full-screen layer with a context line on top and a bottom toolbar holding a 44px Back button named for the view it returns to, plus the item's actions. From 640px it sits in the page with a back row, at a 68ch measure |
 | `StatusPill` | Dot + short label for live, paused, connected |
-| `Segmented` | The one control for switching views or filters of the same content; options can carry a count ("Needs you 1") |
+| `Segmented` | A small inline switch inside a view, such as Usage's range; options can carry a count. Views and filters use `ViewPicker` |
 | `ListSection`, `ListRow` | A titled group of rows: leading icon, title, description, right-aligned meta, a time column from `md`; rows can expand details under themselves |
 | `EmptyState` | What a list says when empty: what would appear and how to get some |
 | `Button` (ui) | `outline` for most actions, `default` (primary) for the one main action, `ghost` for low-weight actions |
 
-Activity (`src/features/activity/`) is the reference page: `DayChart` (totals plus a 24-hour bar chart), runs grouped by trace with steps folded in (`runs.ts`), Everything / Needs you / Errors.
+Activity (`src/features/activity/`) is the reference page: `DayChart` (totals plus a 24-hour bar chart), runs grouped by trace with steps folded in (`runs.ts`), Everything / Needs you / Errors in a `ViewPicker`.
 
 ## 6. Do's and Don'ts
 
@@ -106,7 +113,7 @@ Activity (`src/features/activity/`) is the reference page: `DayChart` (totals pl
 - Don't use pure black, or tint `bg` with the accent.
 - Don't add font sizes outside the scale, or uppercase tracked labels.
 - Don't put decorative dots or colored stripes on rows; a dot means state.
-- Don't build walls of equal tiles or icon grids (the self-hosted start-page look); one summary line or a row of chips, then lists.
+- Don't build walls of equal tiles or icon grids (the self-hosted start-page look); one summary line or a row of chips, then lists. The one exception is Apps: it is a launcher, so its apps are an icon grid.
 - Don't render chat messages as bubbles with container chrome.
 
 ## 7. The Display

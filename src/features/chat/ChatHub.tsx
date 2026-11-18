@@ -46,7 +46,7 @@ export function ChatHub() {
   const loading = useChatLoading();
 
   const list = (
-    <ConversationList variant="hub" data={data} query={query} onQuery={setQuery} activeId={openId} onSelect={openSession} />
+    <ConversationList data={data} query={query} onQuery={setQuery} activeId={openId} onSelect={openSession} />
   );
 
   const conversation = (

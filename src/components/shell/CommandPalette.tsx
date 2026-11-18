@@ -29,7 +29,6 @@ import {
   type PaletteEntry,
   type PaletteItem,
 } from "@/nav/paletteSources";
-import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore, type ItemRef } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 
@@ -120,7 +119,7 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
     else if (e.kind === "item") openRef(e.ref);
     else if (e.kind === "app") window.open(e.url, "_blank", "noopener,noreferrer");
     else if (e.action === "settings") {
-      useShellStore.getState().setSettingsOpen(true);
+      useUiStore.getState().setSettingsOpen(true);
     } else if (e.action === "new-chat") startNewChat();
     else setTheme(e.action === "theme:light" ? "light" : e.action === "theme:dark" ? "dark" : "system");
   }

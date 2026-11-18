@@ -27,12 +27,11 @@ function App() {
 
   useEffect(() => {
     const link = parseDeepLink(window.location.search);
-    const shellParam = new URLSearchParams(window.location.search).has("shell");
     if (link) {
       link.items?.forEach((item) => useNavStore.getState().openItem(item));
       useNavStore.getState().go(link.hub, link.view);
+      window.history.replaceState(null, "", window.location.pathname);
     }
-    if (link || shellParam) window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
   useEffect(() => {

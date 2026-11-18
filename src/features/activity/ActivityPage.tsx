@@ -15,8 +15,6 @@ import {
   ListSection,
   Page,
   PageBody,
-  PageHeader,
-  Segmented,
   StatusPill,
   type Tone,
 } from "@/components/system";
@@ -35,7 +33,6 @@ import { JobSheet } from "@/features/jobs/JobSheet";
 import { KIND_LABEL, STATUS_LABEL, stepsFromEvents } from "@/features/jobs/format";
 import { openSession } from "@/features/chat/openSession";
 import { ViewPicker } from "@/components/shell/ViewPicker";
-import { useShellStore } from "@/nav/shellFlag";
 import { useNavStore, useSub, type SubValue } from "@/store/navStore";
 import { DayChart } from "./DayChart";
 import { FlowSheet, type FlowTarget } from "./FlowSheet";
@@ -56,11 +53,8 @@ export function ActivityPage() {
   const [events, setEvents] = useState<ActivityEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<ActivityCategory[]>([]);
-  const hubs = useShellStore((s) => s.shell) === "hubs";
-  const [oldShellView, setOldShellView] = useState<View>("all");
-  const storedView = useSub("system:activity");
-  const view = hubs ? storedView : oldShellView;
-  const setView = (v: View) => (hubs ? useNavStore.getState().setSub("system:activity", v) : setOldShellView(v));
+  const view = useSub("system:activity");
+  const setView = (v: View) => useNavStore.getState().setSub("system:activity", v);
   const [summary, setSummary] = useState<ActivitySummary | null>(null);
   const [dayEvents, setDayEvents] = useState<ActivityEvent[]>([]);
   const [waitingJobs, setWaitingJobs] = useState<JobSummary[] | null>(null);
@@ -252,8 +246,7 @@ export function ActivityPage() {
   const liveLabel =
     live === "live" ? "Live" : live === "paused" ? "Paused" : live === "reconnecting" ? "Reconnecting" : "Connecting";
 
-  // Phones get 44px targets in the hub shell; the old shell keeps its sizes.
-  const tapClass = hubs ? "h-11 sm:h-7" : undefined;
+  const tapClass = "h-11 sm:h-7";
   const liveStatus = (
     <StatusPill tone={liveTone} pulse={live === "live"}>
       {liveLabel}
@@ -263,48 +256,33 @@ export function ActivityPage() {
     <Button
       variant="outline"
       size="sm"
-      className={cn(tapClass, hubs && "min-w-11")}
+      className={cn(tapClass, "min-w-11")}
       onClick={togglePause}
       aria-label={paused ? "Resume live updates" : "Pause live updates"}
     >
       {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
-      {/* The hub shell's phone row has room for the icon only. */}
-      <span className={cn(hubs && "max-sm:sr-only")}>{paused ? "Resume" : "Pause"}</span>
+      {/* The phone row has room for the icon only. */}
+      <span className="max-sm:sr-only">{paused ? "Resume" : "Pause"}</span>
       {paused && held.length > 0 && <span className="text-warn">{held.length} new</span>}
     </Button>
   );
 
   return (
     <Page>
-      {!hubs && <PageHeader title="Activity" status={liveStatus} actions={pauseButton} />}
-
       <PageBody>
         {s && <DayChart events={chartEvents} summary={s} />}
 
         <div className="flex flex-wrap items-center gap-2">
-          {hubs ? (
-            <ViewPicker
-              title="Activity"
-              choices={[
-                { id: "all", label: VIEW_LABEL.all },
-                { id: "needs", label: VIEW_LABEL.needs, count: waitingCount || undefined },
-                { id: "errors", label: VIEW_LABEL.errors, count: s?.errors || undefined },
-              ]}
-              value={view}
-              onChange={(id) => setView(id as View)}
-            />
-          ) : (
-            <Segmented
-              label="Show"
-              options={[
-                { value: "all", label: VIEW_LABEL.all },
-                { value: "needs", label: VIEW_LABEL.needs, count: waitingCount },
-                { value: "errors", label: VIEW_LABEL.errors, count: s?.errors },
-              ]}
-              value={view}
-              onChange={setView}
-            />
-          )}
+          <ViewPicker
+            title="Activity"
+            choices={[
+              { id: "all", label: VIEW_LABEL.all },
+              { id: "needs", label: VIEW_LABEL.needs, count: waitingCount || undefined },
+              { id: "errors", label: VIEW_LABEL.errors, count: s?.errors || undefined },
+            ]}
+            value={view}
+            onChange={(id) => setView(id as View)}
+          />
           {view !== "needs" && (
             <DropdownMenu>
               <DropdownMenuTrigger className={buttonVariants({ variant: "outline", size: "sm", className: tapClass })}>
@@ -330,12 +308,10 @@ export function ActivityPage() {
               Clear
             </Button>
           )}
-          {hubs && (
-            <div className="ml-auto flex items-center gap-2">
-              {liveStatus}
-              {pauseButton}
-            </div>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            {liveStatus}
+            {pauseButton}
+          </div>
         </div>
 
         {error && <p className="text-meta text-err">Couldn't load activity: {error}</p>}

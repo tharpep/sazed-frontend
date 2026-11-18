@@ -282,8 +282,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         const res = await getConversation(id);
         if (get().loadingSessionId !== id) return;
         const messages = rawMessagesToMessages(res.messages);
-        // The old shell leaves its composer enabled during the load, so a send may have started a
-        // stream since; it belongs to the conversation being left.
+        // A send may have started a stream during the load; it belongs to the conversation being left.
         get().controller?.abort();
         set({
           sessionId: id,

@@ -44,29 +44,3 @@ export function Tile({ label, value, note, tone = "neutral" }: TileProps) {
     </div>
   );
 }
-
-interface TabsProps<T extends string> {
-  options: { value: T; label: string }[];
-  value: T;
-  onChange: (value: T) => void;
-  label: string;
-}
-
-export function Tabs<T extends string>({ options, value, onChange, label }: TabsProps<T>) {
-  return (
-    <div role="tablist" aria-label={label} className="flex gap-0.5 overflow-x-auto border-b border-line [scrollbar-width:none]">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          role="tab"
-          aria-selected={o.value === value}
-          onClick={() => onChange(o.value)}
-          className="-mb-px shrink-0 border-b-2 border-transparent px-3 py-2 text-meta whitespace-nowrap text-ink-2 transition-colors hover:text-ink aria-selected:border-primary aria-selected:text-ink"
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}

@@ -63,7 +63,7 @@ export function ProjectWidget({ onBack, ...project }: ProjectWidgetProps) {
           <button
             type="button"
             onClick={onBack}
-            className="-ml-1 inline-flex items-center gap-1 self-start rounded-md px-1 py-0.5 text-meta text-ink-2 transition-colors hover:bg-raised hover:text-ink"
+            className="-ml-1 inline-flex min-h-11 items-center gap-1 self-start rounded-md px-1 py-0.5 text-meta sm:min-h-0 text-ink-2 transition-colors hover:bg-raised hover:text-ink"
           >
             <ArrowLeft className="size-3.5" aria-hidden="true" />
             Projects

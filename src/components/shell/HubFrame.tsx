@@ -7,8 +7,8 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { useRunningCount } from "@/hooks/useRunningCount";
 import { isTauri } from "@/lib/isTauri";
 import { openPaletteFromTap, usePaletteStore } from "@/nav/paletteSources";
-import { useShellStore } from "@/nav/shellFlag";
 import { shownItem, useNavStore } from "@/store/navStore";
+import { useUiStore } from "@/store/uiStore";
 import { ActionSlotContext } from "./actionSlot";
 import { CommandPalette } from "./CommandPalette";
 import { DetailSlotContext } from "./detailSlot";
@@ -46,8 +46,8 @@ const NEW_CHAT = { label: "New chat", onClick: startNewChat };
  * with the title row from 640px. */
 export function HubFrame({ children, docked }: HubFrameProps) {
   const isMobile = useIsMobile();
-  const settingsOpen = useShellStore((s) => s.settingsOpen);
-  const setSettingsOpen = useShellStore((s) => s.setSettingsOpen);
+  const settingsOpen = useUiStore((s) => s.settingsOpen);
+  const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
   const inChat = useNavStore((s) => s.hub === "chat");

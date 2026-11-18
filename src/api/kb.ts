@@ -4,11 +4,6 @@ import { gatewayFetch } from "./client";
 
 export type KbOrigin = "upload" | "text" | "url" | "drive";
 
-export interface KbStats {
-  chunk_count: number;
-  file_count: number;
-}
-
 export interface KbSource {
   file_id: string;
   filename: string;
@@ -51,10 +46,6 @@ export interface KbSearchHit {
 // Must match knowledge-base app/routes/ingest.py.
 export const UPLOAD_ACCEPT = ".pdf,.docx,.md,.markdown,.txt,.csv";
 export const MAX_UPLOAD_MB = 15;
-
-export async function getKbStats(): Promise<KbStats> {
-  return gatewayFetch("/kb/stats") as Promise<KbStats>;
-}
 
 export async function listKbSources(): Promise<KbSource[]> {
   const data = (await gatewayFetch("/kb/sources")) as { sources: KbSource[] };

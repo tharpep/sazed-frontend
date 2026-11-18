@@ -6,9 +6,9 @@ product
 
 ## Users
 
-The user themselves — a single individual using their own personal AI agent, "Sazed." Used as a small (900×620, min 600×480) Tauri desktop window and secondarily as a responsive web app. Context: daily, personal use — chatting with the assistant about calendar, tasks, email, knowledge-base lookups, and journaling. Not a multi-tenant SaaS product; there is exactly one user, and the "customer" and "user" are the same person. The primary job on any given screen is either (a) having a conversation with the assistant and reading its tool-call activity, (b) finding a past conversation, or (c) writing/reviewing a journal entry.
+The user themselves — a single individual using their own personal AI agent, "Sazed." Used mostly on a phone (an iPhone, through the web app), and also as a web app on desktop and a small (900×620, min 600×480) Tauri desktop window. Context: daily, personal use — watching and steering agents, the board and the homelab, chatting with the assistant about calendar, tasks, email and knowledge-base lookups, and journaling. Not a multi-tenant SaaS product; there is exactly one user, and the "customer" and "user" are the same person. The primary job on any given screen is either (a) having a conversation with the assistant and reading its tool-call activity, (b) finding a past conversation, or (c) writing/reviewing a journal entry.
 
-The console uses one hub shell across desktop and phone. Hubs organize the product by stable areas of work; a responsive rail, phone tab bar and More sheet provide the navigation without switching between competing layouts.
+The console uses one hub shell across desktop and phone. Hubs organize the product by stable areas of work; a rail from 640px, and a hub bar and More sheet on phones, provide the navigation.
 
 ## Product Purpose
 
@@ -27,7 +27,7 @@ Calm, considered, warm. Quiet confidence rather than flashiness — the interfac
 ## Design Principles
 
 - **One considered accent, not a palette.** Restrained color strategy: warm neutrals carry the interface, one accent color carries meaning (interactive state, focus), nothing else competes for attention.
-- **Phone-first, not a shrunk desktop app.** The primary surface is a 600–900px-wide window and a phone-sized web view. Every layout decision (navigation pattern, information density) is made for those sizes first, not adapted down from a wide-screen assumption.
+- **Phone-first, not a shrunk desktop app.** The primary surface is a phone-sized web view (390px wide). Every layout decision (navigation pattern, information density, 44px tap targets) is made for the phone first and widened from 640px, not adapted down from a wide-screen assumption.
 - **Read as a product, not a redesign.** No component, page, or token may be carried over from the current implementation's visual language — a fresh foundation (Tailwind + shadcn/ui + Motion), not an iteration.
 - **Content over chrome.** The conversation and the journal entry are the interface; navigation, status indicators, and window controls stay quiet and out of the way.
 - **Motion with a reason.** Every animation marks a real state change (message arriving, panel expanding, focus shifting) — never decoration for its own sake.
