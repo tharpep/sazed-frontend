@@ -9,7 +9,7 @@ import { Composer } from "./Composer";
 import { ConversationList, useConversationList } from "./ConversationList";
 import { NEW_CHAT_DRAFT } from "./draftStore";
 import { MessageList } from "./MessageList";
-import { openSession, useChatLoading, useOpenChatTitle } from "./openSession";
+import { backToChats, openSession, useChatLoading, useOpenChatTitle } from "./openSession";
 
 const TWO_PANES = "(min-width: 900px)";
 
@@ -36,7 +36,6 @@ const useListQuery = create<{ query: string; setQuery: (query: string) => void }
 export function ChatHub() {
   const view = useNavStore((s) => s.view.chat);
   const openId = useNavStore((s) => s.open["chat:conversation"]?.id ?? null);
-  const go = useNavStore((s) => s.go);
   const { query, setQuery } = useListQuery();
   // Loads on every mount, the conversation view too, so the shell can name the open conversation.
   const data = useConversationList(true, query);
@@ -56,7 +55,7 @@ export function ChatHub() {
         <div className="flex h-11 flex-none items-center gap-1 border-b border-line pr-3 pl-1">
           <button
             type="button"
-            onClick={() => go("chat", "list")}
+            onClick={backToChats}
             className="flex h-11 flex-none items-center gap-1 rounded-md px-2 text-meta text-ink-2 transition-colors hover:text-ink"
           >
             <ChevronLeft className="size-4" aria-hidden="true" />

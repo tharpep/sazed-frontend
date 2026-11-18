@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { ChevronLeft, Plus, Search, Settings } from "lucide-react";
 
+import { backToChats } from "@/features/chat/openSession";
 import { cn } from "@/lib/utils";
 import { useNavStore } from "@/store/navStore";
 import { hasViewTabs, hubDef, shortLabel, type ShellAction } from "./hubMeta";
@@ -59,7 +60,7 @@ export function PhoneHeader({ onSearch, onSettings, chatTitle, chatAction }: Pho
     if (view === "conversation") {
       return (
         <header className={cn(row, "pl-1")}>
-          <button type="button" onClick={() => go("chat", "list")} aria-label="Back to chats" className={iconButton}>
+          <button type="button" onClick={backToChats} aria-label="Back to chats" className={iconButton}>
             <ChevronLeft className="size-5" aria-hidden="true" />
           </button>
           <h1 className={title}>{chatTitle ?? "Conversation"}</h1>

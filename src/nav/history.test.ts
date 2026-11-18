@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { loadViews, type ItemRef, type Place } from "@/store/navStore";
-import { parseEntry, samePlace, stepFor } from "./history";
+import { parseEntry, placeToApply, samePlace, stepFor } from "./history";
 
 const views = loadViews(null);
 
@@ -45,13 +45,25 @@ describe("stepFor: how a store change shows in browser history", () => {
     expect(stepFor(projects, place("work"), place("work"))).toBe("back");
   });
 
-  it("goes back when Chat's own Back returns to the list beneath, but pushes a tap back to another hub", () => {
+  it("pushes a tab back to the view beneath, so Back still steps through both views", () => {
+    const board = place("work", { view: { ...views, work: "board" } });
+    const plans = place("work", { view: { ...views, work: "plans" } });
+    expect(stepFor(plans, board, board)).toBe("push");
+    expect(stepFor(place("work"), place("home"), place("home"))).toBe("push");
+  });
+
+  it("goes back when Chat's own Back control returns to the list beneath", () => {
     const session = { "chat:conversation": { kind: "session" as const, id: "s1" } };
     const list = place("chat", { open: session });
     const conversation = place("chat", { view: { ...views, chat: "conversation" }, open: session });
-    expect(stepFor(conversation, list, list)).toBe("back");
-    expect(stepFor(conversation, list, place("chat"))).toBe("back");
-    expect(stepFor(place("work"), place("home"), place("home"))).toBe("push");
+    expect(stepFor(conversation, list, list, "back")).toBe("back");
+    expect(stepFor(conversation, list, place("chat"), "back")).toBe("back");
+    expect(stepFor(conversation, list, list)).toBe("push");
+  });
+
+  it("pushes an in-app Back that does not land on the screen beneath", () => {
+    const conversation = place("chat", { view: { ...views, chat: "conversation" } });
+    expect(stepFor(conversation, place("chat"), place("home"), "back")).toBe("push");
   });
 
   it("replaces a close with no entry beneath, as after a deep link or reload", () => {
@@ -65,7 +77,31 @@ describe("stepFor: how a store change shows in browser history", () => {
 
   it("replaces when the write follows other state instead of navigating", () => {
     const chat = place("chat", { open: { "chat:conversation": { kind: "session", id: "s1" } } });
-    expect(stepFor(place("chat"), chat, null, true)).toBe("replace");
+    expect(stepFor(place("chat"), chat, null, "follow")).toBe("replace");
+    expect(stepFor(projects, place("work"), place("work"), "follow")).toBe("replace");
+  });
+});
+
+describe("placeToApply: what Back restores", () => {
+  const s0 = { kind: "session" as const, id: "s0" };
+  const s1 = { kind: "session" as const, id: "s1" };
+  const streaming = place("chat", { view: { ...views, chat: "conversation" }, open: { "chat:conversation": s1 } });
+
+  it("keeps the live conversation on an entry whose screen is not that conversation", () => {
+    const list = place("chat", { open: { "chat:conversation": s0 } });
+    expect(placeToApply(list, streaming).open).toEqual({ "chat:conversation": s1 });
+    const board = place("work", { open: { "chat:conversation": s0, "work:projects": project } });
+    expect(placeToApply(board, streaming).open).toEqual({ "chat:conversation": s1, "work:projects": project });
+  });
+
+  it("leaves no conversation when none is live", () => {
+    const list = place("chat", { open: { "chat:conversation": s0 } });
+    expect(placeToApply(list, place("home")).open).toEqual({});
+  });
+
+  it("restores the conversation an entry shows", () => {
+    const conversation = place("chat", { view: { ...views, chat: "conversation" }, open: { "chat:conversation": s0 } });
+    expect(placeToApply(conversation, streaming)).toBe(conversation);
   });
 });
 

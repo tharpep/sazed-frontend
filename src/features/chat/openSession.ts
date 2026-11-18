@@ -1,4 +1,4 @@
-import { withoutEntry } from "@/nav/history";
+import { backInHistory, withoutEntry } from "@/nav/history";
 import type { PaletteItem } from "@/nav/paletteSources";
 import { useChatStore } from "@/store/chatStore";
 import { useNavStore } from "@/store/navStore";
@@ -25,19 +25,24 @@ export function openSession(id: string) {
   useSessionStore.getState().selectSession(id);
 }
 
+/** Chat's own Back from a conversation to the list. */
+export function backToChats() {
+  backInHistory(() => useNavStore.getState().go("chat", "list"));
+}
+
 /** Shows an empty conversation in Chat. */
 export function startNewChat() {
   useChatStore.getState().newSession();
   useNavStore.getState().go("chat", "conversation");
 }
 
-/** In the hub shell, navStore's open["chat:conversation"] names the conversation Chat shows, and the chat store
- * holds it. Naming a new session in open.chat (a list row, the palette, Recent, Activity) loads
- * it; in every other disagreement open.chat follows the chat store: a new chat's first reply, a
+/** In the hub shell, navStore's open["chat:conversation"] names the conversation Chat shows, and the
+ * chat store holds it. Naming a new session there (a list row, the palette, Recent, Activity) loads
+ * it; in every other disagreement the slot follows the chat store: a new chat's first reply, a
  * new chat, a failed or superseded load, and a page or retap that cleared navStore's items.
  * Returns the unsubscribe. */
 export function startSessionSync(): () => void {
-  // open.chat can be left over from before a layout switch; loading it could abort a live stream.
+  // The slot can be left over from before a layout switch; loading it could abort a live stream.
   setOpenSession(shownSession());
 
   const offNav = useNavStore.subscribe((s, prev) => {

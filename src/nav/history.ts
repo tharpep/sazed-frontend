@@ -12,6 +12,9 @@ export interface Entry {
 
 export type Step = "push" | "back" | "replace" | null;
 
+/** Why the store changed: navigation, a write that follows other state, or an in-app Back control. */
+export type Intent = "navigate" | "follow" | "back";
+
 // history.state is shared with react-router's BrowserRouter, so the entry lives under its own key.
 const KEY = "sazed";
 
@@ -47,19 +50,43 @@ function sameScreen(a: Place, b: Place): boolean {
   return a.hub === b.hub && a.view[a.hub] === b.view[b.hub] && sameRef(shownItem(a) ?? undefined, shownItem(b) ?? undefined);
 }
 
-/** How a store change shows in history. Within a hub, a change that lands on the screen beneath goes
- * back, so an in-app close or Chat's own Back leaves no extra entry. Otherwise moving to another hub
- * or view, or opening an item, pushes, and anything else rewrites the current entry. */
-export function stepFor(prev: Place, next: Place, below: Place | null, quiet = false): Step {
+function closed(prev: Place, next: Place): boolean {
+  return (
+    prev.hub === next.hub &&
+    prev.view[prev.hub] === next.view[next.hub] &&
+    shownItem(prev) !== null &&
+    shownItem(next) === null
+  );
+}
+
+/** How a store change shows in history. A close of the shown item, or an in-app Back control, that
+ * lands on the screen beneath goes back, so it leaves no extra entry. Otherwise moving to another
+ * hub or view (tabs, rail, palette) or opening an item pushes, and anything else rewrites the
+ * current entry. */
+export function stepFor(prev: Place, next: Place, below: Place | null, intent: Intent = "navigate"): Step {
   if (samePlace(prev, next)) return null;
-  if (quiet) return "replace";
-  if (below && next.hub === prev.hub && sameScreen(below, next)) return "back";
+  if (intent === "follow") return "replace";
+  const landsBelow = below !== null && next.hub === prev.hub && sameScreen(below, next);
+  if (landsBelow && (intent === "back" || closed(prev, next))) return "back";
   const navigated =
     next.hub !== prev.hub ||
     next.view[next.hub] !== prev.view[next.hub] ||
     opened(prev.open, next.open) ||
     opened(prev.read, next.read);
   return navigated ? "push" : "replace";
+}
+
+const CHAT = "chat:conversation";
+
+/** What a history entry restores. Its conversation is restored only when that conversation is its
+ * screen: any other entry keeps the live one, so Back never loads an older conversation over a
+ * reply that is still streaming. */
+export function placeToApply(entry: Place, live: Place): Place {
+  if (shownItem(entry)?.kind === "session") return entry;
+  const open = { ...entry.open };
+  if (live.open[CHAT]) open[CHAT] = live.open[CHAT];
+  else delete open[CHAT];
+  return { ...entry, open };
 }
 
 function parsePlace(raw: unknown): Place | null {
@@ -79,17 +106,27 @@ export function parseEntry(state: unknown): Entry | null {
   return { place, below: parsePlace((raw as Record<string, unknown>).below) };
 }
 
-let quiet = false;
+let intent: Intent = "navigate";
 
-/** Runs a store write that follows other state rather than navigating (the chat store naming its
- * conversation): it rewrites the current entry instead of adding one. */
-export function withoutEntry(write: () => void) {
-  quiet = true;
+function withIntent(next: Intent, write: () => void) {
+  intent = next;
   try {
     write();
   } finally {
-    quiet = false;
+    intent = "navigate";
   }
+}
+
+/** Runs a store write that follows other state rather than navigating (the chat store naming its
+ * conversation, a page dropping an item that failed to load): it rewrites the current entry. */
+export function withoutEntry(write: () => void) {
+  withIntent("follow", write);
+}
+
+/** Runs the write behind an in-app Back control: when it lands on the screen beneath, history goes
+ * back instead of adding an entry. */
+export function backInHistory(write: () => void) {
+  withIntent("back", write);
 }
 
 /** Mirrors navStore into browser history: pushState for navigation, back() for an in-app close of
@@ -104,12 +141,13 @@ export function startHistorySync(): () => void {
     else window.history.replaceState(state, "");
   };
 
-  const apply = (entry: Entry) => {
+  const apply = (entry: Entry, initial: boolean) => {
     const nav = useNavStore.getState();
-    if (!samePlace(placeOf(nav), entry.place)) {
+    const place = initial ? entry.place : placeToApply(entry.place, placeOf(nav));
+    if (!samePlace(placeOf(nav), place)) {
       applying = true;
       try {
-        nav.applyPlace(entry.place);
+        nav.applyPlace(place);
       } finally {
         applying = false;
       }
@@ -122,7 +160,7 @@ export function startHistorySync(): () => void {
   };
 
   const saved = parseEntry(window.history.state);
-  if (saved) apply(saved);
+  if (saved) apply(saved, true);
   else {
     current = { place: placeOf(useNavStore.getState()), below: null };
     write(current, false);
@@ -131,7 +169,7 @@ export function startHistorySync(): () => void {
   const offNav = useNavStore.subscribe((s) => {
     if (applying) return;
     const next = placeOf(s);
-    const step = stepFor(current.place, next, current.below, quiet);
+    const step = stepFor(current.place, next, current.below, intent);
     if (step === "push") {
       current = { place: next, below: current.place };
       write(current, true);
@@ -146,7 +184,7 @@ export function startHistorySync(): () => void {
 
   const onPop = (e: PopStateEvent) => {
     const entry = parseEntry(e.state);
-    if (entry) apply(entry);
+    if (entry) apply(entry, false);
   };
   window.addEventListener("popstate", onPop);
 
