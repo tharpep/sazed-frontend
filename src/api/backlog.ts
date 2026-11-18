@@ -30,9 +30,10 @@ export interface BacklogItem {
   workstream_id?: string | null;
 }
 
-export async function listBacklog(view: BacklogView, type?: BacklogType): Promise<BacklogItem[]> {
+export async function listBacklog(view: BacklogView, type?: BacklogType, limit?: number): Promise<BacklogItem[]> {
   const q = new URLSearchParams({ view });
   if (type) q.set("type", type);
+  if (limit) q.set("limit", String(limit));
   const data = (await apiFetch(`/backlog?${q}`)) as { items: BacklogItem[] };
   return data.items;
 }

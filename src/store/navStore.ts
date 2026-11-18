@@ -50,7 +50,6 @@ export const SUB_CHOICES = {
   "system:homelab": ["map", "list", "storage", "links"],
   "system:activity": ["all", "needs", "errors"],
   "system:usage": ["overview", "claude_code", "worker", "sazed_api"],
-  "work:board": ["open", "done", "dismissed"],
   "work:board.type": ["all", "idea", "bug", "gap", "optimization", "planned", "known_issue"],
   "work:plans": ["active", "draft", "done", "all"],
 } as const satisfies Partial<Record<ViewKey | `${ViewKey}.${string}`, readonly [string, ...string[]]>>;
