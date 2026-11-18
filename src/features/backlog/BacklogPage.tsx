@@ -25,6 +25,7 @@ import { TYPE_LABEL, ageLabel, isOpenStatus } from "./format";
 import { NEXT_LIMIT, STAGES, backlogId, groupByStage, olderDone, openingStage, shownNext, type StageInfo } from "./stages";
 
 const REFRESH_MS = 15_000;
+const OPEN_REFRESH_MS = 60_000;
 const WIDE_QUERY = "(min-width: 1100px)";
 const STAGE_KEY = "sazed-board-stage";
 const STOPPED = new Set(["failed", "timed_out", "cancelled"]);
@@ -101,6 +102,8 @@ export function BacklogPage() {
   const [addError, setAddError] = useState<string | null>(null);
   const requestId = useRef(0);
   const olderRequestId = useRef(0);
+  const openRequestId = useRef(0);
+  const openFetchedAt = useRef(0);
   const olderShownRef = useRef(false);
 
   useEffect(() => {
@@ -126,28 +129,47 @@ export function BacklogPage() {
     }
   }, []);
 
-  // Only the newest request may land, so a slow poll never replaces the answer to a later one.
-  const load = useCallback(async () => {
-    const id = ++requestId.current;
-    if (olderShownRef.current) loadOlder();
+  const loadOpen = useCallback(async () => {
+    const id = ++openRequestId.current;
+    openFetchedAt.current = Date.now();
     try {
-      const [board, open] = await Promise.all([getBoard(), listBacklog("open", undefined, 500)]);
-      if (id !== requestId.current) return;
-      setCards(board.cards);
-      setOpenItems(open);
-      setError(null);
+      const open = await listBacklog("open", undefined, 500);
+      if (id === openRequestId.current) setOpenItems(open);
     } catch (err) {
-      if (id === requestId.current) setError(errorText(err));
+      if (id === openRequestId.current) setError(errorText(err));
     }
-  }, [loadOlder]);
+  }, []);
+
+  // Only the newest request of each kind may land, so a slow poll never replaces a later answer.
+  // The board is small and carries the stages, so it polls; the open list and the older lists are
+  // large and change mostly through actions taken here, so they refresh far less often.
+  const load = useCallback(
+    async ({ open = false, older = false }: { open?: boolean; older?: boolean } = {}) => {
+      const id = ++requestId.current;
+      const jobs: Promise<unknown>[] = [];
+      if (open || Date.now() - openFetchedAt.current >= OPEN_REFRESH_MS) jobs.push(loadOpen());
+      if (older && olderShownRef.current) jobs.push(loadOlder());
+      try {
+        const board = await getBoard();
+        if (id !== requestId.current) return;
+        setCards(board.cards);
+        setError(null);
+      } catch (err) {
+        if (id === requestId.current) setError(errorText(err));
+      }
+      await Promise.all(jobs);
+    },
+    [loadOpen, loadOlder]
+  );
+  const reload = useCallback(() => load({ open: true, older: true }), [load]);
 
   useEffect(() => {
-    load();
+    load({ open: true });
     const id = setInterval(() => {
       if (!document.hidden) load();
     }, REFRESH_MS);
     const onVisible = () => {
-      if (!document.hidden) load();
+      if (!document.hidden) load({ open: true });
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
@@ -170,7 +192,7 @@ export function BacklogPage() {
       await createBacklogItem({ type: draft.type, title: draft.title.trim(), summary: draft.summary.trim() });
       setDraft({ type: draft.type, title: "", summary: "" });
       setAdding(false);
-      await load();
+      await reload();
     } catch (err) {
       setAddError(errorText(err));
     }
@@ -181,7 +203,7 @@ export function BacklogPage() {
     setActionError(null);
     try {
       await fn();
-      await load();
+      await reload();
     } catch (err) {
       setActionError(errorText(err));
     } finally {
@@ -299,6 +321,7 @@ export function BacklogPage() {
       choices={TYPE_CHOICES}
       value={typeChoice}
       onChange={(id) => useNavStore.getState().setSub("work:board.type", id as typeof typeChoice)}
+      compact={wide}
     />
   );
 
@@ -438,14 +461,14 @@ export function BacklogPage() {
         onChanged={(updated) => {
           // An action that finishes after the sheet closed or moved to another card must not bring it back.
           setFetched((cur) => (cur?.id === updated.id ? updated : cur));
-          load();
+          reload();
         }}
         onOpenJob={(id) => {
           close();
           setJobId(id);
         }}
       />
-      <JobSheet jobId={jobId} onClose={() => setJobId(null)} onChanged={load} onOpenJob={setJobId} />
+      <JobSheet jobId={jobId} onClose={() => setJobId(null)} onChanged={reload} onOpenJob={setJobId} />
     </Page>
   );
 }
