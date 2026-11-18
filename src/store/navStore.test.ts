@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { loadSubs, shownItem, useNavStore } from "./navStore";
+import { loadItems, loadSubs, shownItem, useNavStore } from "./navStore";
 
 describe("navStore closeItem: closes the slot of the item's own kind", () => {
   beforeEach(() => useNavStore.setState({ hub: "home", open: {}, read: {} }));
@@ -11,8 +11,8 @@ describe("navStore closeItem: closes the slot of the item's own kind", () => {
     nav.openItem({ kind: "plan", id: "board-plan" });
     useNavStore.getState().closeItem("plan");
     const s = useNavStore.getState();
-    expect(s.read.work).toBeUndefined();
-    expect(s.open.work).toEqual({ kind: "project", id: "board" });
+    expect(s.read["work:plans"]).toBeUndefined();
+    expect(s.open["work:projects"]).toEqual({ kind: "project", id: "board" });
   });
 
   it("closing Plan Live keeps the MCP server open in another Agents view", () => {
@@ -22,14 +22,57 @@ describe("navStore closeItem: closes the slot of the item's own kind", () => {
     useNavStore.getState().openItem({ kind: "dispatch", id: "overhaul" });
     useNavStore.getState().closeItem("dispatch");
     const s = useNavStore.getState();
-    expect(s.read.agents).toBeUndefined();
-    expect(s.open.agents).toEqual({ kind: "mcp", id: "github" });
+    expect(s.read["agents:runs"]).toBeUndefined();
+    expect(s.open["agents:mcp"]).toEqual({ kind: "mcp", id: "github" });
   });
 
   it("does nothing when the slot holds another kind", () => {
     useNavStore.getState().openItem({ kind: "mcp", id: "github" });
     useNavStore.getState().closeItem("profile");
-    expect(useNavStore.getState().open.agents).toEqual({ kind: "mcp", id: "github" });
+    expect(useNavStore.getState().open["agents:mcp"]).toEqual({ kind: "mcp", id: "github" });
+  });
+
+  it("keeps a profile open in Profiles while a job opens and closes in Runs", () => {
+    useNavStore.getState().openItem({ kind: "profile", id: "builder" });
+    useNavStore.getState().openItem({ kind: "job", id: "j1" });
+    useNavStore.getState().closeItem("job");
+    useNavStore.getState().go("agents", "profiles");
+    expect(shownItem(useNavStore.getState())).toEqual({ kind: "profile", id: "builder" });
+  });
+});
+
+describe("navStore openItem and applyPlace", () => {
+  beforeEach(() => useNavStore.setState({ hub: "home", open: {}, read: {}, recent: [] }));
+
+  it("opens an item in another hub with one store update", () => {
+    let updates = 0;
+    const off = useNavStore.subscribe(() => updates++);
+    useNavStore.getState().openItem({ kind: "plan", id: "p" });
+    off();
+    expect(updates).toBe(1);
+    expect(useNavStore.getState()).toMatchObject({ hub: "work", read: { "work:plans": { kind: "plan", id: "p" } } });
+  });
+
+  it("restores a place without touching Recent", () => {
+    const place = { ...useNavStore.getState(), hub: "work" as const, read: { "work:plans": { kind: "plan" as const, id: "p" } } };
+    useNavStore.getState().applyPlace(place);
+    expect(useNavStore.getState().hub).toBe("work");
+    expect(useNavStore.getState().recent).toEqual([]);
+  });
+});
+
+describe("loadItems", () => {
+  it("keeps items filed under their own view and drops the older per-hub shape", () => {
+    expect(
+      loadItems({
+        "agents:profiles": { kind: "profile", id: "builder" },
+        "agents:runs": { kind: "profile", id: "misfiled" },
+        agents: { kind: "job", id: "old" },
+        "work:board": { kind: "backlog", id: "" },
+      })
+    ).toEqual({ "agents:profiles": { kind: "profile", id: "builder" } });
+    expect(loadItems(null)).toEqual({});
+    expect(loadItems("x")).toEqual({});
   });
 });
 

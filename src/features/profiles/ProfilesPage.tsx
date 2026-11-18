@@ -58,7 +58,7 @@ function openServer(name: string) {
 /** The Profiles and MCP servers views; the open profile or server is navStore's, like any item. */
 export function ProfilesPage() {
   const inServers = useNavStore((s) => s.view.agents === "mcp");
-  const navItem = useNavStore((s) => s.open.agents);
+  const navItem = useNavStore((s) => s.open[inServers ? "agents:mcp" : "agents:profiles"]);
   const [servers, setServers] = useState<McpServer[] | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<Profile[] | null>(null);

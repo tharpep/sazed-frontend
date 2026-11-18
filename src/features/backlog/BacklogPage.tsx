@@ -73,7 +73,7 @@ function matchesType(item: BacklogItem, type: SubValue<"work:board.type">) {
 }
 
 export function BacklogPage() {
-  const navItem = useNavStore((s) => s.open.work);
+  const navItem = useNavStore((s) => s.open["work:board"]);
   const openId = navItem?.kind === "backlog" ? navItem.id : null;
   const typeChoice = useSub("work:board.type");
   const wide = useWide();

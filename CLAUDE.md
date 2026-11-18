@@ -21,7 +21,8 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 **View switching is store state, not routed.** The console uses six hubs: Home, Chat (Conversations, Conversation), Work (Projects, Board, Plans), Agents (Runs, Automations, Profiles, MCP servers), System (Homelab, Activity, Usage, Integrations) and Library (Knowledge, Journal).
 - `src/nav/hubViews.ts` lists the hubs and Apps with their views (ids and labels).
 - `src/nav/hubs.ts` points each view at the page that renders it today.
-- `src/store/navStore.ts` holds the active hub, each hub's view and each view's filter (`sub`) in localStorage, the open item (`open`) and reader (`read`) per hub, scroll positions, and recent items (sessionStorage). `openItem(ref)` switches to the item's hub and view (`ITEM_PLACE`) and opens it there, so links, the palette and Recent open items the same way. The app always opens on Home.
+- `src/store/navStore.ts` holds the active hub, each hub's view and each view's filter (`sub`) in localStorage, the open item (`open`) and reader (`read`) per view, scroll positions, and recent items (sessionStorage). `openItem(ref)` switches to the item's hub and view (`ITEM_PLACE`) and opens it there, so links, the palette and Recent open items the same way. A fresh load opens on Home.
+- `src/nav/history.ts` mirrors navStore into browser history (`history.state`, never the URL), so Back and Forward and the phone's back gesture move through hubs, views and opened items. Opening pushes an entry; an in-app close that lands on the entry beneath goes back instead; a reload restores the place.
 - `src/nav/deepLinks.ts` parses `?page=` links, including the `?page=<hub>` and `?page=<hub>.<view>` aliases; `pnpm test` guards it.
 - `uiStore` holds transient UI state: private apps revealed and the Settings dialog's open state. Navigation state belongs in `navStore`. Apps is a seventh destination with no views. Settings shows as a dialog over the hub shell.
 

@@ -1,16 +1,17 @@
+import { backInHistory, withoutEntry } from "@/nav/history";
 import type { PaletteItem } from "@/nav/paletteSources";
 import { useChatStore } from "@/store/chatStore";
 import { useNavStore } from "@/store/navStore";
 import { useSessionStore } from "@/store/sessionStore";
 
-/** Writes the open conversation without navigating: navStore.openItem would also switch to Chat
- * and add the conversation to Recent. */
+/** Writes the open conversation without navigating: navStore.openItem would also switch to Chat,
+ * add the conversation to Recent and add a browser history entry. */
 function setOpenSession(id: string | null) {
-  if (useNavStore.getState().open.chat?.id === (id ?? undefined)) return;
+  if (useNavStore.getState().open["chat:conversation"]?.id === (id ?? undefined)) return;
   const open = { ...useNavStore.getState().open };
-  if (id) open.chat = { kind: "session", id };
-  else delete open.chat;
-  useNavStore.setState({ open });
+  if (id) open["chat:conversation"] = { kind: "session", id };
+  else delete open["chat:conversation"];
+  withoutEntry(() => useNavStore.setState({ open }));
 }
 
 /** The conversation Chat shows, or is about to show once its load lands. */
@@ -24,24 +25,29 @@ export function openSession(id: string) {
   useSessionStore.getState().selectSession(id);
 }
 
+/** Chat's own Back from a conversation to the list. */
+export function backToChats() {
+  backInHistory(() => useNavStore.getState().go("chat", "list"));
+}
+
 /** Shows an empty conversation in Chat. */
 export function startNewChat() {
   useChatStore.getState().newSession();
   useNavStore.getState().go("chat", "conversation");
 }
 
-/** In the hub shell, navStore.open.chat names the conversation Chat shows, and the chat store
- * holds it. Naming a new session in open.chat (a list row, the palette, Recent, Activity) loads
- * it; in every other disagreement open.chat follows the chat store: a new chat's first reply, a
+/** In the hub shell, navStore's open["chat:conversation"] names the conversation Chat shows, and the
+ * chat store holds it. Naming a new session there (a list row, the palette, Recent, Activity) loads
+ * it; in every other disagreement the slot follows the chat store: a new chat's first reply, a
  * new chat, a failed or superseded load, and a page or retap that cleared navStore's items.
  * Returns the unsubscribe. */
 export function startSessionSync(): () => void {
-  // open.chat can be left over from before a layout switch; loading it could abort a live stream.
+  // The slot can be left over from before a layout switch; loading it could abort a live stream.
   setOpenSession(shownSession());
 
   const offNav = useNavStore.subscribe((s, prev) => {
-    const id = s.open.chat?.id;
-    if (id === prev.open.chat?.id) return;
+    const id = s.open["chat:conversation"]?.id;
+    if (id === prev.open["chat:conversation"]?.id) return;
     if (!id) {
       setOpenSession(shownSession());
       return;
@@ -73,7 +79,7 @@ export function useChatLoading(): boolean {
 /** The open conversation's title for the shell: "New chat" with none open, undefined until the
  * session list has loaded. */
 export function useOpenChatTitle(): string | undefined {
-  const openId = useNavStore((s) => s.open.chat?.id);
+  const openId = useNavStore((s) => s.open["chat:conversation"]?.id);
   return useSessionStore((s) => (openId ? s.sessions.find((x) => x.id === openId)?.title : "New chat"));
 }
 

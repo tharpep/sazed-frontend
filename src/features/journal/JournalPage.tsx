@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Reader } from "@/components/shell/Reader";
 import { ToolsRow } from "@/components/shell/ToolsRow";
 import { ViewPicker } from "@/components/shell/ViewPicker";
+import { withoutEntry } from "@/nav/history";
 import { useNavStore } from "@/store/navStore";
 import {
   createEntry,
@@ -463,7 +464,7 @@ function Editor({
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export function JournalPage() {
-  const readRef = useNavStore((s) => s.read.library);
+  const readRef = useNavStore((s) => s.read["library:journal"]);
   const selectedId = readRef?.kind === "journal" ? readRef.id : null;
   const [category] = useState<JournalCategory>(ACTIVE_CATEGORY);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -553,7 +554,7 @@ export function JournalPage() {
       .catch((err) => {
         if (!live) return;
         setError(`Couldn't open that entry: ${String(err)}`);
-        useNavStore.getState().closeItem("journal");
+        withoutEntry(() => useNavStore.getState().closeItem("journal"));
       });
     return () => {
       live = false;
