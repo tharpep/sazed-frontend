@@ -1,13 +1,10 @@
 /*
- * Compatibility layer for pages outside this rebuild's design scope
- * (Knowledge Base, Settings, Audit, Finance, the /display kiosk route,
- * and the widgets/ they share — kept reachable per product decision,
- * but never redesigned in DESIGN.md or the redesign spec, which only cover
- * chat, journal, and the navigation shell). These pages still use CSS
- * Modules against the old token vocabulary; this file aliases that
- * vocabulary onto the new DESIGN.md tokens so they render correctly
- * without re-deriving the old design system wholesale. Chat and journal
- * do not use any of these — they're pure Tailwind against globals.css.
+ * Compatibility layer for the code that still uses CSS Modules against the
+ * old token vocabulary: Settings, Finance and the widgets/ CSS Modules.
+ * They were never redesigned in DESIGN.md. This file aliases that
+ * vocabulary onto the DESIGN.md tokens so they render correctly without
+ * re-deriving the old design system wholesale. Everything else is
+ * Tailwind against globals.css.
  */
 
 :root,

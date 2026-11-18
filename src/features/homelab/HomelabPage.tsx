@@ -14,7 +14,6 @@ import {
   type ServicesResponse,
 } from "@/api/homelab";
 import { ViewPicker } from "@/components/shell/ViewPicker";
-import { useShellStore } from "@/nav/shellFlag";
 import { SUB_CHOICES, useNavStore, useSub, type SubValue } from "@/store/navStore";
 import { useUiStore } from "@/store/uiStore";
 import { DependenciesView } from "./DependenciesView";
@@ -34,13 +33,6 @@ const VIEW_HINT: Record<View, string> = {
   storage: "Pools and space for media",
   links: "What depends on what",
 };
-// The old shell's segmented control keeps its order until slice 13 deletes that shell.
-const OLD_SHELL_ORDER: View[] = ["map", "links", "list", "storage"];
-
-/** Open the Homelab page on a given view (Home's glance tiles): it starts on the stored one. */
-export function rememberHomelabView(v: View) {
-  useNavStore.getState().setSub("system:homelab", v);
-}
 
 function clearOpenService() {
   useNavStore.setState((s) => {
@@ -50,12 +42,6 @@ function clearOpenService() {
     return { open };
   });
 }
-
-// A service the hub shell left open must not pop up on the old shell's next Homelab visit; the old
-// shell takes a stored service only from a palette pick made while it is the shell.
-useShellStore.subscribe((s, prev) => {
-  if (s.shell === "old" && prev.shell !== "old") clearOpenService();
-});
 
 const GROUPS: { key: ServiceGroup; label: string }[] = [
   { key: "sazed", label: "Sazed" },
@@ -75,26 +61,16 @@ export function HomelabPage() {
   const view = useSub("system:homelab");
   const [map, setMap] = useState<ArchMap | null>(null);
   const privateRevealed = useUiStore((s) => s.privateRevealed);
-  const hubs = useShellStore((s) => s.shell) === "hubs";
   const navOpen = useNavStore((s) => s.open.system);
-  const [oldShellId, setOldShellId] = useState<string | null>(null);
 
   function chooseView(v: View) {
     useNavStore.getState().setSub("system:homelab", v);
   }
 
-  // The hub shell keeps the open service in navStore, so it is still open when Pryce comes back to
-  // System. The old shell drops it on leaving the page, as before; it only takes the palette's
-  // pick from the store (the module-level subscription below clears anything the hub shell left).
-  useEffect(() => {
-    if (hubs || navOpen?.kind !== "service") return;
-    setOldShellId(navOpen.id);
-    clearOpenService();
-  }, [hubs, navOpen]);
-  const selectedId = hubs ? (navOpen?.kind === "service" ? navOpen.id : null) : oldShellId;
-  const openService = (id: string) =>
-    hubs ? useNavStore.getState().openItem({ kind: "service", id }) : setOldShellId(id);
-  const closeService = () => (hubs ? clearOpenService() : setOldShellId(null));
+  // The open service lives in navStore, so it is still open when Pryce comes back to System.
+  const selectedId = navOpen?.kind === "service" ? navOpen.id : null;
+  const openService = (id: string) => useNavStore.getState().openItem({ kind: "service", id });
+  const closeService = clearOpenService;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -166,10 +142,7 @@ export function HomelabPage() {
       disabled={loading}
       aria-label="Refresh"
       title="Refresh"
-      className={cn(
-        "flex items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50",
-        hubs ? "size-11 flex-none sm:size-9" : "size-9"
-      )}
+      className="flex size-11 flex-none items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50 sm:size-9"
     >
       <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
     </button>
@@ -177,46 +150,18 @@ export function HomelabPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg">
-      {!hubs && (
-        <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-          <div className="flex items-center gap-3">
-            <h1 className="text-base font-semibold text-ink">Homelab</h1>
-            <div role="tablist" aria-label="View" className="flex gap-1 rounded-md bg-surface p-0.5">
-              {OLD_SHELL_ORDER.map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  role="tab"
-                  aria-selected={view === v}
-                  onClick={() => chooseView(v)}
-                  className={cn(
-                    "rounded px-2.5 py-0.5 text-sm transition-colors",
-                    view === v ? "bg-bg font-medium text-ink shadow-sm" : "text-muted hover:text-ink"
-                  )}
-                >
-                  {VIEW_LABEL[v]}
-                </button>
-              ))}
-            </div>
-          </div>
-          {refresh}
-        </header>
-      )}
-
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className={cn("mx-auto flex w-full flex-col gap-5 px-4 py-4 pb-8", view === "map" || view === "links" ? "max-w-3xl" : "max-w-2xl")}>
-          {hubs && (
-            <div className="-mb-2 flex min-w-0 items-center gap-2">
-              <ViewPicker
-                title="Homelab"
-                choices={SUB_CHOICES["system:homelab"].map((v) => ({ id: v, label: VIEW_LABEL[v], hint: VIEW_HINT[v] }))}
-                value={view}
-                onChange={(id) => chooseView(id as View)}
-              />
-              <span className="flex-1" />
-              {refresh}
-            </div>
-          )}
+          <div className="-mb-2 flex min-w-0 items-center gap-2">
+            <ViewPicker
+              title="Homelab"
+              choices={SUB_CHOICES["system:homelab"].map((v) => ({ id: v, label: VIEW_LABEL[v], hint: VIEW_HINT[v] }))}
+              value={view}
+              onChange={(id) => chooseView(id as View)}
+            />
+            <span className="flex-1" />
+            {refresh}
+          </div>
           {view === "map" && shownMap && <MapView map={shownMap} onOpenService={openService} />}
           {view === "map" && !map && !error && <p className="text-sm text-muted">Loading the map…</p>}
           {view === "links" && data && <DependenciesView services={shown} onOpenService={openService} />}

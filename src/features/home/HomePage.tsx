@@ -10,7 +10,6 @@ import { listProjects, type Project } from "@/api/projects";
 import { JobSheet } from "@/features/jobs/JobSheet";
 import { gib, statusOf } from "@/features/homelab/format";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useShellStore } from "@/nav/shellFlag";
 import { useChatStore } from "@/store/chatStore";
 import { useUiStore } from "@/store/uiStore";
 
@@ -86,7 +85,6 @@ const NO_SIDE: Side = {
 export function HomePage() {
   const privateRevealed = useUiStore((s) => s.privateRevealed);
   const togglePrivate = useUiStore((s) => s.togglePrivate);
-  const shell = useShellStore((s) => s.shell);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const stopReply = useChatStore((s) => s.stop);
   const isMobile = useIsMobile();
@@ -169,7 +167,7 @@ export function HomePage() {
   const working = command?.working ?? null;
   const done = command?.done ?? null;
   const ready = side.backlog ? readyCount(side.backlog) : null;
-  const askInline = shell === "hubs" && !isMobile;
+  const askInline = !isMobile;
 
   const links = [
     { key: "homelab", label: "Homelab", text: homelab, alert: down > 0, onClick: () => openSystem("homelab") },
