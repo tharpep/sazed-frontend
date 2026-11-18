@@ -82,11 +82,10 @@ describe("navStore sub: each view's third-level choice", () => {
     expect(useNavStore.getState().sub).toEqual({ "system:homelab": "storage", "system:activity": "errors" });
   });
 
-  it("keeps a view's second picker apart from its first", () => {
-    useNavStore.getState().setSub("work:board", "dismissed");
+  it("keeps a view's named picker under its own key", () => {
     useNavStore.getState().setSub("work:board.type", "bug");
-    expect(useNavStore.getState().sub).toEqual({ "work:board": "dismissed", "work:board.type": "bug" });
-    expect(loadSubs({ "work:board.type": "open" })).toEqual({});
+    expect(useNavStore.getState().sub).toEqual({ "work:board.type": "bug" });
+    expect(loadSubs({ "work:board.type": "open", "work:board": "dismissed" })).toEqual({});
   });
 
   it("ignores a choice the view does not have", () => {
