@@ -62,15 +62,15 @@ export function isSub<K extends SubKey>(key: K, value: unknown): value is SubVal
   return typeof value === "string" && (SUB_CHOICES[key] as readonly string[]).includes(value);
 }
 
-type Views = { [H in HubId]: ViewId<H> };
-type ItemsByHub = Partial<Record<HubId, ItemRef>>;
+export type Views = { [H in HubId]: ViewId<H> };
+export type ItemsByView = Partial<Record<ViewKey, ItemRef>>;
 
 interface NavState {
   hub: HubId;
   view: Views;
   sub: Subs;
-  open: ItemsByHub;
-  read: ItemsByHub;
+  open: ItemsByView;
+  read: ItemsByView;
   scroll: Record<string, number>;
   recent: ItemRef[];
   // Bumped when the active hub is tapped again, so the hub shell remounts the view and drops any
@@ -82,7 +82,11 @@ interface NavState {
   openItem: (ref: ItemRef) => void;
   closeItem: (kind: ItemKind) => void;
   clearItems: () => void;
+  applyPlace: (place: Place) => void;
 }
+
+/** Where the console is: what a browser history entry restores. */
+export type Place = Pick<NavState, "hub" | "view" | "open" | "read">;
 
 function readJson(storage: () => Storage, key: string): unknown {
   try {
@@ -101,8 +105,7 @@ function writeJson(storage: () => Storage, key: string, value: unknown) {
   }
 }
 
-function loadViews(): Views {
-  const saved = readJson(() => localStorage, VIEW_KEY);
+export function loadViews(saved: unknown): Views {
   const views = Object.fromEntries(HUB_VIEWS.map((h) => [h.id, firstView(h.id)])) as Views;
   if (saved && typeof saved === "object") {
     for (const hub of HUB_VIEWS.map((h) => h.id)) {
@@ -136,20 +139,36 @@ function isItemRef(r: unknown): r is ItemRef {
   );
 }
 
+/** The view that holds an item of this kind. */
+export function itemView(kind: ItemKind): ViewKey {
+  const { hub, view } = ITEM_PLACE[kind];
+  return `${hub}:${view}` as ViewKey;
+}
+
+/** Keeps each saved item that is valid and filed under its own kind's view; anything else, such as
+ * the older per-hub shape, is dropped. */
+export function loadItems(saved: unknown): ItemsByView {
+  const items: ItemsByView = {};
+  if (saved && typeof saved === "object") {
+    for (const [key, ref] of Object.entries(saved)) {
+      if (isItemRef(ref) && itemView(ref.kind) === key) items[key as ViewKey] = ref;
+    }
+  }
+  return items;
+}
+
 function loadRecent(): ItemRef[] {
   const saved = readJson(() => sessionStorage, RECENT_KEY);
   return Array.isArray(saved) ? saved.filter(isItemRef).slice(0, RECENT_MAX) : [];
 }
 
-function without(items: ItemsByHub, hub: HubId): ItemsByHub {
-  const next = { ...items };
-  delete next[hub];
-  return next;
+function withoutHub(items: ItemsByView, hub: HubId): ItemsByView {
+  return Object.fromEntries(Object.entries(items).filter(([key]) => !key.startsWith(`${hub}:`)));
 }
 
 export const useNavStore = create<NavState>((set, get) => ({
   hub: "home",
-  view: loadViews(),
+  view: loadViews(readJson(() => localStorage, VIEW_KEY)),
   sub: loadSubs(readJson(() => localStorage, SUB_KEY)),
   open: {},
   read: {},
@@ -165,8 +184,8 @@ export const useNavStore = create<NavState>((set, get) => ({
       writeJson(() => localStorage, VIEW_KEY, views);
       set({
         view: views,
-        open: without(s.open, hub),
-        read: without(s.read, hub),
+        open: withoutHub(s.open, hub),
+        read: withoutHub(s.read, hub),
         scroll: { ...s.scroll, [`${hub}:${first}`]: 0 },
         retaps: s.retaps + 1,
       });
@@ -185,30 +204,38 @@ export const useNavStore = create<NavState>((set, get) => ({
   setScroll: (hubView, top) => {
     if (get().scroll[hubView] !== top) set({ scroll: { ...get().scroll, [hubView]: top } });
   },
+  // One set, so browser history sees opening an item in another view as one step.
   openItem: (ref) => {
     const place = ITEM_PLACE[ref.kind];
-    get().go(place.hub, place.view);
     const s = get();
+    const views = { ...s.view, [place.hub]: place.view };
+    writeJson(() => localStorage, VIEW_KEY, views);
     const recent = [ref, ...s.recent.filter((r) => r.kind !== ref.kind || r.id !== ref.id)].slice(0, RECENT_MAX);
     writeJson(() => sessionStorage, RECENT_KEY, recent);
-    set({ [place.slot]: { ...s[place.slot], [place.hub]: ref }, recent });
+    set({ hub: place.hub, view: views, [place.slot]: { ...s[place.slot], [itemView(ref.kind)]: ref }, recent });
   },
   closeItem: (kind) => {
-    const { hub, slot } = ITEM_PLACE[kind];
+    const { slot } = ITEM_PLACE[kind];
+    const key = itemView(kind);
     const items = get()[slot];
-    if (items[hub]?.kind === kind) set({ [slot]: without(items, hub) });
+    if (items[key]?.kind !== kind) return;
+    const next = { ...items };
+    delete next[key];
+    set({ [slot]: next });
   },
   clearItems: () => set({ open: {}, read: {} }),
+  // Restores a history entry: no Recent, no retap.
+  applyPlace: ({ hub, view, open, read }) => {
+    writeJson(() => localStorage, VIEW_KEY, view);
+    set({ hub, view, open, read });
+  },
 }));
 
 /** The item on screen in the current view: a reader covers its view's page, so it wins over a
- * sheet or panel of the same view. An item kept for another view of the hub is not on screen. */
-export function shownItem(s: Pick<NavState, "hub" | "view" | "open" | "read">): ItemRef | null {
-  const view = s.view[s.hub];
-  for (const ref of [s.read[s.hub], s.open[s.hub]]) {
-    if (ref && ITEM_PLACE[ref.kind].view === view) return ref;
-  }
-  return null;
+ * sheet or panel of the same view. */
+export function shownItem(s: Place): ItemRef | null {
+  const key = `${s.hub}:${s.view[s.hub]}` as ViewKey;
+  return s.read[key] ?? s.open[key] ?? null;
 }
 
 /** A view's third-level choice: the saved one, else its default. */

@@ -36,9 +36,9 @@ const VIEW_HINT: Record<View, string> = {
 
 function clearOpenService() {
   useNavStore.setState((s) => {
-    if (s.open.system?.kind !== "service") return {};
+    if (s.open["system:homelab"]?.kind !== "service") return {};
     const open = { ...s.open };
-    delete open.system;
+    delete open["system:homelab"];
     return { open };
   });
 }
@@ -61,7 +61,7 @@ export function HomelabPage() {
   const view = useSub("system:homelab");
   const [map, setMap] = useState<ArchMap | null>(null);
   const privateRevealed = useUiStore((s) => s.privateRevealed);
-  const navOpen = useNavStore((s) => s.open.system);
+  const navOpen = useNavStore((s) => s.open["system:homelab"]);
 
   function chooseView(v: View) {
     useNavStore.getState().setSub("system:homelab", v);

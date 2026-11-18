@@ -18,7 +18,7 @@ const FILTER_CHOICES = SUB_CHOICES["work:plans"].map((id) => ({ id, label: FILTE
 type Compare = { slug: string; version: number | null; a: number; b: number };
 
 export function PlansPage() {
-  const navPlan = useNavStore((s) => s.read.work);
+  const navPlan = useNavStore((s) => s.read["work:plans"]);
   const open = navPlan?.kind === "plan" ? { slug: navPlan.id, version: navPlan.version ?? null } : null;
   const [picked, setPicked] = useState<Compare | null>(null);
   const compare = picked && open && picked.slug === open.slug && picked.version === open.version ? picked : null;

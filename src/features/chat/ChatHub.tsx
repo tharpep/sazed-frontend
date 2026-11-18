@@ -35,7 +35,7 @@ const useListQuery = create<{ query: string; setQuery: (query: string) => void }
  * from 900px. */
 export function ChatHub() {
   const view = useNavStore((s) => s.view.chat);
-  const openId = useNavStore((s) => s.open.chat?.id ?? null);
+  const openId = useNavStore((s) => s.open["chat:conversation"]?.id ?? null);
   const go = useNavStore((s) => s.go);
   const { query, setQuery } = useListQuery();
   // Loads on every mount, the conversation view too, so the shell can name the open conversation.

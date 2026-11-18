@@ -20,7 +20,7 @@ export function AutomationsPage() {
   const [items, setItems] = useState<Automation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const navItem = useNavStore((s) => s.open.agents);
+  const navItem = useNavStore((s) => s.open["agents:automations"]);
   const openId = navItem?.kind === "automation" ? navItem.id : null;
 
   // An automation opened from anywhere (a row, the palette) replaces the create form.

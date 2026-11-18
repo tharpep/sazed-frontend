@@ -20,8 +20,8 @@ export function newerRunsItem(recent: ItemRef[], job: string | null, dispatch: s
 }
 
 export function RunsPage() {
-  const job = useNavStore((s) => (s.open.agents?.kind === "job" ? s.open.agents.id : null));
-  const dispatch = useNavStore((s) => (s.read.agents?.kind === "dispatch" ? s.read.agents.id : null));
+  const job = useNavStore((s) => (s.open["agents:runs"]?.kind === "job" ? s.open["agents:runs"].id : null));
+  const dispatch = useNavStore((s) => (s.read["agents:runs"]?.kind === "dispatch" ? s.read["agents:runs"].id : null));
   const recent = useNavStore((s) => s.recent);
   const [starting, setStarting] = useState(false);
   const shown = newerRunsItem(recent, job, dispatch);

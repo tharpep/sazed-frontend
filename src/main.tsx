@@ -7,6 +7,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App";
 import { AuthGate } from "./features/auth/AuthGate";
 import { DisplayPage } from "./features/display/DisplayPage";
+import { HistorySync } from "./nav/history";
 import { ThemeProvider } from "./components/theme/ThemeProvider";
 import { TooltipProvider } from "./components/ui/tooltip";
 
@@ -20,7 +21,15 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
           <GoogleOAuthProvider clientId={clientId}>
             <AuthGate>
               <Routes>
-                <Route path="/" element={<App />} />
+                <Route
+                  path="/"
+                  element={
+                    <>
+                      <App />
+                      <HistorySync />
+                    </>
+                  }
+                />
                 <Route path="/display" element={<DisplayPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

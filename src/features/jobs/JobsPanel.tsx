@@ -25,7 +25,7 @@ interface Props {
 export function JobsPanel({ starting, onStartingChange }: Props) {
   const [jobs, setJobs] = useState<JobSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const navItem = useNavStore((s) => s.open.agents);
+  const navItem = useNavStore((s) => s.open["agents:runs"]);
   const jobId = navItem?.kind === "job" ? navItem.id : null;
   const jobGroups: Array<[string, JobSummary[]]> = [
     ["Running", (jobs ?? []).filter((j) => ACTIVE_STATUSES.includes(j.status))],

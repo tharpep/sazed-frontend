@@ -463,7 +463,7 @@ function Editor({
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export function JournalPage() {
-  const readRef = useNavStore((s) => s.read.library);
+  const readRef = useNavStore((s) => s.read["library:journal"]);
   const selectedId = readRef?.kind === "journal" ? readRef.id : null;
   const [category] = useState<JournalCategory>(ACTIVE_CATEGORY);
   const [entries, setEntries] = useState<JournalEntry[]>([]);

@@ -12,7 +12,7 @@ import { SourceSheet } from "./SourceSheet";
 import { ORIGIN_LABEL, addedAgo } from "./format";
 
 export function KnowledgePage() {
-  const navSource = useNavStore((s) => s.open.library);
+  const navSource = useNavStore((s) => s.open["library:knowledge"]);
   const [sources, setSources] = useState<KbSource[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);

@@ -33,7 +33,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-const openChat = () => useNavStore.getState().open.chat?.id;
+const openChat = () => useNavStore.getState().open["chat:conversation"]?.id;
 
 let stop: () => void;
 
@@ -126,7 +126,7 @@ describe("startSessionSync on start", () => {
   it("writes the chat store's session into open.chat instead of loading a stale one", () => {
     stop();
     useChatStore.setState({ sessionId: "live" });
-    useNavStore.setState({ open: { chat: { kind: "session", id: "stale" } } });
+    useNavStore.setState({ open: { "chat:conversation": { kind: "session", id: "stale" } } });
     stop = startSessionSync();
     expect(openChat()).toBe("live");
     expect(api.getConversation).not.toHaveBeenCalled();

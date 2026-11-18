@@ -16,7 +16,7 @@ import { ProjectsWidget } from "@/widgets/ProjectsWidget";
 const REFRESH_MS = 10_000;
 
 export function ProjectsPage() {
-  const navProject = useNavStore((s) => s.open.work);
+  const navProject = useNavStore((s) => s.open["work:projects"]);
   const slug = navProject?.kind === "project" ? navProject.id : null;
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [project, setProject] = useState<Project | null>(null);
