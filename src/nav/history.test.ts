@@ -6,7 +6,7 @@ import { parseEntry, placeToApply, samePlace, stepFor } from "./history";
 const views = loadViews(null);
 
 function place(hub: Place["hub"], over: Partial<Place> = {}): Place {
-  return { hub, view: views, open: {}, read: {}, ...over };
+  return { hub, view: views, open: {}, read: {}, sheet: {}, ...over };
 }
 
 const project: ItemRef = { kind: "project", id: "board" };
@@ -120,6 +120,27 @@ describe("parseEntry: reading the console's entry back from history.state", () =
 
   it("drops items that no longer validate and fills missing views", () => {
     const parsed = parseEntry({ sazed: { place: { hub: "agents", open: { agents: project } }, below: "x" } });
-    expect(parsed).toEqual({ place: { hub: "agents", view: views, open: {}, read: {} }, below: null });
+    expect(parsed).toEqual({ place: { hub: "agents", view: views, open: {}, read: {}, sheet: {} }, below: null });
+  });
+
+  it("keeps a card sheet filed under a real view and drops any other", () => {
+    const card = { kind: "backlog", id: "c1" };
+    const parsed = parseEntry({
+      sazed: { place: { hub: "home", sheet: { "home:home": card, "home:nowhere": card, "work:projects": project } } },
+    });
+    expect(parsed?.place.sheet).toEqual({ "home:home": card });
+  });
+});
+
+describe("a card sheet opened over a page", () => {
+  const card: ItemRef = { kind: "backlog", id: "c1" };
+  const withSheet = place("work", { open: { "work:projects": project }, sheet: { "work:projects": card } });
+
+  it("pushes when it opens, so Back closes it before leaving the page", () => {
+    expect(stepFor(projects, withSheet, null)).toBe("push");
+  });
+
+  it("goes back when its close control lands on the page beneath", () => {
+    expect(stepFor(withSheet, projects, projects, "back")).toBe("back");
   });
 });

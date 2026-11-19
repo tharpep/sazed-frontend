@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { HUB_VIEWS, firstView, isView, type HubId, type NavTarget, type ViewId, type ViewKey } from "@/nav/hubViews";
+import { HUB_VIEWS, firstView, isHub, isView, type HubId, type NavTarget, type ViewId, type ViewKey } from "@/nav/hubViews";
 
 export type ItemKind =
   | "backlog"
@@ -71,6 +71,9 @@ interface NavState {
   sub: Subs;
   open: ItemsByView;
   read: ItemsByView;
+  // A card's sheet opened over the view where it was tapped, keyed by that view rather than by the
+  // card's own place, so the page stays underneath and Back closes the sheet first.
+  sheet: ItemsByView;
   scroll: Record<string, number>;
   recent: ItemRef[];
   // Bumped when the active hub is tapped again, so the hub shell remounts the view and drops any
@@ -81,12 +84,27 @@ interface NavState {
   setScroll: (hubView: string, top: number) => void;
   openItem: (ref: ItemRef) => void;
   closeItem: (kind: ItemKind) => void;
+  openSheet: (ref: ItemRef) => void;
+  closeSheet: () => void;
   clearItems: () => void;
   applyPlace: (place: Place) => void;
 }
 
 /** Where the console is: what a browser history entry restores. */
-export type Place = Pick<NavState, "hub" | "view" | "open" | "read">;
+export type Place = Pick<NavState, "hub" | "view" | "open" | "read" | "sheet">;
+
+const SHEET_KINDS: readonly ItemKind[] = ["backlog", "job"];
+
+function currentView(s: Pick<NavState, "hub" | "view">): ViewKey {
+  return `${s.hub}:${s.view[s.hub]}` as ViewKey;
+}
+
+function without(items: ItemsByView, key: ViewKey): ItemsByView {
+  if (!items[key]) return items;
+  const next = { ...items };
+  delete next[key];
+  return next;
+}
 
 function readJson(storage: () => Storage, key: string): unknown {
   try {
@@ -157,6 +175,18 @@ export function loadItems(saved: unknown): ItemsByView {
   return items;
 }
 
+/** Keeps each saved card sheet that is valid and filed under a real view. */
+export function loadSheets(saved: unknown): ItemsByView {
+  const items: ItemsByView = {};
+  if (saved && typeof saved === "object") {
+    for (const [key, ref] of Object.entries(saved)) {
+      const [hub, view = ""] = key.split(":");
+      if (isItemRef(ref) && SHEET_KINDS.includes(ref.kind) && isHub(hub) && isView(hub, view)) items[key as ViewKey] = ref;
+    }
+  }
+  return items;
+}
+
 function loadRecent(): ItemRef[] {
   const saved = readJson(() => sessionStorage, RECENT_KEY);
   return Array.isArray(saved) ? saved.filter(isItemRef).slice(0, RECENT_MAX) : [];
@@ -172,6 +202,7 @@ export const useNavStore = create<NavState>((set, get) => ({
   sub: loadSubs(readJson(() => localStorage, SUB_KEY)),
   open: {},
   read: {},
+  sheet: {},
   scroll: {},
   recent: loadRecent(),
   retaps: 0,
@@ -186,6 +217,7 @@ export const useNavStore = create<NavState>((set, get) => ({
         view: views,
         open: withoutHub(s.open, hub),
         read: withoutHub(s.read, hub),
+        sheet: withoutHub(s.sheet, hub),
         scroll: { ...s.scroll, [`${hub}:${first}`]: 0 },
         retaps: s.retaps + 1,
       });
@@ -193,7 +225,10 @@ export const useNavStore = create<NavState>((set, get) => ({
     }
     const views = view === undefined ? s.view : { ...s.view, [hub]: view };
     writeJson(() => localStorage, VIEW_KEY, views);
-    set({ hub, view: views });
+    // A sheet belongs to the visit it was opened in; coming back by tab or rail starts without it.
+    const left = currentView(s);
+    const sheet = left === currentView({ hub, view: views }) ? s.sheet : without(s.sheet, left);
+    set({ hub, view: views, sheet });
   },
   setSub: (key, value) => {
     if (!isSub(key, value) || get().sub[key] === value) return;
@@ -212,22 +247,40 @@ export const useNavStore = create<NavState>((set, get) => ({
     writeJson(() => localStorage, VIEW_KEY, views);
     const recent = [ref, ...s.recent.filter((r) => r.kind !== ref.kind || r.id !== ref.id)].slice(0, RECENT_MAX);
     writeJson(() => sessionStorage, RECENT_KEY, recent);
-    set({ hub: place.hub, view: views, [place.slot]: { ...s[place.slot], [itemView(ref.kind)]: ref }, recent });
+    // A sheet opened over the item that is being replaced belonged to that item, and one over the
+    // view being left belonged to that visit.
+    const key = itemView(ref.kind);
+    set({
+      hub: place.hub,
+      view: views,
+      [place.slot]: { ...s[place.slot], [key]: ref },
+      sheet: without(without(s.sheet, key), currentView(s)),
+      recent,
+    });
   },
   closeItem: (kind) => {
     const { slot } = ITEM_PLACE[kind];
     const key = itemView(kind);
-    const items = get()[slot];
+    const s = get();
+    const items = s[slot];
     if (items[key]?.kind !== kind) return;
     const next = { ...items };
     delete next[key];
-    set({ [slot]: next });
+    set({ [slot]: next, sheet: without(s.sheet, key) });
   },
-  clearItems: () => set({ open: {}, read: {} }),
+  openSheet: (ref) => {
+    const s = get();
+    set({ sheet: { ...s.sheet, [currentView(s)]: ref } });
+  },
+  closeSheet: () => {
+    const s = get();
+    set({ sheet: without(s.sheet, currentView(s)) });
+  },
+  clearItems: () => set({ open: {}, read: {}, sheet: {} }),
   // Restores a history entry: no Recent, no retap.
-  applyPlace: ({ hub, view, open, read }) => {
+  applyPlace: ({ hub, view, open, read, sheet }) => {
     writeJson(() => localStorage, VIEW_KEY, view);
-    set({ hub, view, open, read });
+    set({ hub, view, open, read, sheet });
   },
 }));
 

@@ -1,11 +1,15 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 
-import type { Project } from "@/api/projects";
+import type { Project, ProjectCard } from "@/api/projects";
+import { openCardSheet } from "@/features/backlog/CardSheet";
 import { cn } from "@/lib/utils";
+import { prRef, stepNumbers } from "@/widgets/projectWork";
+import { MiniTrack } from "@/widgets/stepTrack";
 
 import { MoreLink } from "./Group";
 import { goTo, openProject } from "./homeNav";
+import { clockOf, firstRows, shippedDays } from "./shipped";
 import type { Today } from "./summary";
 
 const box = "min-w-0 overflow-hidden rounded-[10px] border border-line bg-surface";
@@ -81,17 +85,79 @@ export function ProjectsBox({ projects }: { projects: Project[] | null }) {
               <span className="font-mono text-caption text-muted tabular-nums">
                 {p.steps_done}/{p.steps_total}
               </span>
-              <span className="col-span-2 truncate text-caption text-muted">{p.current?.title ?? "No open step"}</span>
-              <span aria-hidden="true" className="col-span-2 mt-1 block h-[3px] overflow-hidden rounded-sm bg-raised">
-                <span
-                  className="block h-full bg-muted"
-                  style={{ width: `${p.steps_total ? (p.steps_done / p.steps_total) * 100 : 0}%` }}
-                />
+              <span className="col-span-2 min-w-0">
+                <MiniTrack steps={p.workstreams} currentId={p.current?.id ?? null} />
+              </span>
+              <span className="col-span-2 flex min-w-0 text-caption text-muted">
+                <span className="truncate">{stepLabel(p)}</span>
+                <span className="shrink-0 whitespace-nowrap">
+                  &nbsp;· {p.progress.done} of {p.progress.total} cards done
+                </span>
               </span>
             </button>
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+function stepLabel(p: Project): string {
+  const n = p.current ? stepNumbers(p.workstreams).get(p.current.id) : undefined;
+  return p.current && n ? `Step ${n}: ${p.current.title}` : "No open step";
+}
+
+const SHIPPED_SHOWN = 8;
+
+/** Done cards from the board's 14 days by local day; a row opens the card over Home. */
+export function ShippedBox({ cards, projectOf }: { cards: ProjectCard[] | null; projectOf: Map<string, string> }) {
+  const [all, setAll] = useState(false);
+  const days = cards ? shippedDays(cards) : [];
+  const total = days.reduce((n, d) => n + d.cards.length, 0);
+  const shown = all ? days : firstRows(days, SHIPPED_SHOWN);
+  return (
+    <section aria-label="Shipped" className={box}>
+      <h2 className={boxHead}>
+        Shipped <span className="font-mono font-normal text-muted tabular-nums">{cards ? total : "…"}</span>
+        <span className="ml-auto font-normal text-muted">last 14 days</span>
+      </h2>
+      {shown.map((d) => (
+        <div key={d.key}>
+          <h3 className="flex items-baseline gap-1.5 px-3.5 pt-2.5 pb-0.5 text-caption font-medium text-ink-2">
+            {d.label}
+            <span className="font-mono font-normal text-muted tabular-nums">{d.cards.length || "none"}</span>
+          </h3>
+          <ul className="divide-y divide-line">
+            {d.cards.map((c) => {
+              const project = c.workstream_id ? projectOf.get(c.workstream_id) : undefined;
+              return (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => openCardSheet(c)}
+                    className="grid min-h-11 w-full grid-cols-[minmax(0,1fr)_auto] gap-x-2.5 gap-y-0.5 px-3.5 py-2 text-left hover:bg-raised"
+                  >
+                    <span className="line-clamp-2 text-meta text-ink">{c.title}</span>
+                    <span className="font-mono text-caption text-muted tabular-nums">{clockOf(c.done_at!)}</span>
+                    <span className="col-span-2 truncate text-caption text-muted">
+                      {[project, prRef(c.session_link) ?? "Marked done"].filter(Boolean).join(" · ")}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+      {total > SHIPPED_SHOWN && (
+        <button
+          type="button"
+          onClick={() => setAll(!all)}
+          className="flex min-h-11 w-full items-center border-t border-line px-3.5 text-meta text-muted hover:bg-raised hover:text-ink sm:min-h-9"
+        >
+          {all ? "Show fewer" : `Show all ${total}`}
+        </button>
+      )}
     </section>
   );
 }

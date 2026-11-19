@@ -18,6 +18,7 @@ import {
 import { errorText } from "@/api/homelab";
 import { jobCardId } from "@/api/command";
 import { CardActions, TOUCH_BUTTON } from "@/features/home/CardActions";
+import { ageSince, heardLabel, isStale } from "@/features/home/heard";
 import { Timeline } from "./Timeline";
 import { KIND_LABEL, PAUSE_REASON, STATUS_LABEL, duration, requesterLabel, statusTone, stepsFromEvents } from "./format";
 
@@ -115,6 +116,7 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
     : [];
 
   const active = !!job && ACTIVE_STATUSES.includes(job.status);
+  const heardAge = ageSince(job?.heartbeat_at);
   const paused = job?.status === "paused";
   const footer =
     job && (active || paused) ? (
@@ -166,6 +168,9 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
                   : job.status === "needs_input"
                     ? "Waiting for your answer."
                     : `Working: ${steps.length} steps so far…`}
+              {job.status === "running" && (
+                <span className={cn(isStale(heardAge) && "text-warn")}> · {heardLabel(heardAge)}</span>
+              )}
             </p>
           )}
 

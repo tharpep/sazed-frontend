@@ -6,6 +6,7 @@ import { errorText } from "@/api/homelab";
 import { getProject, listProjects, type Project } from "@/api/projects";
 import { ToolsRow } from "@/components/shell/ToolsRow";
 import { useNavStore } from "@/store/navStore";
+import { CardSheet, openCardSheet } from "@/features/backlog/CardSheet";
 import { ProjectPlans } from "@/features/plans/ProjectPlans";
 import { ProjectDispatchRuns } from "./ProjectDispatchRuns";
 import { NewProjectForm } from "./NewProjectForm";
@@ -97,9 +98,10 @@ export function ProjectsPage() {
               <ProjectEditor project={shown} onChanged={load} onDone={() => setEditingSlug(null)} />
             ) : (
               <>
-                <ProjectWidget {...shown} onBack={back} />
+                <ProjectWidget {...shown} onBack={back} onOpenCard={openCardSheet} />
                 <ProjectPlans project={shown.slug} />
                 <ProjectDispatchRuns runs={shown.dispatch_runs ?? []} />
+                <CardSheet view="work:projects" onChanged={load} />
               </>
             )
           ) : (

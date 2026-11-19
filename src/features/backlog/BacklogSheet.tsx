@@ -7,10 +7,13 @@ import { DetailPanel } from "@/components/shell/DetailPanel";
 import { cn } from "@/lib/utils";
 import { approveBacklogItem, moveBacklogItem, updateBacklogItem, type BacklogItem } from "@/api/backlog";
 import { errorText } from "@/api/homelab";
+import { sessionLabel } from "@/widgets/projectWork";
 import { REPOS, STATUS_LABEL, TYPE_LABEL, ageLabel, isOpenStatus, sourceLabel, workLabel } from "./format";
 
 interface Props {
   item: BacklogItem | null;
+  /** Open with a loading state while the item is fetched, so a tap shows the sheet at once. */
+  loading?: boolean;
   /** How many open items have a priority, for "#3 of 14" and the last-place check. */
   rankedCount: number;
   onClose: () => void;
@@ -24,7 +27,7 @@ const field =
 const FOOTER_BUTTON = "h-11 min-w-24 flex-1 px-4 sm:h-8 sm:flex-none";
 const BODY_BUTTON = "h-11 px-3 sm:h-7 sm:px-2.5";
 
-export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob }: Props) {
+export function BacklogSheet({ item, loading = false, rankedCount, onClose, onChanged, onOpenJob }: Props) {
   const [repo, setRepo] = useState("");
   const [note, setNote] = useState("");
   const [approving, setApproving] = useState(false);
@@ -111,8 +114,8 @@ export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob 
 
   return (
     <DetailPanel
-      open={item !== null}
-      title={item?.title ?? "Item"}
+      open={item !== null || loading}
+      title={item?.title ?? (loading ? "Loading…" : "Item")}
       description={
         item && (
           <>
@@ -125,9 +128,27 @@ export function BacklogSheet({ item, rankedCount, onClose, onChanged, onOpenJob 
       onClose={onClose}
       footer={footer || undefined}
     >
+      {!item && loading && <p className="text-sm text-muted">Loading the card…</p>}
       {item && (
         <>
           {error && <p className="text-sm text-destructive">{error}</p>}
+
+          {item.session_label && (
+            <p className="flex flex-wrap gap-x-1.5 text-xs text-muted">
+              <span>Session {sessionLabel(item.session_label)}</span>
+              {item.session_branch && <span className="font-mono">· {item.session_branch}</span>}
+              {item.pr_repo && item.pr_number != null && (
+                <a
+                  href={`https://github.com/${item.pr_repo}/pull/${item.pr_number}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  · {item.pr_repo.split("/").pop()}#{item.pr_number}
+                </a>
+              )}
+            </p>
+          )}
 
           {item.summary && (
             <section aria-label="What it is" className="prose-journal text-sm">

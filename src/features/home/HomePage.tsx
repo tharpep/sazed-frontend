@@ -3,10 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { listActivity, type ActivityEvent } from "@/api/activity";
 import { getAutomation, listAutomations } from "@/api/automations";
 import { listBacklog, type BacklogItem } from "@/api/backlog";
+import { getBoard } from "@/api/board";
 import { getCommand, type CommandSummary } from "@/api/command";
 import { fetchCalendarToday, fetchTasksDueToday } from "@/api/display";
 import { fetchServices, fetchStorage, type Service } from "@/api/homelab";
-import { listProjects, type Project } from "@/api/projects";
+import { listProjects, type Project, type ProjectCard } from "@/api/projects";
+import { CardSheet } from "@/features/backlog/CardSheet";
 import { JobSheet } from "@/features/jobs/JobSheet";
 import { gib, statusOf } from "@/features/homelab/format";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -15,11 +17,12 @@ import { useUiStore } from "@/store/uiStore";
 
 import { AskField } from "./AskField";
 import { Done } from "./Done";
-import { LinkRows, ProjectsBox, TodayBox, TodayLine } from "./HomeSide";
+import { LinkRows, ProjectsBox, ShippedBox, TodayBox, TodayLine } from "./HomeSide";
 import { askFromHome, goTo, openSystem } from "./homeNav";
 import { NeedsYou } from "./NeedsYou";
 import { Ready } from "./Ready";
 import { Running } from "./Running";
+import { useHeartbeats } from "./useHeartbeats";
 import {
   failedStep,
   latestFailure,
@@ -37,6 +40,8 @@ const NAME = "Pryce";
 const COMMAND_POLL_MS = 4000;
 const SIDE_POLL_MS = 30_000;
 const TODAY_POLL_MS = 5 * 60_000;
+const SHIPPED_EVERY_MS = 5 * 60_000;
+const SHIPPED_CHECK_MS = 60_000;
 
 function getPeriod(): string {
   const h = new Date().getHours();
@@ -68,6 +73,7 @@ interface Side {
   runLine: string | null;
   runAlert: boolean;
   projects: Project[] | null;
+  projectOf: Map<string, string>;
   latest: ActivityEvent | null;
   backlog: BacklogItem[] | null;
 }
@@ -78,9 +84,15 @@ const NO_SIDE: Side = {
   runLine: null,
   runAlert: false,
   projects: null,
+  projectOf: new Map(),
   latest: null,
   backlog: null,
 };
+
+/** Each step's project title by workstream id, for cards that carry only their step. */
+function projectTitles(projects: Project[]): Map<string, string> {
+  return new Map(projects.flatMap((p) => p.workstreams.map((w) => [w.id, p.title] as const)));
+}
 
 export function HomePage() {
   const privateRevealed = useUiStore((s) => s.privateRevealed);
@@ -91,6 +103,7 @@ export function HomePage() {
   const [command, setCommand] = useState<CommandSummary | null>(null);
   const [commandError, setCommandError] = useState(false);
   const [side, setSide] = useState<Side>(NO_SIDE);
+  const [shipped, setShipped] = useState<ProjectCard[] | null>(null);
   const [today, setToday] = useState<Today>(NO_TODAY);
   const [openJob, setOpenJob] = useState<string | null>(null);
   const sideSeq = useRef(0);
@@ -134,6 +147,7 @@ export function HomePage() {
       runLine: runSentence(failure, step, nextRun(autos)),
       runAlert: failure !== null,
       projects: projects.status === "fulfilled" ? projectsByRank(projects.value) : null,
+      projectOf: projects.status === "fulfilled" ? projectTitles(projects.value) : new Map(),
       latest: activity.status === "fulfilled" ? (activity.value[0] ?? null) : null,
       backlog: backlog.status === "fulfilled" ? backlog.value : null,
     });
@@ -150,8 +164,30 @@ export function HomePage() {
     );
   }, []);
 
+  // GET /board is about 180 KB and done cards change slowly, so Shipped refreshes on its own clock
+  // and after a sheet reports a change.
+  const shippedAt = useRef(0);
+  const fetchShipped = useCallback(() => {
+    shippedAt.current = Date.now();
+    getBoard().then(
+      (board) => setShipped(board.cards),
+      () => undefined
+    );
+  }, []);
+  // The visible poll also fires whenever the page comes back into view, which must not refetch early.
+  const loadShipped = useCallback(() => {
+    if (Date.now() - shippedAt.current >= SHIPPED_EVERY_MS) fetchShipped();
+  }, [fetchShipped]);
+
+  const refreshAll = useCallback(() => {
+    loadCommand();
+    loadSide();
+    fetchShipped();
+  }, [loadCommand, loadSide, fetchShipped]);
+
   useVisiblePoll(loadCommand, COMMAND_POLL_MS);
   useVisiblePoll(loadSide, SIDE_POLL_MS);
+  useVisiblePoll(loadShipped, SHIPPED_CHECK_MS);
   useVisiblePoll(loadToday, TODAY_POLL_MS);
 
   const checked = (side.services ?? []).filter((s) => (privateRevealed || !s.private) && s.lifecycle !== "planned");
@@ -165,6 +201,7 @@ export function HomePage() {
 
   const needs = command?.needs ?? null;
   const working = command?.working ?? null;
+  const heard = useHeartbeats(working);
   const done = command?.done ?? null;
   const ready = side.backlog ? readyCount(side.backlog) : null;
   const askInline = !isMobile;
@@ -226,7 +263,7 @@ export function HomePage() {
         <div className="mt-5 grid items-start gap-7 @min-[860px]:grid-cols-[minmax(0,1fr)_300px]">
           <div className="flex min-w-0 flex-col gap-4">
             <NeedsYou cards={needs} onOpenJob={setOpenJob} onChanged={loadCommand} />
-            <Running jobs={working} onOpenJob={setOpenJob} onChanged={loadCommand} />
+            <Running jobs={working} heard={heard} onOpenJob={setOpenJob} onChanged={loadCommand} />
             <Ready top={side.backlog ? topReady(side.backlog) : []} total={ready} />
             <Done done={done} compact={isMobile} onOpenJob={setOpenJob} />
             {askInline && <AskField onSend={askFromHome} isStreaming={isStreaming} onStop={stopReply} />}
@@ -234,11 +271,13 @@ export function HomePage() {
           <div className="flex min-w-0 flex-col gap-4">
             <TodayBox today={today} className="hidden @min-[860px]:block" />
             <ProjectsBox projects={side.projects} />
+            <ShippedBox cards={shipped} projectOf={side.projectOf} />
             <LinkRows label="Elsewhere" rows={links} />
           </div>
         </div>
       </div>
       <JobSheet jobId={openJob} onClose={() => setOpenJob(null)} onChanged={loadCommand} onOpenJob={setOpenJob} />
+      <CardSheet view="home:home" onChanged={refreshAll} />
     </div>
   );
 }

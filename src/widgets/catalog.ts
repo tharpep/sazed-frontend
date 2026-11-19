@@ -111,6 +111,16 @@ const projectCard = z.object({
   stage: z.enum(["inbox", "next", "doing", "needs_me", "done"]),
   next: z.string(),
   updated_at: z.string(),
+  done_at: z.string().nullable().optional(),
+  session_link: z
+    .object({
+      session: z.string(),
+      branch: z.string().nullable(),
+      pr_repo: z.string().nullable(),
+      pr_number: z.number().nullable(),
+    })
+    .nullable()
+    .optional(),
   repo: z.string().nullable(),
   item_type: z.string().nullable(),
   effort: z.string().nullable(),
