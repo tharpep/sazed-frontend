@@ -63,6 +63,8 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<unk
           Object.entries(options.headers).map(([k, v]) => [k, String(v)])
         )
       : {}),
+    // Sazed answers dispatch and profile routes in the pre-035 shape without this.
+    "X-Sazed-Shape": "2",
   };
   const method = options?.method ?? "GET";
   if (method !== "GET" && method !== "HEAD") {

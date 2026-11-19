@@ -3,7 +3,7 @@ import { toneDot, toneText } from "@/components/system";
 import { cn } from "@/lib/utils";
 import { StepLine } from "@/features/home/StepLine";
 import { ProfileLink } from "@/features/profiles/ProfileLink";
-import { at, last, clock, costOf, dollars, runRows, STATE_TONE, stateOf, stepLine, toolSteps, tries, type TaskState } from "./dispatchRun";
+import { at, last, clock, costOf, dollars, runRows, STATE_TONE, stateOf, stateWord, stepLine, toolSteps, tries, type TaskState } from "./dispatchRun";
 import { useNow } from "./useNow";
 
 export function StateLabel({ state, since }: { state: TaskState; since?: number }) {
@@ -14,12 +14,8 @@ export function StateLabel({ state, since }: { state: TaskState; since?: number 
         <span className="animate-pulse">running</span>
         {since ? ` · ${clock((now - since) / 1000)}` : ""}
       </>
-    ) : state === "waiting" ? (
-      "asking you"
-    ) : state === "next" ? (
-      "not started"
     ) : (
-      state
+      stateWord(state)
     );
   return (
     <span className={cn("inline-flex items-center gap-1.5 font-mono text-caption whitespace-nowrap", toneText[STATE_TONE[state]])}>
@@ -41,7 +37,7 @@ export function TaskCard({ task, byId, selected, fresh, onSelect }: CardProps) {
   const state = stateOf(task);
   const rows = runRows(task);
   const latest = last(rows);
-  const running = last(rows.filter((r) => r.state === "running"));
+  const running = last(rows.filter((r) => r.phase === "running"));
   const attempts = tries(task);
   const frame = cn(
     "w-full min-w-0 rounded-lg border bg-surface px-2.5 py-2 text-left transition-colors hover:border-ink-2/40",
@@ -49,7 +45,7 @@ export function TaskCard({ task, byId, selected, fresh, onSelect }: CardProps) {
     state === "next" && "border-dashed bg-transparent",
     state === "running" && "border-l-2 border-l-primary",
     state === "waiting" && !selected && "border-warn/50",
-    (state === "failed" || state === "conflict" || state === "blocked") && !selected && "border-err/50",
+    STATE_TONE[state] === "err" && !selected && "border-err/50",
     fresh && "animate-in fade-in slide-in-from-bottom-1.5 duration-500"
   );
   if (state === "next") {

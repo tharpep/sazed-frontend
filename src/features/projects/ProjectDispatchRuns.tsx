@@ -22,7 +22,7 @@ export function ProjectDispatchRuns({ runs }: { runs: ProjectDispatchRun[] }) {
             key={r.plan}
             onClick={() => open(r.plan)}
             title={<span className="font-mono">{r.plan}</span>}
-            description={`${r.states.landed ?? 0}/${r.tasks_total} landed`}
+            description={`${r.phases?.landed ?? 0}/${r.tasks_total} landed`}
             meta={
               <>
                 <span>{ago(r.updated_at)}</span>

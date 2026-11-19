@@ -10,7 +10,7 @@ import { useNow } from "./useNow";
 export function DispatchPanel({ task }: { task: DispatchTask }) {
   const rows = runRows(task);
   const state = stateOf(task);
-  const open = last(rows)?.state === "running";
+  const open = last(rows)?.phase === "running";
   const now = useNow(open);
   const start = rows.length ? at(rows[0]) : now;
   const end = open ? now : rows.length ? at(rows[rows.length - 1]) : now;
@@ -46,16 +46,16 @@ export function DispatchPanel({ task }: { task: DispatchTask }) {
         {rows.map((r, i) => {
           const from = at(r);
           const to = i + 1 < rows.length ? at(rows[i + 1]) : end;
-          const live = i === rows.length - 1 && r.state === "running";
+          const live = i === rows.length - 1 && r.phase === "running";
           return (
             <div key={`${r.ts}-${i}`} className="py-1">
               <div className="grid grid-cols-[4rem_minmax(0,1fr)_2.5rem] items-center gap-2 font-mono text-caption">
-                <span className={cn("truncate", toneText[STATE_TONE[r.state]])}>
-                  {r.state}
+                <span className={cn("truncate", toneText[STATE_TONE[r.phase]])}>
+                  {r.phase}
                 </span>
                 <span className="relative h-1.5 rounded-sm bg-raised">
                   <i
-                    className={cn("absolute top-0 h-1.5 rounded-sm", toneDot[STATE_TONE[r.state]], live && "animate-pulse")}
+                    className={cn("absolute top-0 h-1.5 rounded-sm", toneDot[STATE_TONE[r.phase]], live && "animate-pulse")}
                     style={{
                       left: `${(100 * (from - start)) / span}%`,
                       width: `${Math.max(1.5, (100 * (to - from)) / span)}%`,

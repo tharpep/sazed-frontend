@@ -2,14 +2,29 @@ import { useEffect, useState } from "react";
 
 import { listDispatchPlans, type DispatchPlanSummary } from "@/api/dispatch";
 import { errorText } from "@/api/homelab";
+import type { RunState } from "@/api/jobs";
 import { EmptyState, ListRow, ListSection } from "@/components/system";
+import { STATUS_LABEL } from "@/features/jobs/format";
 import { outcomeOf } from "./dispatchRun";
 import { ago } from "./planParts";
 
-const ORDER = ["running", "waiting", "failed", "conflict", "blocked", "done", "landed", "cleaned"];
+const ORDER: RunState[] = [
+  "running",
+  "needs_input",
+  "needs_approval",
+  "queued",
+  "paused",
+  "failed",
+  "timed_out",
+  "skipped",
+  "cancelled",
+  "succeeded",
+];
 
 export function counts(states: Record<string, number>) {
-  return ORDER.filter((s) => states[s]).map((s) => `${states[s]} ${s}`).join(" · ");
+  const words = ORDER.filter((s) => states[s]).map((s) => `${states[s]} ${STATUS_LABEL[s].toLowerCase()}`);
+  if (states.planned) words.push(`${states.planned} not started`);
+  return words.join(" · ");
 }
 
 export function DispatchRuns({ onOpen }: { onOpen: (plan: string) => void }) {
@@ -43,7 +58,7 @@ export function DispatchRuns({ onOpen }: { onOpen: (plan: string) => void }) {
             <h3 className="px-1 text-sm font-medium text-ink">{label}</h3>
             <ListSection>
               {items.map((p) => {
-                const landed = p.states.landed ?? 0;
+                const landed = p.phases.landed ?? 0;
                 return (
                   <ListRow
                     key={p.plan}

@@ -1,18 +1,24 @@
-import type { DispatchPlanSummary, DispatchRow, DispatchStep, DispatchTask } from "@/api/dispatch";
+import type { DispatchPhase, DispatchPlanSummary, DispatchRow, DispatchStep, DispatchTask } from "@/api/dispatch";
+import type { RunState } from "@/api/jobs";
 import type { Tone } from "@/components/system";
+import { STATUS_LABEL, runTone } from "@/features/jobs/format";
 
 export type RunOutcome = "Running" | "Failed" | "Done";
 
-/** A plan is Done only once every task has landed; a task with no row yet is still to come. */
+const FAILED: RunState[] = ["failed", "timed_out", "paused", "skipped"];
+const DONE: RunState[] = ["succeeded", "cancelled"];
+
+/** The same groups as the jobs list; a plan is Done only once every task has finished. */
 export function outcomeOf(plan: DispatchPlanSummary): RunOutcome {
-  const states = (...names: string[]) => names.reduce((sum, s) => sum + (plan.states[s] ?? 0), 0);
-  if (states("running", "waiting") > 0) return "Running";
-  if (states("failed", "conflict", "blocked") > 0) return "Failed";
-  return states("landed", "cleaned") >= plan.tasks_total ? "Done" : "Running";
+  const count = (names: RunState[]) => names.reduce((sum, s) => sum + (plan.states[s] ?? 0), 0);
+  if (count(["queued", "needs_approval", "running", "needs_input"]) > 0) return "Running";
+  if (count(FAILED) > 0) return "Failed";
+  return count(DONE) >= plan.tasks_total ? "Done" : "Running";
 }
 
 export type Column = "landed" | "working" | "landing" | "next";
-export type TaskState = DispatchRow["state"] | "next";
+/** The card's word: the phase, except where only the run state tells what happened. */
+export type TaskState = DispatchPhase | "cancelled" | "next";
 
 const COLUMN: Partial<Record<TaskState, Column>> = {
   landed: "landed",
@@ -21,6 +27,8 @@ const COLUMN: Partial<Record<TaskState, Column>> = {
   failed: "working",
   conflict: "working",
   blocked: "working",
+  timed_out: "working",
+  cancelled: "working",
   done: "landing",
 };
 
@@ -33,25 +41,40 @@ export const STATE_TONE: Record<TaskState, Tone> = {
   conflict: "err",
   blocked: "err",
   cleaned: "neutral",
+  timed_out: runTone("timed_out"),
+  cancelled: runTone("cancelled"),
   next: "neutral",
 };
+
+export function stateWord(state: TaskState): string {
+  if (state === "timed_out" || state === "cancelled") return STATUS_LABEL[state].toLowerCase();
+  if (state === "waiting") return "asking you";
+  if (state === "next") return "not started";
+  return state;
+}
 
 export const last = <T,>(xs: T[]): T | undefined => xs[xs.length - 1];
 
 export const at = (row: DispatchRow) => Date.parse(row.received_at);
 
 export function runRows(task: DispatchTask): DispatchRow[] {
-  const cleaned = task.rows.map((r) => r.state).lastIndexOf("cleaned");
+  const cleaned = task.rows.map((r) => r.phase).lastIndexOf("cleaned");
   return task.rows.slice(cleaned + 1);
 }
 
-export const stateOf = (task: DispatchTask): TaskState => last(runRows(task))?.state ?? "next";
+// A reaped task's phase stays failed and a task cleaned mid-run leaves no current rows, so
+// those two read from Sazed's run state.
+export function stateOf(task: DispatchTask): TaskState {
+  const latest = last(runRows(task));
+  if (latest) return latest.state === "timed_out" ? "timed_out" : latest.phase;
+  return last(task.rows)?.state === "cancelled" ? "cancelled" : "next";
+}
 
 export const columnOf = (task: DispatchTask): Column => COLUMN[stateOf(task)] ?? "next";
 
 export const costOf = (task: DispatchTask) => runRows(task).reduce((sum, r) => sum + (r.cost_usd ?? 0), 0);
 
-export const tries = (task: DispatchTask) => runRows(task).filter((r) => r.state === "running").length;
+export const tries = (task: DispatchTask) => runRows(task).filter((r) => r.phase === "running").length;
 
 export function isSettled(tasks: DispatchTask[]): boolean {
   return tasks.every((t) => stateOf(t) === "landed");
