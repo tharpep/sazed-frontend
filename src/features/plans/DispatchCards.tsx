@@ -3,7 +3,7 @@ import { toneDot, toneText } from "@/components/system";
 import { cn } from "@/lib/utils";
 import { StepLine } from "@/features/home/StepLine";
 import { ProfileLink } from "@/features/profiles/ProfileLink";
-import { at, last, clock, costOf, dollars, runRows, STATE_TONE, stateOf, stateWord, stepLine, toolSteps, tries, type TaskState } from "./dispatchRun";
+import { at, last, clock, costOf, dollars, runRows, stateOf, stateWord, stepLine, toneOf, toolSteps, tries, type TaskState } from "./dispatchRun";
 import { useNow } from "./useNow";
 
 export function StateLabel({ state, since }: { state: TaskState; since?: number }) {
@@ -18,8 +18,8 @@ export function StateLabel({ state, since }: { state: TaskState; since?: number 
       stateWord(state)
     );
   return (
-    <span className={cn("inline-flex items-center gap-1.5 font-mono text-caption whitespace-nowrap", toneText[STATE_TONE[state]])}>
-      <span aria-hidden="true" className={cn("size-1.5 rounded-full", toneDot[STATE_TONE[state]])} />
+    <span className={cn("inline-flex items-center gap-1.5 font-mono text-caption whitespace-nowrap", toneText[toneOf(state)])}>
+      <span aria-hidden="true" className={cn("size-1.5 rounded-full", toneDot[toneOf(state)])} />
       <span>{text}</span>
     </span>
   );
@@ -45,7 +45,7 @@ export function TaskCard({ task, byId, selected, fresh, onSelect }: CardProps) {
     state === "next" && "border-dashed bg-transparent",
     state === "running" && "border-l-2 border-l-primary",
     state === "waiting" && !selected && "border-warn/50",
-    STATE_TONE[state] === "err" && !selected && "border-err/50",
+    toneOf(state) === "err" && !selected && "border-err/50",
     fresh && "animate-in fade-in slide-in-from-bottom-1.5 duration-500"
   );
   if (state === "next") {

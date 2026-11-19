@@ -95,7 +95,7 @@ Shared components live in `src/components/system/` (import from `@/components/sy
 | `Reader` | Long text (plans, journal entries). On phones a full-screen layer with a context line on top and a bottom toolbar holding a 44px Back button named for the view it returns to, plus the item's actions. From 640px it sits in the page with a back row, at a 68ch measure |
 | `StatusPill` | Dot + short label for live, paused, connected |
 | `Segmented` | A small inline switch inside a view, such as Usage's range; options can carry a count. Views and filters use `ViewPicker` |
-| `ListSection`, `ListRow` | A titled group of rows: leading icon, title, description, right-aligned meta, a time column from `md`; rows can expand details under themselves |
+| `ListSection`, `ListRow` | A titled group of rows: leading icon, title, description (two lines at most), an unclamped detail line, right-aligned meta, a time column from `md`; rows can expand details under themselves |
 | `EmptyState` | What a list says when empty: what would appear and how to get some |
 | `Button` (ui) | `outline` for most actions, `default` (primary) for the one main action, `ghost` for low-weight actions |
 

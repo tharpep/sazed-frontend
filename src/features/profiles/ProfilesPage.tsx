@@ -23,17 +23,15 @@ function Row({ profile, onOpen }: { profile: Profile; onOpen: () => void }) {
     <ListRow
       onClick={onOpen}
       title={<span className="font-mono">{profile.name}</span>}
-      description={
-        <>
-          {profile.description}
-          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-mono text-caption text-muted">
-              {profile.model} · {effort(profile.effort)} · {budget(profile.budget_usd)} · {timeout(profile.timeout_s)}
-            </span>
-            <Tag>{profile.capability}</Tag>
-            {profile.evidence_required && <Tag>evidence</Tag>}
+      description={profile.description}
+      detail={
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-mono text-caption text-muted">
+            {profile.model} · {effort(profile.effort)} · {budget(profile.budget_usd)} · {timeout(profile.timeout_s)}
           </span>
-        </>
+          <Tag>{profile.capability}</Tag>
+          {profile.evidence_required && <Tag>evidence</Tag>}
+        </span>
       }
       meta={
         <>
@@ -145,6 +143,7 @@ export function ProfilesPage() {
             {creating && (
               <ProfileForm
                 initial={BLANK}
+                taken={profiles?.map((p) => p.name) ?? []}
                 submitLabel="Create profile"
                 onCancel={() => setCreating(false)}
                 onSubmit={async (values, reason, newName) => {

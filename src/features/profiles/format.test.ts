@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MODEL_PATTERN, NAME_PATTERN } from "@/api/profiles";
-import { DASH, budget, effort, toolCalls } from "./format";
+import { DASH, budget, effort, nameProblem, toolCalls } from "./format";
 
 describe("profile facts", () => {
   it("reads a NULL budget as no cap and a NULL effort as a dash", () => {
@@ -10,6 +10,14 @@ describe("profile facts", () => {
     expect(effort(null)).toBe(DASH);
     expect(effort("high")).toBe("high");
     expect(toolCalls(null)).toBe("no cap");
+  });
+
+  it("refuses a new profile over an existing name, naming it", () => {
+    expect(nameProblem("change", ["change", "review"])).toBe(
+      "A profile named change already exists. Open it from the list to edit it."
+    );
+    expect(nameProblem("reviewer_two", ["change", "review"])).toBe(false);
+    expect(nameProblem("Bad", [])).toMatch(/^Name:/);
   });
 
   it("accepts the registry's names and each engine's models", () => {

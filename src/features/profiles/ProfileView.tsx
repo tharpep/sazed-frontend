@@ -238,6 +238,7 @@ export function ProfileView({ name, onBack, onChanged }: Props) {
                 submitLabel="Save"
                 onSubmit={save}
                 onReload={load}
+                isStale={async () => (await getProfile(name)).version !== detail.version}
               />
               <DeleteBox
                 name={detail.name}

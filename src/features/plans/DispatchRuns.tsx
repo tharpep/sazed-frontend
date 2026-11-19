@@ -21,8 +21,12 @@ const ORDER: RunState[] = [
   "succeeded",
 ];
 
+const KNOWN = new Set<string>([...ORDER, "planned"]);
+
+/** Run-state counts in job words; a state from a newer backend shows as its raw word. */
 export function counts(states: Record<string, number>) {
   const words = ORDER.filter((s) => states[s]).map((s) => `${states[s]} ${STATUS_LABEL[s].toLowerCase()}`);
+  for (const [s, n] of Object.entries(states)) if (n && !KNOWN.has(s)) words.push(`${n} ${s}`);
   if (states.planned) words.push(`${states.planned} not started`);
   return words.join(" · ");
 }
@@ -64,10 +68,10 @@ export function DispatchRuns({ onOpen }: { onOpen: (plan: string) => void }) {
                     key={p.plan}
                     onClick={() => onOpen(p.plan)}
                     title={<span className="font-mono">{p.plan}</span>}
-                    description={
+                    description={`${p.repo} · ${p.host}`}
+                    detail={
                       <>
-                        {p.repo} · {p.host}
-                        <span className="mt-1 flex items-center gap-2">
+                        <span className="mt-0.5 flex items-center gap-2">
                           <span aria-hidden="true" className="h-1 w-24 overflow-hidden rounded-full bg-raised">
                             <span
                               className="block h-full bg-ok"
@@ -78,14 +82,10 @@ export function DispatchRuns({ onOpen }: { onOpen: (plan: string) => void }) {
                             {landed}/{p.tasks_total} landed
                           </span>
                         </span>
+                        <span className="mt-0.5 block text-caption text-muted">{counts(p.states)}</span>
                       </>
                     }
-                    meta={
-                      <>
-                        <span>{ago(p.updated_at)}</span>
-                        <span>{counts(p.states)}</span>
-                      </>
-                    }
+                    meta={<span>{ago(p.updated_at)}</span>}
                   />
                 );
               })}

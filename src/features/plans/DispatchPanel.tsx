@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { StepIcon } from "@/features/home/StepLine";
 import { stepParts } from "@/features/home/steps";
 import { StateLabel } from "./DispatchCards";
-import { at, last, clock, costOf, dollars, runRows, STATE_TONE, stateOf, stepLine } from "./dispatchRun";
+import { at, last, clock, costOf, dollars, runRows, stateOf, stepLine, toneOf } from "./dispatchRun";
 import { useNow } from "./useNow";
 
 export function DispatchPanel({ task }: { task: DispatchTask }) {
@@ -50,12 +50,12 @@ export function DispatchPanel({ task }: { task: DispatchTask }) {
           return (
             <div key={`${r.ts}-${i}`} className="py-1">
               <div className="grid grid-cols-[4rem_minmax(0,1fr)_2.5rem] items-center gap-2 font-mono text-caption">
-                <span className={cn("truncate", toneText[STATE_TONE[r.phase]])}>
+                <span className={cn("truncate", toneText[toneOf(r.phase)])}>
                   {r.phase}
                 </span>
                 <span className="relative h-1.5 rounded-sm bg-raised">
                   <i
-                    className={cn("absolute top-0 h-1.5 rounded-sm", toneDot[STATE_TONE[r.phase]], live && "animate-pulse")}
+                    className={cn("absolute top-0 h-1.5 rounded-sm", toneDot[toneOf(r.phase)], live && "animate-pulse")}
                     style={{
                       left: `${(100 * (from - start)) / span}%`,
                       width: `${Math.max(1.5, (100 * (to - from)) / span)}%`,

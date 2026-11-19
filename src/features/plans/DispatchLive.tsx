@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { MiniRow, SystemBox, TaskCard } from "./DispatchCards";
 import { DispatchEdges } from "./DispatchEdges";
 import { DispatchPanel } from "./DispatchPanel";
-import { columnOf, costOf, dollars, isSettled, stateOf, type Column } from "./dispatchRun";
+import { columnOf, costOf, dollars, isSettled, isWorking, stateOf, type Column } from "./dispatchRun";
 import { useNavStore } from "@/store/navStore";
 import { syncServerClock } from "./useNow";
 
@@ -79,6 +79,7 @@ export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBac
   const inColumn = (c: Column) => tasks.filter((t) => columns.get(t.id) === c);
   const landed = inColumn("landed");
   const working = inColumn("working");
+  const workingCount = tasks.filter(isWorking).length;
   const landing = inColumn("landing");
   const next = inColumn("next");
   const allLanded = tasks.length > 0 && landed.length === tasks.length;
@@ -121,7 +122,7 @@ export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBac
               landed
             </span>
             <span>
-              <b className="font-medium text-ink">{working.length}</b> working
+              <b className="font-medium text-ink">{workingCount}</b> working
             </span>
             <span>
               <b className="font-medium text-ink">{dollars(spent)}</b> spent
@@ -160,7 +161,7 @@ export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBac
                   )}
                 </div>
                 <div>
-                  <ColumnHead label="Working" count={working.length} />
+                  <ColumnHead label="Working" count={workingCount} />
                   <div className="flex flex-col gap-2">
                     {working.length ? (
                       working.map((t) => (

@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { DispatchPhase, DispatchPlanSummary, DispatchRow, DispatchTask } from "@/api/dispatch";
 import type { RunState } from "@/api/jobs";
 import { counts } from "./DispatchRuns";
-import { columnOf, outcomeOf, STATE_TONE, stateOf, stateWord } from "./dispatchRun";
+import { columnOf, isWorking, outcomeOf, stateOf, stateWord, toneOf } from "./dispatchRun";
 
-function plan(states: Record<string, number>, tasks_total = 2): DispatchPlanSummary {
+function plan(states: Record<string, number>, phases: Record<string, number>, tasks_total = 2): DispatchPlanSummary {
   return {
     plan: "example",
     repo: "owner/repo",
@@ -14,7 +14,7 @@ function plan(states: Record<string, number>, tasks_total = 2): DispatchPlanSumm
     updated_at: "",
     tasks_total,
     states,
-    phases: {},
+    phases,
   };
 }
 
@@ -40,23 +40,32 @@ function task(rows: DispatchRow[]): DispatchTask {
 
 describe("outcomeOf", () => {
   it("gives running work precedence over failures and finished tasks", () => {
-    expect(outcomeOf(plan({ running: 1, failed: 1, succeeded: 2 }, 4))).toBe("Running");
-    expect(outcomeOf(plan({ needs_input: 1, succeeded: 1 }))).toBe("Running");
+    expect(outcomeOf(plan({ running: 1, failed: 1, succeeded: 2 }, { running: 1, failed: 1, landed: 2 }, 4))).toBe("Running");
+    expect(outcomeOf(plan({ needs_input: 1, succeeded: 1 }, { waiting: 1, landed: 1 }))).toBe("Running");
   });
 
-  it("gives failures, timeouts and skipped tasks precedence over finished tasks", () => {
-    expect(outcomeOf(plan({ failed: 1, succeeded: 1 }))).toBe("Failed");
-    expect(outcomeOf(plan({ timed_out: 1, succeeded: 1 }))).toBe("Failed");
-    expect(outcomeOf(plan({ skipped: 1, succeeded: 1 }))).toBe("Failed");
+  it("gives failures, timeouts and skipped tasks precedence over landed tasks", () => {
+    expect(outcomeOf(plan({ failed: 1, succeeded: 1 }, { conflict: 1, landed: 1 }))).toBe("Failed");
+    expect(outcomeOf(plan({ timed_out: 1, succeeded: 1 }, { failed: 1, landed: 1 }))).toBe("Failed");
+    expect(outcomeOf(plan({ skipped: 1, succeeded: 1 }, { blocked: 1, landed: 1 }))).toBe("Failed");
   });
 
-  it("is done once every task has succeeded or been cancelled", () => {
-    expect(outcomeOf(plan({ succeeded: 2 }))).toBe("Done");
-    expect(outcomeOf(plan({ succeeded: 1, cancelled: 1 }))).toBe("Done");
+  it("is done once every task has landed or been cleaned", () => {
+    expect(outcomeOf(plan({ succeeded: 2 }, { landed: 2 }))).toBe("Done");
+    expect(outcomeOf(plan({ succeeded: 1, cancelled: 1 }, { landed: 1, cleaned: 1 }))).toBe("Done");
+  });
+
+  it("keeps a plan whose finished tasks have not landed under Running", () => {
+    expect(outcomeOf(plan({ succeeded: 2 }, { done: 2 }))).toBe("Running");
+    expect(outcomeOf(plan({ succeeded: 3 }, { landed: 2, done: 1 }, 3))).toBe("Running");
+  });
+
+  it("counts a plan cleaned up after a failure as done", () => {
+    expect(outcomeOf(plan({ failed: 2 }, { cleaned: 2 }))).toBe("Done");
   });
 
   it("keeps a plan with tasks still planned under Running", () => {
-    expect(outcomeOf(plan({ succeeded: 1, planned: 2 }, 3))).toBe("Running");
+    expect(outcomeOf(plan({ succeeded: 1, planned: 2 }, { landed: 1, planned: 2 }, 3))).toBe("Running");
   });
 });
 
@@ -65,6 +74,10 @@ describe("counts", () => {
     expect(counts({ succeeded: 2, planned: 1, timed_out: 1, running: 1 })).toBe(
       "1 running · 1 timed out · 2 done · 1 not started"
     );
+  });
+
+  it("keeps a state it doesn't know as its raw word", () => {
+    expect(counts({ succeeded: 1, held: 2 })).toBe("1 done · 2 held");
   });
 });
 
@@ -78,8 +91,22 @@ describe("stateOf", () => {
     const reaped = task([row("running", "running", 1), row("timed_out", "failed", 2)]);
     expect(stateOf(reaped)).toBe("timed_out");
     expect(stateWord(stateOf(reaped))).toBe("timed out");
-    expect(STATE_TONE[stateOf(reaped)]).toBe("err");
+    expect(toneOf(stateOf(reaped))).toBe("err");
     expect(columnOf(reaped)).toBe("working");
+    expect(isWorking(reaped)).toBe(false);
+  });
+
+  it("counts only running and asking tasks as working", () => {
+    expect(isWorking(task([row("running", "running", 1)]))).toBe(true);
+    expect(isWorking(task([row("running", "running", 1), row("needs_input", "waiting", 2)]))).toBe(true);
+    expect(isWorking(task([row("running", "running", 1), row("failed", "failed", 2)]))).toBe(false);
+  });
+
+  it("shows a phase it doesn't know as its raw word, neutral, among started tasks", () => {
+    const odd = task([row("running", "running", 1), row("succeeded", "parked" as DispatchPhase, 2)]);
+    expect(stateWord(stateOf(odd))).toBe("parked");
+    expect(toneOf(stateOf(odd))).toBe("neutral");
+    expect(columnOf(odd)).toBe("working");
   });
 
   it("reads a task cleaned while running as cancelled", () => {

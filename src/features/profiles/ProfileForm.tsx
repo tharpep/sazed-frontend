@@ -7,7 +7,6 @@ import {
   ENGINES,
   MODEL_ALIASES,
   MODEL_PATTERN,
-  NAME_PATTERN,
   TIMEOUT_RANGE,
   TOOL_CALLS_RANGE,
   profileError,
@@ -20,7 +19,7 @@ import { ApiError } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { field } from "@/features/projects/fields";
-import { TOUCH } from "./format";
+import { TOUCH, nameProblem } from "./format";
 import { GrantsEditor, grantsProblem, mcpToRows, rowsToMcp, type GrantRow } from "./McpGrants";
 
 export const BLANK: ProfileValues = {
@@ -49,9 +48,13 @@ const within = (n: number, [lo, hi]: readonly [number, number]) => n >= lo && n 
 interface Props {
   initial: ProfileValues;
   name?: string;
+  /** Names already in the registry; a new profile can't take one. */
+  taken?: readonly string[];
   submitLabel: string;
   onSubmit: (values: ProfileValues, reason: string, name: string) => Promise<void>;
   onReload?: () => void;
+  /** Whether a 409 came from a newer saved version, as opposed to a refused change. */
+  isStale?: () => Promise<boolean>;
   onCancel?: () => void;
 }
 
@@ -64,7 +67,7 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
   );
 }
 
-export function ProfileForm({ initial, name: fixedName, submitLabel, onSubmit, onReload, onCancel }: Props) {
+export function ProfileForm({ initial, name: fixedName, taken = [], submitLabel, onSubmit, onReload, isStale, onCancel }: Props) {
   const [name, setName] = useState(fixedName ?? "");
   const [values, setValues] = useState(() => profileValues(initial));
   const [rows, setRows] = useState<GrantRow[]>(() => mcpToRows(initial.mcp ?? {}));
@@ -75,9 +78,7 @@ export function ProfileForm({ initial, name: fixedName, submitLabel, onSubmit, o
   const set = <K extends keyof ProfileValues>(key: K, value: ProfileValues[K]) => setValues((v) => ({ ...v, [key]: value }));
 
   const problems = [
-    !fixedName &&
-      !NAME_PATTERN.test(name) &&
-      "Name: lowercase letters, digits, dashes and underscores, 2 to 31 characters, starting with a letter.",
+    !fixedName && nameProblem(name, taken),
     !MODEL_PATTERN[values.engine].test(values.model) && MODEL_HINT[values.engine],
     values.budget_usd !== null &&
       !within(values.budget_usd, BUDGET_RANGE) &&
@@ -99,7 +100,7 @@ export function ProfileForm({ initial, name: fixedName, submitLabel, onSubmit, o
       await onSubmit({ ...values, mcp: rowsToMcp(rows) }, reason.trim(), name);
     } catch (err) {
       setError(profileError(err));
-      setStale(Boolean(fixedName) && err instanceof ApiError && err.status === 409);
+      if (err instanceof ApiError && err.status === 409 && isStale) setStale(await isStale().catch(() => false));
     } finally {
       setBusy(false);
     }

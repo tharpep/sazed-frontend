@@ -5,15 +5,17 @@ import { STATUS_LABEL, runTone } from "@/features/jobs/format";
 
 export type RunOutcome = "Running" | "Failed" | "Done";
 
+const WORKING: RunState[] = ["queued", "needs_approval", "running", "needs_input"];
 const FAILED: RunState[] = ["failed", "timed_out", "paused", "skipped"];
-const DONE: RunState[] = ["succeeded", "cancelled"];
 
-/** The same groups as the jobs list; a plan is Done only once every task has finished. */
+// Done waits for landing, not for the agent: a task that finished but never landed (phase done,
+// state succeeded) keeps its plan under Running. A cleaned task takes the state of the row before
+// it, so a plan cleaned up after a failure counts its cleaned tasks as finished, not failed.
 export function outcomeOf(plan: DispatchPlanSummary): RunOutcome {
-  const count = (names: RunState[]) => names.reduce((sum, s) => sum + (plan.states[s] ?? 0), 0);
-  if (count(["queued", "needs_approval", "running", "needs_input"]) > 0) return "Running";
-  if (count(FAILED) > 0) return "Failed";
-  return count(DONE) >= plan.tasks_total ? "Done" : "Running";
+  const sum = (counts: Record<string, number>, names: string[]) => names.reduce((n, s) => n + (counts[s] ?? 0), 0);
+  if (sum(plan.states, WORKING) > 0 || sum(plan.phases, ["done"]) > 0) return "Running";
+  if (sum(plan.phases, ["landed", "cleaned"]) >= plan.tasks_total) return "Done";
+  return sum(plan.states, FAILED) > 0 ? "Failed" : "Running";
 }
 
 export type Column = "landed" | "working" | "landing" | "next";
@@ -32,7 +34,7 @@ const COLUMN: Partial<Record<TaskState, Column>> = {
   done: "landing",
 };
 
-export const STATE_TONE: Record<TaskState, Tone> = {
+const STATE_TONE: Record<TaskState, Tone> = {
   running: "accent",
   done: "ok",
   landed: "ok",
@@ -45,6 +47,9 @@ export const STATE_TONE: Record<TaskState, Tone> = {
   cancelled: runTone("cancelled"),
   next: "neutral",
 };
+
+/** A word from a newer backend shows as itself, neutral. */
+export const toneOf = (state: string): Tone => STATE_TONE[state as TaskState] ?? "neutral";
 
 export function stateWord(state: TaskState): string {
   if (state === "timed_out" || state === "cancelled") return STATUS_LABEL[state].toLowerCase();
@@ -70,7 +75,15 @@ export function stateOf(task: DispatchTask): TaskState {
   return last(task.rows)?.state === "cancelled" ? "cancelled" : "next";
 }
 
-export const columnOf = (task: DispatchTask): Column => COLUMN[stateOf(task)] ?? "next";
+export function columnOf(task: DispatchTask): Column {
+  const state = stateOf(task);
+  return COLUMN[state] ?? (state === "next" ? "next" : "working");
+}
+
+export const isWorking = (task: DispatchTask) => {
+  const state = last(runRows(task))?.state;
+  return state === "running" || state === "needs_input";
+};
 
 export const costOf = (task: DispatchTask) => runRows(task).reduce((sum, r) => sum + (r.cost_usd ?? 0), 0);
 
