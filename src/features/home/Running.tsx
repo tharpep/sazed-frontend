@@ -16,12 +16,12 @@ function sub(job: WorkingJob): string {
     .join(" · ");
 }
 
-function LastHeard({ job, heard }: { job: WorkingJob; heard: Record<string, string | null> }) {
-  // Sazed's elapsed_s for a dispatch task already counts from its latest row; heartbeats are not exposed.
-  if (job.kind === "job" && !(job.job_id! in heard)) return null;
-  const age = job.kind === "dispatch" ? job.elapsed_s : ageSince(heard[job.job_id!]);
+// Worker jobs only: no endpoint exposes a dispatch task's heartbeat, and its latest row is not one.
+function LastHeard({ jobId, heard }: { jobId: string; heard: Record<string, string | null> }) {
+  if (!(jobId in heard)) return null;
+  const age = ageSince(heard[jobId]);
   return (
-    <span className={cn("text-caption whitespace-nowrap", isStale(age, job.kind) ? "text-warn" : "text-muted")}>
+    <span className={cn("text-caption whitespace-nowrap", isStale(age) ? "text-warn" : "text-muted")}>
       {heardLabel(age)}
     </span>
   );
@@ -73,7 +73,9 @@ export function Running({ jobs, heard, onOpenJob, onChanged }: Props) {
                   <span className="font-mono text-meta whitespace-nowrap text-muted tabular-nums">
                     {job.status === "queued" ? "queued" : clock(job.elapsed_s)}
                   </span>
-                  {job.status === "running" && <LastHeard job={job} heard={heard} />}
+                  {job.status === "running" && job.kind === "job" && job.job_id && (
+                    <LastHeard jobId={job.job_id} heard={heard} />
+                  )}
                 </span>
                 {job.job_id && stop.length > 0 && (
                   <CardActions cardId={jobCardId(job.job_id)} actions={stop} onDone={onChanged} touch />

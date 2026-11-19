@@ -225,7 +225,10 @@ export const useNavStore = create<NavState>((set, get) => ({
     }
     const views = view === undefined ? s.view : { ...s.view, [hub]: view };
     writeJson(() => localStorage, VIEW_KEY, views);
-    set({ hub, view: views });
+    // A sheet belongs to the visit it was opened in; coming back by tab or rail starts without it.
+    const left = currentView(s);
+    const sheet = left === currentView({ hub, view: views }) ? s.sheet : without(s.sheet, left);
+    set({ hub, view: views, sheet });
   },
   setSub: (key, value) => {
     if (!isSub(key, value) || get().sub[key] === value) return;
@@ -244,13 +247,14 @@ export const useNavStore = create<NavState>((set, get) => ({
     writeJson(() => localStorage, VIEW_KEY, views);
     const recent = [ref, ...s.recent.filter((r) => r.kind !== ref.kind || r.id !== ref.id)].slice(0, RECENT_MAX);
     writeJson(() => sessionStorage, RECENT_KEY, recent);
-    // A sheet opened over the item that is being replaced belonged to that item.
+    // A sheet opened over the item that is being replaced belonged to that item, and one over the
+    // view being left belonged to that visit.
     const key = itemView(ref.kind);
     set({
       hub: place.hub,
       view: views,
       [place.slot]: { ...s[place.slot], [key]: ref },
-      sheet: without(s.sheet, key),
+      sheet: without(without(s.sheet, key), currentView(s)),
       recent,
     });
   },

@@ -40,6 +40,8 @@ const NAME = "Pryce";
 const COMMAND_POLL_MS = 4000;
 const SIDE_POLL_MS = 30_000;
 const TODAY_POLL_MS = 5 * 60_000;
+const SHIPPED_EVERY_MS = 5 * 60_000;
+const SHIPPED_CHECK_MS = 60_000;
 
 function getPeriod(): string {
   const h = new Date().getHours();
@@ -72,7 +74,6 @@ interface Side {
   runAlert: boolean;
   projects: Project[] | null;
   projectOf: Map<string, string>;
-  shipped: ProjectCard[] | null;
   latest: ActivityEvent | null;
   backlog: BacklogItem[] | null;
 }
@@ -84,7 +85,6 @@ const NO_SIDE: Side = {
   runAlert: false,
   projects: null,
   projectOf: new Map(),
-  shipped: null,
   latest: null,
   backlog: null,
 };
@@ -103,6 +103,7 @@ export function HomePage() {
   const [command, setCommand] = useState<CommandSummary | null>(null);
   const [commandError, setCommandError] = useState(false);
   const [side, setSide] = useState<Side>(NO_SIDE);
+  const [shipped, setShipped] = useState<ProjectCard[] | null>(null);
   const [today, setToday] = useState<Today>(NO_TODAY);
   const [openJob, setOpenJob] = useState<string | null>(null);
   const sideSeq = useRef(0);
@@ -119,14 +120,13 @@ export function HomePage() {
 
   const loadSide = useCallback(async () => {
     const seq = ++sideSeq.current;
-    const [services, storage, automations, projects, activity, backlog, board] = await Promise.allSettled([
+    const [services, storage, automations, projects, activity, backlog] = await Promise.allSettled([
       fetchServices(),
       fetchStorage(),
       listAutomations(),
       listProjects(),
       listActivity([], false, undefined, 1),
       listBacklog("open"),
-      getBoard(),
     ]);
     const autos = automations.status === "fulfilled" ? automations.value : [];
     const failure = latestFailure(autos);
@@ -148,7 +148,6 @@ export function HomePage() {
       runAlert: failure !== null,
       projects: projects.status === "fulfilled" ? projectsByRank(projects.value) : null,
       projectOf: projects.status === "fulfilled" ? projectTitles(projects.value) : new Map(),
-      shipped: board.status === "fulfilled" ? board.value.cards : null,
       latest: activity.status === "fulfilled" ? (activity.value[0] ?? null) : null,
       backlog: backlog.status === "fulfilled" ? backlog.value : null,
     });
@@ -165,8 +164,30 @@ export function HomePage() {
     );
   }, []);
 
+  // GET /board is about 180 KB and done cards change slowly, so Shipped refreshes on its own clock
+  // and after a sheet reports a change.
+  const shippedAt = useRef(0);
+  const fetchShipped = useCallback(() => {
+    shippedAt.current = Date.now();
+    getBoard().then(
+      (board) => setShipped(board.cards),
+      () => undefined
+    );
+  }, []);
+  // The visible poll also fires whenever the page comes back into view, which must not refetch early.
+  const loadShipped = useCallback(() => {
+    if (Date.now() - shippedAt.current >= SHIPPED_EVERY_MS) fetchShipped();
+  }, [fetchShipped]);
+
+  const refreshAll = useCallback(() => {
+    loadCommand();
+    loadSide();
+    fetchShipped();
+  }, [loadCommand, loadSide, fetchShipped]);
+
   useVisiblePoll(loadCommand, COMMAND_POLL_MS);
   useVisiblePoll(loadSide, SIDE_POLL_MS);
+  useVisiblePoll(loadShipped, SHIPPED_CHECK_MS);
   useVisiblePoll(loadToday, TODAY_POLL_MS);
 
   const checked = (side.services ?? []).filter((s) => (privateRevealed || !s.private) && s.lifecycle !== "planned");
@@ -250,13 +271,13 @@ export function HomePage() {
           <div className="flex min-w-0 flex-col gap-4">
             <TodayBox today={today} className="hidden @min-[860px]:block" />
             <ProjectsBox projects={side.projects} />
-            <ShippedBox cards={side.shipped} projectOf={side.projectOf} />
+            <ShippedBox cards={shipped} projectOf={side.projectOf} />
             <LinkRows label="Elsewhere" rows={links} />
           </div>
         </div>
       </div>
       <JobSheet jobId={openJob} onClose={() => setOpenJob(null)} onChanged={loadCommand} onOpenJob={setOpenJob} />
-      <CardSheet view="home:home" onChanged={loadSide} />
+      <CardSheet view="home:home" onChanged={refreshAll} />
     </div>
   );
 }

@@ -12,6 +12,8 @@ import { BacklogSheet } from "./BacklogSheet";
 import { isOpenStatus } from "./format";
 import { backlogId } from "./stages";
 
+const FAILURE_SHOWN_MS = 8000;
+
 /** Opens a card's sheet over the view it was tapped in. */
 export function openCardSheet(card: ProjectCard) {
   const id = card.kind === "job" ? card.job_id : backlogId(card);
@@ -33,23 +35,37 @@ export function CardSheet({ view, onChanged }: { view: ViewKey; onChanged: () =>
   const itemId = ref?.kind === "backlog" ? ref.id : null;
   const [item, setItem] = useState<BacklogItem | null>(null);
   const [rankedCount, setRankedCount] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
 
   useEffect(() => {
     if (!itemId) return;
     let live = true;
-    setError(null);
-    Promise.all([getBacklogItem(itemId), listBacklog("open", undefined, 500)])
-      .then(([found, open]) => {
+    setFailure(null);
+    getBacklogItem(itemId).then(
+      (found) => live && setItem(found),
+      (err) => {
         if (!live) return;
-        setItem(found);
-        setRankedCount(open.filter((i) => i.rank != null && isOpenStatus(i.status)).length);
-      })
-      .catch((err) => live && setError(errorText(err)));
+        setFailure(`Couldn't open the card: ${errorText(err)}`);
+        // Takes back the history entry the tap pushed, so Back still leaves the page and the same
+        // card can be tapped again.
+        close();
+      }
+    );
+    // Only the Priority row's "of N" and its last-place check use this, so it never holds the sheet.
+    listBacklog("open", undefined, 500).then(
+      (open) => live && setRankedCount(open.filter((i) => i.rank != null && isOpenStatus(i.status)).length),
+      () => undefined
+    );
     return () => {
       live = false;
     };
   }, [itemId]);
+
+  useEffect(() => {
+    if (!failure) return;
+    const id = setTimeout(() => setFailure(null), FAILURE_SHOWN_MS);
+    return () => clearTimeout(id);
+  }, [failure]);
 
   const shown = item && item.id === itemId ? item : null;
 
@@ -57,6 +73,7 @@ export function CardSheet({ view, onChanged }: { view: ViewKey; onChanged: () =>
     <>
       <BacklogSheet
         item={shown}
+        loading={itemId !== null && !shown}
         rankedCount={rankedCount}
         onClose={close}
         onChanged={(updated) => {
@@ -65,12 +82,22 @@ export function CardSheet({ view, onChanged }: { view: ViewKey; onChanged: () =>
         }}
         onOpenJob={openJob}
       />
-      {itemId && error && !shown && (
-        <p role="alert" className="text-meta text-err">
-          Couldn't open the card: {error}
-        </p>
-      )}
       <JobSheet jobId={ref?.kind === "job" ? ref.id : null} onClose={close} onChanged={onChanged} onOpenJob={openJob} />
+      {failure && (
+        <div
+          role="alert"
+          className="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-sm items-center gap-3 rounded-lg border border-err/40 bg-surface py-1 pr-1 pl-3.5 text-meta text-ink shadow-lg sm:bottom-6"
+        >
+          <span className="min-w-0 flex-1">{failure}</span>
+          <button
+            type="button"
+            onClick={() => setFailure(null)}
+            className="min-h-11 shrink-0 rounded-md px-3 text-muted hover:bg-raised hover:text-ink sm:min-h-8"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
     </>
   );
 }

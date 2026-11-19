@@ -19,11 +19,9 @@ describe("last heard", () => {
     expect(heardLabel(null)).toBe("last heard unknown");
   });
 
-  it("is stale only past the reaper's grace for that kind", () => {
-    expect(isStale(120, "job")).toBe(false);
-    expect(isStale(121, "job")).toBe(true);
-    expect(isStale(140, "dispatch")).toBe(false);
-    expect(isStale(151, "dispatch")).toBe(true);
-    expect(isStale(null, "job")).toBe(false);
+  it("is stale only past the reaper's grace for worker jobs", () => {
+    expect(isStale(120)).toBe(false);
+    expect(isStale(121)).toBe(true);
+    expect(isStale(null)).toBe(false);
   });
 });

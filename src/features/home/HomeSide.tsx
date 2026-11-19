@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import type { Project, ProjectCard } from "@/api/projects";
 import { openCardSheet } from "@/features/backlog/CardSheet";
 import { cn } from "@/lib/utils";
-import { prRef } from "@/widgets/projectWork";
+import { prRef, stepNumbers } from "@/widgets/projectWork";
 import { MiniTrack } from "@/widgets/stepTrack";
 
 import { MoreLink } from "./Group";
@@ -88,7 +88,12 @@ export function ProjectsBox({ projects }: { projects: Project[] | null }) {
               <span className="col-span-2 min-w-0">
                 <MiniTrack steps={p.workstreams} currentId={p.current?.id ?? null} />
               </span>
-              <span className="col-span-2 truncate text-caption text-muted">{projectRowLine(p)}</span>
+              <span className="col-span-2 flex min-w-0 text-caption text-muted">
+                <span className="truncate">{stepLabel(p)}</span>
+                <span className="shrink-0 whitespace-nowrap">
+                  &nbsp;· {p.progress.done} of {p.progress.total} cards done
+                </span>
+              </span>
             </button>
           </li>
         ))}
@@ -97,10 +102,9 @@ export function ProjectsBox({ projects }: { projects: Project[] | null }) {
   );
 }
 
-function projectRowLine(p: Project): string {
-  const at = p.current ? p.workstreams.findIndex((w) => w.id === p.current!.id) : -1;
-  const step = p.current ? `Step ${at + 1}: ${p.current.title}` : "No open step";
-  return `${step} · ${p.progress.done} of ${p.progress.total} cards done`;
+function stepLabel(p: Project): string {
+  const n = p.current ? stepNumbers(p.workstreams).get(p.current.id) : undefined;
+  return p.current && n ? `Step ${n}: ${p.current.title}` : "No open step";
 }
 
 const SHIPPED_SHOWN = 8;

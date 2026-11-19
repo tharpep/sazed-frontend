@@ -169,7 +169,7 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
                     ? "Waiting for your answer."
                     : `Working: ${steps.length} steps so far…`}
               {job.status === "running" && (
-                <span className={cn(isStale(heardAge, "job") && "text-warn")}> · {heardLabel(heardAge)}</span>
+                <span className={cn(isStale(heardAge) && "text-warn")}> · {heardLabel(heardAge)}</span>
               )}
             </p>
           )}

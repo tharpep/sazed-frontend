@@ -28,6 +28,11 @@ export interface BacklogItem {
   updated_at: string;
   decided_at: string | null;
   workstream_id?: string | null;
+  // Set when a Claude Code session linked itself to the item by hand.
+  session_label?: string | null;
+  session_branch?: string | null;
+  pr_repo?: string | null;
+  pr_number?: number | null;
 }
 
 export async function listBacklog(view: BacklogView, type?: BacklogType, limit?: number): Promise<BacklogItem[]> {

@@ -4,8 +4,18 @@ import { ArrowLeft, ChevronRight } from "lucide-react";
 import type { Project, ProjectCard, Workstream } from "@/api/projects";
 import { cn } from "@/lib/utils";
 import { STATUS_LABEL, STATUS_TEXT } from "./projectParts";
-import { cardFacts, countLine, foldSteps, GROUP_NAME, groupStepCards, projectLine, type GroupedCards } from "./projectWork";
-import { CardSquares, StepTrack } from "./stepTrack";
+import {
+  cardFacts,
+  countLine,
+  foldSteps,
+  GROUP_NAME,
+  groupStepCards,
+  projectLine,
+  stepNumbers,
+  visibleNext,
+  type GroupedCards,
+} from "./projectWork";
+import { CardSquares, StepSquare, StepTrack } from "./stepTrack";
 
 const GROUP_SHOWN = 8;
 
@@ -16,50 +26,39 @@ interface ProjectWidgetProps extends Project {
   onOpenCard?: (card: ProjectCard) => void;
 }
 
-const ROW = "grid w-full grid-cols-[22px_minmax(0,1fr)_auto] items-start gap-x-2 px-3 py-2.5 text-left md:px-4";
-
-const GLYPH: Record<Workstream["status"], string> = {
-  done: "border-ok/40 bg-ok/20",
-  in_flight: "border-primary",
-  needs_me: "border-warn",
-  next: "border-ink-2/50",
-  planned: "border-line",
-  blocked: "border-err/60 bg-err/15",
-  dropped: "border-dashed border-line opacity-50",
-};
-
-function StepGlyph({ status }: { status: Workstream["status"] }) {
-  return (
-    <span aria-hidden="true" className="flex h-5 items-center justify-center">
-      {status === "done" ? (
-        <span className="text-caption text-ok">{"✓"}</span>
-      ) : (
-        <span className={cn("size-2.5 rounded-[3px] border-[1.5px]", GLYPH[status])} />
-      )}
-    </span>
-  );
-}
+const ROW = "grid w-full grid-cols-[24px_minmax(0,1fr)_auto] items-start gap-x-2.5 px-3 py-2.5 text-left md:px-4";
 
 function CardRow({ card, onOpen }: { card: ProjectCard; onOpen?: (card: ProjectCard) => void }) {
   const facts = cardFacts(card);
-  const body = (
-    <>
-      <span className={cn("line-clamp-2 text-body", card.stage === "done" ? "text-ink-2" : "text-ink")}>{card.title}</span>
-      {facts.text && (
-        <span className={cn("block truncate text-caption", facts.warn ? "text-warn" : "text-muted")}>{facts.text}</span>
-      )}
-    </>
+  const title = <span className={cn("line-clamp-2 text-body", card.stage === "done" ? "text-ink-2" : "text-ink")}>{card.title}</span>;
+  const factLine = facts.text && (
+    <span className={cn("block truncate text-caption", facts.warn ? "text-warn" : "text-muted")}>{facts.text}</span>
   );
   const shape = "-mx-2 flex w-[calc(100%+1rem)] flex-col justify-center gap-0.5 rounded-md px-2 py-1.5 text-left";
-  return (
-    <li>
-      {onOpen ? (
+  if (onOpen) {
+    return (
+      <li>
         <button type="button" onClick={() => onOpen(card)} className={cn(shape, "min-h-11 hover:bg-raised sm:min-h-0")}>
-          {body}
+          {title}
+          {factLine}
         </button>
-      ) : (
-        <div className={shape}>{body}</div>
-      )}
+      </li>
+    );
+  }
+  // Read-only hosts (MCP Apps) have no sheet, so the row itself carries the PR link and the next step.
+  const next = visibleNext(card);
+  return (
+    <li className={shape}>
+      <span className="flex items-baseline justify-between gap-3">
+        {title}
+        {card.pr_url && (
+          <a href={card.pr_url} target="_blank" rel="noreferrer" className="shrink-0 text-caption text-primary hover:underline">
+            {card.pr_number ? `PR #${card.pr_number}` : "PR"}
+          </a>
+        )}
+      </span>
+      {factLine}
+      {next && !facts.text.includes(next) && <span className="text-meta text-ink-2">{next}</span>}
     </li>
   );
 }
@@ -93,14 +92,14 @@ function Group({ group, onOpen }: { group: GroupedCards; onOpen?: (card: Project
 
 function StepRow({
   step,
-  index,
+  number,
   open,
   current,
   onToggle,
   onOpen,
 }: {
   step: Workstream;
-  index: number;
+  number: number | undefined;
   open: boolean;
   current: boolean;
   onToggle: () => void;
@@ -111,10 +110,11 @@ function StepRow({
   return (
     <li className="flex flex-col">
       <button type="button" aria-expanded={open} onClick={onToggle} className={cn(ROW, "min-h-12 hover:bg-raised")}>
-        <StepGlyph status={step.status} />
+        <StepSquare step={step} number={number} current={current} className="size-6" />
         <span className="min-w-0">
           <span className={cn("block text-body", current || open ? "font-medium text-ink" : "text-ink-2")}>
-            {index + 1} · {step.title}
+            <span className="sr-only">{number ? `Step ${number}: ` : "Dropped step: "}</span>
+            {step.title}
           </span>
           <span className="block text-caption text-muted">
             {step.progress.total ? `${step.progress.done} of ${step.progress.total} done` : "No cards"}
@@ -123,7 +123,7 @@ function StepRow({
         <span className={cn("text-caption whitespace-nowrap", STATUS_TEXT[step.status])}>{STATUS_LABEL[step.status]}</span>
       </button>
       {open && (
-        <div className="flex flex-col gap-3 pr-3 pb-3 pl-[42px] md:pr-4 md:pl-[46px]">
+        <div className="flex flex-col gap-3 pr-3 pb-3 pl-[46px] md:pr-4 md:pl-[50px]">
           {step.summary && <p className="text-meta text-ink-2">{step.summary}</p>}
           {cards.length === 0 ? (
             <p className="text-meta text-muted">No cards under this step.</p>
@@ -201,11 +201,12 @@ export function ProjectWidget({ onBack, onOpenCard, ...project }: ProjectWidgetP
     setOpen(next);
   }
 
-  const stepRow = (step: Workstream, index: number): ReactNode => (
+  const numbers = stepNumbers(workstreams);
+  const stepRow = (step: Workstream): ReactNode => (
     <StepRow
       key={step.id}
       step={step}
-      index={index}
+      number={numbers.get(step.id)}
       open={open.has(step.id)}
       current={step.id === currentId}
       onToggle={() => toggle(step.id)}
@@ -230,14 +231,14 @@ export function ProjectWidget({ onBack, onOpenCard, ...project }: ProjectWidgetP
           <h2 className="text-title font-semibold text-ink">{project.title}</h2>
           <p className="text-meta text-muted">{projectLine(project)}</p>
         </div>
-        <p className="text-meta text-ink-2">{project.latest_update ?? project.headline}</p>
         {workstreams.length > 0 && <StepTrack steps={workstreams} currentId={currentId} />}
+        <p className="text-meta text-ink-2">{project.latest_update ?? project.headline}</p>
       </div>
 
       <ol className="flex flex-col divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
         {foldSteps(workstreams).map((entry) =>
           entry.kind === "step" ? (
-            stepRow(entry.step, entry.index)
+            stepRow(entry.step)
           ) : (
             <li key="fold" className="flex flex-col divide-y divide-line">
               <button
@@ -246,7 +247,9 @@ export function ProjectWidget({ onBack, onOpenCard, ...project }: ProjectWidgetP
                 onClick={() => setFoldOpen(!foldOpen)}
                 className={cn(ROW, "min-h-12 hover:bg-raised")}
               >
-                <StepGlyph status="done" />
+                <span aria-hidden="true" className="grid size-6 place-items-center text-caption text-ok">
+                  {"✓"}
+                </span>
                 <span className="min-w-0">
                   <span className="block text-body text-ink-2">1 to {entry.steps.length} done</span>
                   <span className="line-clamp-2 text-caption text-muted">{entry.steps.map((s) => s.step.title).join(", ")}</span>
@@ -256,7 +259,7 @@ export function ProjectWidget({ onBack, onOpenCard, ...project }: ProjectWidgetP
                   className={cn("mt-0.5 size-4 text-muted transition-transform motion-reduce:transition-none", foldOpen && "rotate-90")}
                 />
               </button>
-              {foldOpen && <ol className="flex flex-col divide-y divide-line bg-bg/40">{entry.steps.map((s) => stepRow(s.step, s.index))}</ol>}
+              {foldOpen && <ol className="flex flex-col divide-y divide-line bg-bg/40">{entry.steps.map((s) => stepRow(s.step))}</ol>}
             </li>
           )
         )}

@@ -61,6 +61,24 @@ describe("navStore openItem and applyPlace", () => {
   });
 });
 
+describe("navStore card sheets", () => {
+  beforeEach(() => useNavStore.setState({ hub: "home", open: {}, read: {}, sheet: {}, recent: [] }));
+
+  it("files a sheet under the view it was opened in and closes it there", () => {
+    useNavStore.getState().openSheet({ kind: "backlog", id: "c1" });
+    expect(useNavStore.getState().sheet).toEqual({ "home:home": { kind: "backlog", id: "c1" } });
+    useNavStore.getState().closeSheet();
+    expect(useNavStore.getState().sheet).toEqual({});
+  });
+
+  it("drops the sheet of the view being left, so coming back by tab shows the page alone", () => {
+    useNavStore.getState().openSheet({ kind: "backlog", id: "c1" });
+    useNavStore.getState().go("work", "board");
+    useNavStore.getState().go("home");
+    expect(useNavStore.getState().sheet).toEqual({});
+  });
+});
+
 describe("loadItems", () => {
   it("keeps items filed under their own view and drops the older per-hub shape", () => {
     expect(

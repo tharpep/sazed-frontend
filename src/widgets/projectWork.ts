@@ -86,10 +86,15 @@ export function dayTime(iso: string): string {
   return `${day}, ${time}`;
 }
 
+/** card.next, unless it is one of Sazed's two stock lines. */
+export function visibleNext(card: ProjectCard): string {
+  return SILENT_NEXT.has(card.next) ? "" : card.next;
+}
+
 /** What a card row says under its title, from fields that exist today. */
 export function cardFacts(card: ProjectCard): { text: string; warn: boolean } {
   const group = cardGroup(card);
-  const next = SILENT_NEXT.has(card.next) ? "" : card.next;
+  const next = visibleNext(card);
   const parts: (string | null)[] = [card.repo];
   if (group === "waiting") parts.push(next);
   if (group === "flight") {
@@ -100,12 +105,27 @@ export function cardFacts(card: ProjectCard): { text: string; warn: boolean } {
   return { text: parts.filter(Boolean).join(" · "), warn: group === "waiting" };
 }
 
+/** Steps that count: dropped ones are left out of every number and every track. */
+export function liveSteps(steps: readonly Workstream[]): Workstream[] {
+  return steps.filter((w) => w.status !== "dropped");
+}
+
+/** Each live step's number, 1 to N by position; a dropped step has none. */
+export function stepNumbers(steps: readonly Workstream[]): Map<string, number> {
+  return new Map(liveSteps(steps).map((w, i) => [w.id, i + 1]));
+}
+
+/** "Step X of N" for the current step, or null when there is none. */
+export function stepOf(steps: readonly Workstream[], currentId: string | null): string | null {
+  const n = currentId ? stepNumbers(steps).get(currentId) : undefined;
+  return n ? `Step ${n} of ${liveSteps(steps).length}` : null;
+}
+
 /** The header line: "Step X of N · A of B cards done", then in-flight and waiting counts when set. */
 export function projectLine(project: Project): string {
-  const { progress, current, workstreams, steps_total } = project;
-  const at = current ? workstreams.findIndex((w) => w.id === current.id) : -1;
+  const { progress, current, workstreams } = project;
   const parts = [
-    at >= 0 ? `Step ${at + 1} of ${steps_total}` : `${project.steps_done} of ${steps_total} steps done`,
+    stepOf(workstreams, current?.id ?? null) ?? `${project.steps_done} of ${liveSteps(workstreams).length} steps done`,
     `${progress.done} of ${progress.total} cards done`,
   ];
   if (progress.in_flight) parts.push(`${progress.in_flight} in flight`);
@@ -113,7 +133,7 @@ export function projectLine(project: Project): string {
   return parts.join(" · ");
 }
 
-const STATUS_ORDER: readonly WorkstreamStatus[] = ["done", "in_flight", "needs_me", "next", "blocked", "planned", "dropped"];
+const STATUS_ORDER: readonly WorkstreamStatus[] = ["done", "in_flight", "needs_me", "next", "blocked", "planned"];
 const STATUS_WORD: Record<WorkstreamStatus, string> = {
   done: "done",
   in_flight: "in flight",
@@ -126,12 +146,10 @@ const STATUS_WORD: Record<WorkstreamStatus, string> = {
 
 /** The step track as words: "Step 6 of 11: 5 done, 1 next, 2 blocked, 3 planned". */
 export function trackText(steps: readonly Workstream[], currentId: string | null): string {
-  const at = steps.findIndex((w) => w.id === currentId);
+  const live = liveSteps(steps);
   const counts = STATUS_ORDER.flatMap((s) => {
-    const n = steps.filter((w) => w.status === s).length;
+    const n = live.filter((w) => w.status === s).length;
     return n ? [`${n} ${STATUS_WORD[s]}`] : [];
   }).join(", ");
-  // Sazed's steps_total leaves dropped steps out, so the header and this text count the same way.
-  const total = steps.filter((w) => w.status !== "dropped").length;
-  return at >= 0 ? `Step ${at + 1} of ${total}: ${counts}` : `${total} steps: ${counts}`;
+  return `${stepOf(steps, currentId) ?? `${live.length} steps`}: ${counts}`;
 }

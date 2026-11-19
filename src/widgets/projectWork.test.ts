@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import type { ProjectCard, Workstream, WorkstreamStatus } from "@/api/projects";
-import { cardFacts, countLine, foldSteps, groupStepCards, prRef, sessionLabel, trackText } from "./projectWork";
+import {
+  cardFacts,
+  countLine,
+  foldSteps,
+  groupStepCards,
+  prRef,
+  sessionLabel,
+  stepNumbers,
+  stepOf,
+  trackText,
+} from "./projectWork";
 
 function card(over: Partial<ProjectCard>): ProjectCard {
   return {
@@ -127,9 +137,19 @@ describe("cardFacts", () => {
   });
 });
 
-describe("trackText", () => {
-  it("says the track in words, counting steps the way Sazed's steps_total does", () => {
-    const steps = [step("a", "done"), step("b", "in_flight"), step("c", "blocked"), step("d", "dropped")];
-    expect(trackText(steps, "b")).toBe("Step 2 of 3: 1 done, 1 in flight, 1 blocked, 1 dropped");
+describe("step numbers", () => {
+  const steps = [step("a", "done"), step("x", "dropped"), step("b", "in_flight"), step("c", "blocked")];
+
+  it("leave a dropped step unnumbered and number the rest by position", () => {
+    expect([...stepNumbers(steps)]).toEqual([
+      ["a", 1],
+      ["b", 2],
+      ["c", 3],
+    ]);
+  });
+
+  it("keep Step X within N when a dropped step comes before the current one", () => {
+    expect(stepOf(steps, "b")).toBe("Step 2 of 3");
+    expect(trackText(steps, "b")).toBe("Step 2 of 3: 1 done, 1 in flight, 1 blocked");
   });
 });

@@ -25,11 +25,11 @@ function dayLabel(start: number, today: number): string {
  * empty; any other day only when something shipped. */
 export function shippedDays(cards: readonly ProjectCard[], now = new Date()): ShippedDay[] {
   const today = dayStart(now);
-  const oldest = today - (WINDOW_DAYS - 1) * DAY_MS;
+  const oldest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (WINDOW_DAYS - 1)).getTime();
   const byDay = new Map<number, ProjectCard[]>([[today, []]]);
   const done = cards
-    .filter((c) => c.stage === "done" && c.done_at)
-    .sort((a, b) => b.done_at!.localeCompare(a.done_at!));
+    .filter((c) => c.stage === "done" && c.done_at && !Number.isNaN(Date.parse(c.done_at)))
+    .sort((a, b) => Date.parse(b.done_at!) - Date.parse(a.done_at!));
   for (const card of done) {
     const start = dayStart(new Date(card.done_at!));
     if (start < oldest || start > today) continue;
