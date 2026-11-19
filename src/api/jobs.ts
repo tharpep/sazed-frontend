@@ -14,6 +14,9 @@ export type JobStatus =
   /** A change job stopped by its timeout, tool cap or a worker restart; its work is on a draft PR. */
   | "paused";
 
+/** Every run row's state, jobs and dispatch tasks alike (migration 017); only dispatch skips. */
+export type RunState = JobStatus | "skipped";
+
 export type JobKind = "research" | "second_opinion" | "code_task";
 
 export interface JobSummary {

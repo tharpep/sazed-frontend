@@ -1,6 +1,8 @@
 import { apiFetch } from "./client";
+import type { RunState } from "./jobs";
 
-export type DispatchState =
+/** The integration word dispatch wrote; Sazed maps it to a run state in one place. */
+export type DispatchPhase =
   | "running"
   | "done"
   | "waiting"
@@ -8,13 +10,15 @@ export type DispatchState =
   | "landed"
   | "conflict"
   | "blocked"
-  | "cleaned";
+  | "cleaned"
+  | "timed_out";
 
 export interface DispatchRow {
   plan: string;
   task: string;
   ts: number;
-  state: DispatchState;
+  state: RunState;
+  phase: DispatchPhase;
   line: string;
   ref: string | null;
   cost_usd: number | null;
@@ -30,7 +34,9 @@ export interface DispatchPlanSummary {
   host: string;
   updated_at: string;
   tasks_total: number;
+  /** Tasks per run state, and per phase; a task with no rows yet counts as planned in both. */
   states: Record<string, number>;
+  phases: Record<string, number>;
   project?: string | null;
   board_plan?: string | null;
 }

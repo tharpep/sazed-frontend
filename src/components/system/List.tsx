@@ -17,6 +17,8 @@ export function ListSection({ title, children }: { title?: string; children: Rea
 interface ListRowProps {
   title: ReactNode;
   description?: ReactNode;
+  /** Facts under the description that must never be clamped away, such as tags or a progress bar. */
+  detail?: ReactNode;
   /** Icon (or dot) on the left; color it with a tone class. */
   leading?: ReactNode;
   /** Its own column from md up. Phones don't show it, so repeat it in `meta` if they need it. */
@@ -28,7 +30,7 @@ interface ListRowProps {
   expanded?: boolean;
 }
 
-export function ListRow({ title, description, leading, time, meta, onClick, expanded }: ListRowProps) {
+export function ListRow({ title, description, detail, leading, time, meta, onClick, expanded }: ListRowProps) {
   const className = cn(
     "grid w-full grid-cols-[1.25rem_minmax(0,1fr)_auto] items-start gap-x-3 px-3 py-2.5 text-left md:px-4",
     time && "md:grid-cols-[4.5rem_1.25rem_minmax(0,1fr)_auto]",
@@ -41,6 +43,7 @@ export function ListRow({ title, description, leading, time, meta, onClick, expa
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate text-body font-medium text-ink">{title}</span>
         {description && <span className="line-clamp-2 text-meta text-ink-2">{description}</span>}
+        {detail && <span className="text-meta text-ink-2">{detail}</span>}
       </span>
       {meta ? (
         <span className="flex flex-col items-end gap-0.5 pt-px text-caption whitespace-nowrap text-muted tabular-nums">

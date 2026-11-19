@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import type { DispatchPlanSummary } from "./dispatch";
 
 export type CardStage = "inbox" | "next" | "doing" | "needs_me" | "done";
 export type WorkstreamStatus = "done" | "dropped" | "needs_me" | "in_flight" | "blocked" | "next" | "planned";
@@ -58,11 +59,9 @@ export interface Workstream {
   cards?: ProjectCard[];
 }
 
-export interface ProjectDispatchRun {
-  plan: string;
-  updated_at: string;
-  tasks_total: number;
-  states: Record<string, number>;
+export interface ProjectDispatchRun extends Pick<DispatchPlanSummary, "plan" | "updated_at" | "tasks_total" | "states"> {
+  // MCP cards get projects through the gateway, which may still read Sazed's pre-035 shape.
+  phases?: Record<string, number>;
 }
 
 export interface Project {

@@ -169,6 +169,7 @@ const project = z.object({
         updated_at: z.string(),
         tasks_total: z.number(),
         states: z.record(z.string(), z.number()),
+        phases: z.record(z.string(), z.number()).optional(),
       })
     )
     .optional(),

@@ -1,11 +1,28 @@
+import { NAME_PATTERN } from "@/api/profiles";
+
 /** Phone tap targets for the small buttons in the profile and server forms. */
 export const TOUCH = "max-sm:h-11 max-sm:px-4";
 export const TOUCH_ICON = "max-sm:size-11";
 export const TOUCH_BACK = "max-sm:min-h-11 max-sm:px-2";
 
-export function budget(usd: number): string {
+export const DASH = "–";
+
+// Sazed skips its version check on a create, so a create over an existing name would replace it.
+export function nameProblem(name: string, taken: readonly string[]): string | false {
+  if (!NAME_PATTERN.test(name))
+    return "Name: lowercase letters, digits, dashes and underscores, 2 to 31 characters, starting with a letter.";
+  if (taken.includes(name)) return `A profile named ${name} already exists. Open it from the list to edit it.`;
+  return false;
+}
+
+export function budget(usd: number | null): string {
+  if (usd === null) return "no cap";
   return `$${usd < 1 ? usd.toFixed(2) : String(Number(usd.toFixed(2)))}`;
 }
+
+export const effort = (value: string | null) => value ?? DASH;
+
+export const toolCalls = (n: number | null) => (n === null ? "no cap" : String(n));
 
 export function timeout(seconds: number): string {
   if (seconds < 3600) return `${Math.round(seconds / 60)}m`;

@@ -10,22 +10,29 @@ import {
   saveProfile,
   type ProfileDetail,
   type ProfileValues,
+  type StoredProfile,
 } from "@/api/profiles";
 import { Button } from "@/components/ui/button";
 import { Author, ago } from "@/features/plans/planParts";
 import { field } from "@/features/projects/fields";
-import { TOUCH, TOUCH_BACK, budget, timeout } from "./format";
+import { DASH, TOUCH, TOUCH_BACK, budget, effort, timeout, toolCalls } from "./format";
 import { GrantsList } from "./McpGrants";
 import { ProfileForm } from "./ProfileForm";
 
-function Facts({ values }: { values: ProfileValues }) {
+const yesNo = (v: boolean | undefined) => (v === undefined ? DASH : v ? "yes" : "no");
+
+// Versions saved before migration 035 have read_only and none of engine, capability or max tool
+// calls, so each fact falls back to a dash and read-only shows only where capability is missing.
+function Facts({ values }: { values: StoredProfile }) {
   const rows: [string, string][] = [
-    ["Model", values.model],
-    ["Effort", values.effort],
-    ["Budget", budget(values.budget_usd)],
-    ["Timeout", timeout(values.timeout_s)],
-    ["Read-only", values.read_only ? "yes" : "no"],
-    ["Evidence required", values.evidence_required ? "yes" : "no"],
+    ["Engine", values.engine ?? DASH],
+    values.capability ? ["Capability", values.capability] : ["Read-only", yesNo(values.read_only)],
+    ["Model", values.model ?? DASH],
+    ["Effort", effort(values.effort ?? null)],
+    ["Budget", budget(values.budget_usd ?? null)],
+    ["Timeout", values.timeout_s === undefined ? DASH : timeout(values.timeout_s)],
+    ["Max tool calls", values.max_tool_calls === undefined ? DASH : toolCalls(values.max_tool_calls)],
+    ["Evidence required", yesNo(values.evidence_required)],
   ];
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3 md:p-4">
@@ -231,6 +238,7 @@ export function ProfileView({ name, onBack, onChanged }: Props) {
                 submitLabel="Save"
                 onSubmit={save}
                 onReload={load}
+                isStale={async () => (await getProfile(name)).version !== detail.version}
               />
               <DeleteBox
                 name={detail.name}

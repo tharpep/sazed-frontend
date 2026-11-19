@@ -1,4 +1,5 @@
-import type { JobEvent, JobKind, JobStatus } from "@/api/jobs";
+import type { JobEvent, JobKind, JobStatus, RunState } from "@/api/jobs";
+import type { Tone } from "@/components/system";
 
 export const KIND_LABEL: Record<JobKind, string> = {
   research: "Research",
@@ -6,7 +7,8 @@ export const KIND_LABEL: Record<JobKind, string> = {
   code_task: "Code task",
 };
 
-export const STATUS_LABEL: Record<JobStatus, string> = {
+/** Run-state words for job and dispatch screens alike. */
+export const STATUS_LABEL: Record<RunState, string> = {
   queued: "Queued",
   needs_approval: "Needs approval",
   needs_input: "Needs your answer",
@@ -16,6 +18,7 @@ export const STATUS_LABEL: Record<JobStatus, string> = {
   cancelled: "Cancelled",
   timed_out: "Timed out",
   paused: "Paused",
+  skipped: "Skipped",
 };
 
 export const PAUSE_REASON: Record<string, string> = {
@@ -25,10 +28,16 @@ export const PAUSE_REASON: Record<string, string> = {
 };
 
 /** Same color rule as the rest of the console: only problems (and approvals) get color. */
+export function runTone(state: RunState): Tone {
+  if (state === "failed" || state === "timed_out") return "err";
+  if (state === "needs_approval" || state === "needs_input" || state === "paused") return "warn";
+  return "neutral";
+}
+
+const JOB_TONE_TEXT: Partial<Record<Tone, string>> = { err: "text-destructive", warn: "text-accent" };
+
 export function statusTone(status: JobStatus): string {
-  if (status === "failed" || status === "timed_out") return "text-destructive";
-  if (status === "needs_approval" || status === "needs_input" || status === "paused") return "text-accent";
-  return "text-muted";
+  return JOB_TONE_TEXT[runTone(status)] ?? "text-muted";
 }
 
 export function requesterLabel(requestedBy: string): string {

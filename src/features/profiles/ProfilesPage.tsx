@@ -7,7 +7,7 @@ import { listMcpServers, saveMcpServer, type McpServer } from "@/api/mcpServers"
 import { listProfiles, saveProfile, type Profile } from "@/api/profiles";
 import { Author, ago } from "@/features/plans/planParts";
 import { useNavStore } from "@/store/navStore";
-import { budget, timeout } from "./format";
+import { budget, effort, timeout } from "./format";
 import { BLANK_SERVER, McpServerForm } from "./McpServerForm";
 import { McpServerView } from "./McpServerView";
 import { McpServers } from "./McpServers";
@@ -23,17 +23,15 @@ function Row({ profile, onOpen }: { profile: Profile; onOpen: () => void }) {
     <ListRow
       onClick={onOpen}
       title={<span className="font-mono">{profile.name}</span>}
-      description={
-        <>
-          {profile.description}
-          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-mono text-caption text-muted">
-              {profile.model} · {profile.effort} · {budget(profile.budget_usd)} · {timeout(profile.timeout_s)}
-            </span>
-            {profile.read_only && <Tag>read-only</Tag>}
-            {profile.evidence_required && <Tag>evidence</Tag>}
+      description={profile.description}
+      detail={
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-mono text-caption text-muted">
+            {profile.model} · {effort(profile.effort)} · {budget(profile.budget_usd)} · {timeout(profile.timeout_s)}
           </span>
-        </>
+          <Tag>{profile.capability}</Tag>
+          {profile.evidence_required && <Tag>evidence</Tag>}
+        </span>
       }
       meta={
         <>
@@ -140,11 +138,12 @@ export function ProfilesPage() {
         ) : (
           <>
             <p className="text-meta text-ink-2">
-              Dispatch reads these when a plan runs. The cheapest model whose check catches its mistakes.
+              Dispatch plans and worker jobs read these when they run. The cheapest model whose check catches its mistakes.
             </p>
             {creating && (
               <ProfileForm
                 initial={BLANK}
+                taken={profiles?.map((p) => p.name) ?? []}
                 submitLabel="Create profile"
                 onCancel={() => setCreating(false)}
                 onSubmit={async (values, reason, newName) => {
