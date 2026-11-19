@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import { isHub } from "@/nav/hubViews";
-import { loadItems, loadViews, shownItem, useNavStore, type ItemRef, type ItemsByView, type Place } from "@/store/navStore";
+import { loadItems, loadSheets, loadViews, shownItem, useNavStore, type ItemRef, type ItemsByView, type Place } from "@/store/navStore";
 
 /** What one browser history entry holds: the place, and the place of the entry beneath it when
  * this console pushed that entry (null for the first entry of a load or a deep link). */
@@ -19,7 +19,7 @@ export type Intent = "navigate" | "follow" | "back";
 const KEY = "sazed";
 
 export function placeOf(s: Place): Place {
-  return { hub: s.hub, view: s.view, open: s.open, read: s.read };
+  return { hub: s.hub, view: s.view, open: s.open, read: s.read, sheet: s.sheet };
 }
 
 function sameRef(a: ItemRef | undefined, b: ItemRef | undefined): boolean {
@@ -32,7 +32,7 @@ function sameItems(a: ItemsByView, b: ItemsByView): boolean {
 }
 
 export function samePlace(a: Place, b: Place): boolean {
-  if (a.hub !== b.hub || !sameItems(a.open, b.open) || !sameItems(a.read, b.read)) return false;
+  if (a.hub !== b.hub || !sameItems(a.open, b.open) || !sameItems(a.read, b.read) || !sameItems(a.sheet, b.sheet)) return false;
   return (Object.keys(a.view) as (keyof Place["view"])[]).every((h) => a.view[h] === b.view[h]);
 }
 
@@ -72,7 +72,8 @@ export function stepFor(prev: Place, next: Place, below: Place | null, intent: I
     next.hub !== prev.hub ||
     next.view[next.hub] !== prev.view[next.hub] ||
     opened(prev.open, next.open) ||
-    opened(prev.read, next.read);
+    opened(prev.read, next.read) ||
+    opened(prev.sheet, next.sheet);
   return navigated ? "push" : "replace";
 }
 
@@ -91,9 +92,9 @@ export function placeToApply(entry: Place, live: Place): Place {
 
 function parsePlace(raw: unknown): Place | null {
   if (!raw || typeof raw !== "object") return null;
-  const { hub, view, open, read } = raw as Record<string, unknown>;
+  const { hub, view, open, read, sheet } = raw as Record<string, unknown>;
   if (typeof hub !== "string" || !isHub(hub)) return null;
-  return { hub, view: loadViews(view), open: loadItems(open), read: loadItems(read) };
+  return { hub, view: loadViews(view), open: loadItems(open), read: loadItems(read), sheet: loadSheets(sheet) };
 }
 
 /** The console's entry in a history.state, or null when the state is not one (another app's, a

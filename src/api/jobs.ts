@@ -68,6 +68,8 @@ export interface JobDetail extends Omit<JobSummary, "result_preview"> {
     question?: string;
   };
   events?: JobEvent[];
+  /** When the worker last reported in for this job; only GET /jobs/{id} returns it. */
+  heartbeat_at?: string | null;
   /** Set while the job is waiting on Pryce (status needs_input). */
   question?: string | null;
   timeline?: TimelineStep[];
@@ -88,8 +90,9 @@ export async function listWaitingJobs(): Promise<JobSummary[]> {
   return [...approval.jobs, ...input.jobs].sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
-export async function getJob(id: string): Promise<JobDetail> {
-  return apiFetch(`/jobs/${encodeURIComponent(id)}`) as Promise<JobDetail>;
+/** Without events the reply is a few hundred bytes, for callers that only need status fields. */
+export async function getJob(id: string, events = true): Promise<JobDetail> {
+  return apiFetch(`/jobs/${encodeURIComponent(id)}${events ? "" : "?events=false"}`) as Promise<JobDetail>;
 }
 
 export async function startResearch(

@@ -3,10 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { listActivity, type ActivityEvent } from "@/api/activity";
 import { getAutomation, listAutomations } from "@/api/automations";
 import { listBacklog, type BacklogItem } from "@/api/backlog";
+import { getBoard } from "@/api/board";
 import { getCommand, type CommandSummary } from "@/api/command";
 import { fetchCalendarToday, fetchTasksDueToday } from "@/api/display";
 import { fetchServices, fetchStorage, type Service } from "@/api/homelab";
-import { listProjects, type Project } from "@/api/projects";
+import { listProjects, type Project, type ProjectCard } from "@/api/projects";
+import { CardSheet } from "@/features/backlog/CardSheet";
 import { JobSheet } from "@/features/jobs/JobSheet";
 import { gib, statusOf } from "@/features/homelab/format";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -15,11 +17,12 @@ import { useUiStore } from "@/store/uiStore";
 
 import { AskField } from "./AskField";
 import { Done } from "./Done";
-import { LinkRows, ProjectsBox, TodayBox, TodayLine } from "./HomeSide";
+import { LinkRows, ProjectsBox, ShippedBox, TodayBox, TodayLine } from "./HomeSide";
 import { askFromHome, goTo, openSystem } from "./homeNav";
 import { NeedsYou } from "./NeedsYou";
 import { Ready } from "./Ready";
 import { Running } from "./Running";
+import { useHeartbeats } from "./useHeartbeats";
 import {
   failedStep,
   latestFailure,
@@ -68,6 +71,8 @@ interface Side {
   runLine: string | null;
   runAlert: boolean;
   projects: Project[] | null;
+  projectOf: Map<string, string>;
+  shipped: ProjectCard[] | null;
   latest: ActivityEvent | null;
   backlog: BacklogItem[] | null;
 }
@@ -78,9 +83,16 @@ const NO_SIDE: Side = {
   runLine: null,
   runAlert: false,
   projects: null,
+  projectOf: new Map(),
+  shipped: null,
   latest: null,
   backlog: null,
 };
+
+/** Each step's project title by workstream id, for cards that carry only their step. */
+function projectTitles(projects: Project[]): Map<string, string> {
+  return new Map(projects.flatMap((p) => p.workstreams.map((w) => [w.id, p.title] as const)));
+}
 
 export function HomePage() {
   const privateRevealed = useUiStore((s) => s.privateRevealed);
@@ -107,13 +119,14 @@ export function HomePage() {
 
   const loadSide = useCallback(async () => {
     const seq = ++sideSeq.current;
-    const [services, storage, automations, projects, activity, backlog] = await Promise.allSettled([
+    const [services, storage, automations, projects, activity, backlog, board] = await Promise.allSettled([
       fetchServices(),
       fetchStorage(),
       listAutomations(),
       listProjects(),
       listActivity([], false, undefined, 1),
       listBacklog("open"),
+      getBoard(),
     ]);
     const autos = automations.status === "fulfilled" ? automations.value : [];
     const failure = latestFailure(autos);
@@ -134,6 +147,8 @@ export function HomePage() {
       runLine: runSentence(failure, step, nextRun(autos)),
       runAlert: failure !== null,
       projects: projects.status === "fulfilled" ? projectsByRank(projects.value) : null,
+      projectOf: projects.status === "fulfilled" ? projectTitles(projects.value) : new Map(),
+      shipped: board.status === "fulfilled" ? board.value.cards : null,
       latest: activity.status === "fulfilled" ? (activity.value[0] ?? null) : null,
       backlog: backlog.status === "fulfilled" ? backlog.value : null,
     });
@@ -165,6 +180,7 @@ export function HomePage() {
 
   const needs = command?.needs ?? null;
   const working = command?.working ?? null;
+  const heard = useHeartbeats(working);
   const done = command?.done ?? null;
   const ready = side.backlog ? readyCount(side.backlog) : null;
   const askInline = !isMobile;
@@ -226,7 +242,7 @@ export function HomePage() {
         <div className="mt-5 grid items-start gap-7 @min-[860px]:grid-cols-[minmax(0,1fr)_300px]">
           <div className="flex min-w-0 flex-col gap-4">
             <NeedsYou cards={needs} onOpenJob={setOpenJob} onChanged={loadCommand} />
-            <Running jobs={working} onOpenJob={setOpenJob} onChanged={loadCommand} />
+            <Running jobs={working} heard={heard} onOpenJob={setOpenJob} onChanged={loadCommand} />
             <Ready top={side.backlog ? topReady(side.backlog) : []} total={ready} />
             <Done done={done} compact={isMobile} onOpenJob={setOpenJob} />
             {askInline && <AskField onSend={askFromHome} isStreaming={isStreaming} onStop={stopReply} />}
@@ -234,11 +250,13 @@ export function HomePage() {
           <div className="flex min-w-0 flex-col gap-4">
             <TodayBox today={today} className="hidden @min-[860px]:block" />
             <ProjectsBox projects={side.projects} />
+            <ShippedBox cards={side.shipped} projectOf={side.projectOf} />
             <LinkRows label="Elsewhere" rows={links} />
           </div>
         </div>
       </div>
       <JobSheet jobId={openJob} onClose={() => setOpenJob(null)} onChanged={loadCommand} onOpenJob={setOpenJob} />
+      <CardSheet view="home:home" onChanged={loadSide} />
     </div>
   );
 }

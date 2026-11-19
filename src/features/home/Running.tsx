@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 
 import { CardActions } from "./CardActions";
 import { Group, MoreLink } from "./Group";
+import { ageSince, heardLabel, isStale } from "./heard";
 import { goTo, openDispatch } from "./homeNav";
 import { StepLine } from "./StepLine";
 import { clock } from "./steps";
@@ -15,14 +16,27 @@ function sub(job: WorkingJob): string {
     .join(" · ");
 }
 
+function LastHeard({ job, heard }: { job: WorkingJob; heard: Record<string, string | null> }) {
+  // Sazed's elapsed_s for a dispatch task already counts from its latest row; heartbeats are not exposed.
+  if (job.kind === "job" && !(job.job_id! in heard)) return null;
+  const age = job.kind === "dispatch" ? job.elapsed_s : ageSince(heard[job.job_id!]);
+  return (
+    <span className={cn("text-caption whitespace-nowrap", isStale(age, job.kind) ? "text-warn" : "text-muted")}>
+      {heardLabel(age)}
+    </span>
+  );
+}
+
 interface Props {
   jobs: WorkingJob[] | null;
+  /** heartbeat_at per worker job id, from useHeartbeats. */
+  heard: Record<string, string | null>;
   onOpenJob: (jobId: string) => void;
   onChanged: () => void;
 }
 
 /** Running work, one row each. Home offers only Stop; Steer stays in the job sheet a tap away. */
-export function Running({ jobs, onOpenJob, onChanged }: Props) {
+export function Running({ jobs, heard, onOpenJob, onChanged }: Props) {
   return (
     <Group
       name="Running"
@@ -55,8 +69,11 @@ export function Running({ jobs, onOpenJob, onChanged }: Props) {
                 <span className="block truncate text-caption text-muted">{sub(job)}</span>
               </span>
               <span className="flex items-center gap-2">
-                <span className="font-mono text-meta whitespace-nowrap text-muted tabular-nums">
-                  {job.status === "queued" ? "queued" : clock(job.elapsed_s)}
+                <span className="flex flex-col items-end">
+                  <span className="font-mono text-meta whitespace-nowrap text-muted tabular-nums">
+                    {job.status === "queued" ? "queued" : clock(job.elapsed_s)}
+                  </span>
+                  {job.status === "running" && <LastHeard job={job} heard={heard} />}
                 </span>
                 {job.job_id && stop.length > 0 && (
                   <CardActions cardId={jobCardId(job.job_id)} actions={stop} onDone={onChanged} touch />

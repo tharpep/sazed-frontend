@@ -19,6 +19,14 @@ export interface BoardBar {
   next: number;
 }
 
+/** A Claude Code session that linked itself to a card by hand. */
+export interface SessionLink {
+  session: string;
+  branch: string | null;
+  pr_repo: string | null;
+  pr_number: number | null;
+}
+
 export interface ProjectCard {
   id: string;
   kind: "item" | "job";
@@ -27,6 +35,9 @@ export interface ProjectCard {
   stage: CardStage;
   next: string;
   updated_at: string;
+  // Optional because the gateway's MCP cards may still relay a shape from before Sazed sent them.
+  done_at?: string | null;
+  session_link?: SessionLink | null;
   repo: string | null;
   item_type: string | null;
   effort: string | null;

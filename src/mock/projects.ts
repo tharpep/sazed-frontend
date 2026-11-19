@@ -11,21 +11,25 @@ import type {
 const NOW = Date.now();
 const ago = (hours: number) => new Date(NOW - hours * 3_600_000).toISOString();
 
-type CardSpec = [title: string, stage: CardStage, next?: string, pr?: number];
+type CardSpec = [title: string, stage: CardStage, next?: string, pr?: number, session?: string];
 type WsSpec = [title: string, status: WorkstreamStatus, summary: string, cards: CardSpec[], dependsOn?: string[]];
 
 let seq = 0;
 function card(spec: CardSpec, repo: string, workstream: string): ProjectCard {
-  const [title, stage, next = "", pr] = spec;
+  const [title, stage, next = "", pr, session] = spec;
   seq += 1;
   return {
-    id: `card-${seq}`,
+    id: pr ? `job:${seq}` : `item:card-${seq}`,
     kind: pr ? "job" : "item",
     source: pr ? "worker" : "manual",
     title,
     stage,
     next,
     updated_at: ago(seq * 3),
+    done_at: stage === "done" ? ago(seq * 3) : null,
+    session_link: session
+      ? { session, branch: `feature/${session}`, pr_repo: `tharpep/${repo}`, pr_number: 100 + seq }
+      : null,
     repo,
     item_type: "task",
     effort: null,
@@ -165,7 +169,7 @@ const FIXTURES: Project[] = [
     "Projects and workstreams are being designed now.",
     [
       ["Read-only API", "done", "Cards from the backlog and jobs.", [["Board endpoint", "done", "", 51], ["Card stages", "done", "", 52]]],
-      ["Projects layer", "in_flight", "Projects and ordered workstreams.", [["Projects API", "doing", "Open the PR", 58], ["Projects page", "doing", "Check on a phone"], ["Gateway tools", "next", "After the API lands"]]],
+      ["Projects layer", "in_flight", "Projects and ordered workstreams.", [["Projects API", "doing", "Open the PR", 58], ["Projects page", "doing", "Being built in a terminal session", undefined, "projects-page"],["Gateway tools", "next", "After the API lands"]]],
       ["Life management", "planned", "Grow the board past code work.", [["Home and errands", "inbox"]]],
     ]
   ),
