@@ -31,6 +31,8 @@ export interface WorkingJob {
   elapsed_s: number;
   timeout_s: number | null;
   actions: CardAction[];
+  // Running dispatch items only, and absent from a Sazed that predates it.
+  heartbeat_at?: string | null;
 }
 
 export interface DoneJob {

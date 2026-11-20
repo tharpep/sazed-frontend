@@ -7,11 +7,15 @@ import { DetailPanel } from "@/components/shell/DetailPanel";
 import { cn } from "@/lib/utils";
 import { approveBacklogItem, moveBacklogItem, updateBacklogItem, type BacklogItem } from "@/api/backlog";
 import { errorText } from "@/api/homelab";
-import { sessionLabel } from "@/widgets/projectWork";
+import type { ProjectCard } from "@/api/projects";
+import { sessionLabel, visibleNext } from "@/widgets/projectWork";
+import { ProofBlock } from "./ProofBlock";
 import { REPOS, STATUS_LABEL, TYPE_LABEL, ageLabel, isOpenStatus, sourceLabel, workLabel } from "./format";
 
 interface Props {
   item: BacklogItem | null;
+  /** The board's card for the item, which carries its PR snapshot; the backlog item has none. */
+  card?: ProjectCard | null;
   /** Open with a loading state while the item is fetched, so a tap shows the sheet at once. */
   loading?: boolean;
   /** How many open items have a priority, for "#3 of 14" and the last-place check. */
@@ -27,7 +31,7 @@ const field =
 const FOOTER_BUTTON = "h-11 min-w-24 flex-1 px-4 sm:h-8 sm:flex-none";
 const BODY_BUTTON = "h-11 px-3 sm:h-7 sm:px-2.5";
 
-export function BacklogSheet({ item, loading = false, rankedCount, onClose, onChanged, onOpenJob }: Props) {
+export function BacklogSheet({ item, card, loading = false, rankedCount, onClose, onChanged, onOpenJob }: Props) {
   const [repo, setRepo] = useState("");
   const [note, setNote] = useState("");
   const [approving, setApproving] = useState(false);
@@ -149,6 +153,8 @@ export function BacklogSheet({ item, loading = false, rankedCount, onClose, onCh
               )}
             </p>
           )}
+
+          {card?.pr && <ProofBlock pr={card.pr} reason={card.stage === "done" ? "" : visibleNext(card)} />}
 
           {item.summary && (
             <section aria-label="What it is" className="prose-journal text-sm">

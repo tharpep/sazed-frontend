@@ -121,6 +121,35 @@ const projectCard = z.object({
     })
     .nullable()
     .optional(),
+  pr: z
+    .object({
+      repo: z.string(),
+      number: z.number(),
+      url: z.string(),
+      state: z.enum(["open", "draft", "merged", "closed"]),
+      checks: z
+        .object({
+          state: z.enum(["passing", "failing", "running", "none"]),
+          passed: z.number(),
+          total: z.number(),
+          runs: z.array(z.object({ name: z.string(), conclusion: z.string().nullable() })),
+        })
+        .nullable(),
+      review: z
+        .object({
+          verdict: z.enum(["approve", "approve_with_nits", "request_changes"]),
+          source: z.string(),
+          url: z.string(),
+        })
+        .nullable(),
+      additions: z.number().nullable(),
+      deletions: z.number().nullable(),
+      merged_at: z.string().nullable(),
+      fetched_at: z.string().nullable(),
+    })
+    .nullable()
+    .optional()
+    .describe("Sazed's last snapshot of the card's PR; absent from older payloads"),
   repo: z.string().nullable(),
   item_type: z.string().nullable(),
   effort: z.string().nullable(),

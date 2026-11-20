@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 import { CardActions } from "./CardActions";
 import { Group, MoreLink } from "./Group";
-import { ageSince, heardLabel, isStale } from "./heard";
+import { ageSince, DISPATCH_STALE_AFTER_S, heardLabel, isStale, JOB_STALE_AFTER_S } from "./heard";
 import { goTo, openDispatch } from "./homeNav";
 import { StepLine } from "./StepLine";
 import { clock } from "./steps";
@@ -16,12 +16,10 @@ function sub(job: WorkingJob): string {
     .join(" · ");
 }
 
-// Worker jobs only: no endpoint exposes a dispatch task's heartbeat, and its latest row is not one.
-function LastHeard({ jobId, heard }: { jobId: string; heard: Record<string, string | null> }) {
-  if (!(jobId in heard)) return null;
-  const age = ageSince(heard[jobId]);
+function LastHeard({ at, graceS }: { at: string | null; graceS: number }) {
+  const age = ageSince(at);
   return (
-    <span className={cn("text-caption whitespace-nowrap", isStale(age) ? "text-warn" : "text-muted")}>
+    <span className={cn("text-caption whitespace-nowrap", isStale(age, graceS) ? "text-warn" : "text-muted")}>
       {heardLabel(age)}
     </span>
   );
@@ -73,8 +71,12 @@ export function Running({ jobs, heard, onOpenJob, onChanged }: Props) {
                   <span className="font-mono text-meta whitespace-nowrap text-muted tabular-nums">
                     {job.status === "queued" ? "queued" : clock(job.elapsed_s)}
                   </span>
-                  {job.status === "running" && job.kind === "job" && job.job_id && (
-                    <LastHeard jobId={job.job_id} heard={heard} />
+                  {job.status === "running" && job.kind === "job" && job.job_id && job.job_id in heard && (
+                    <LastHeard at={heard[job.job_id]} graceS={JOB_STALE_AFTER_S} />
+                  )}
+                  {/* A dispatch task that has never beaten sends null, and an older Sazed sends nothing: no line either way. */}
+                  {job.status === "running" && job.kind === "dispatch" && job.heartbeat_at && (
+                    <LastHeard at={job.heartbeat_at} graceS={DISPATCH_STALE_AFTER_S} />
                   )}
                 </span>
                 {job.job_id && stop.length > 0 && (

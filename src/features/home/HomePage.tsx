@@ -277,7 +277,7 @@ export function HomePage() {
         </div>
       </div>
       <JobSheet jobId={openJob} onClose={() => setOpenJob(null)} onChanged={loadCommand} onOpenJob={setOpenJob} />
-      <CardSheet view="home:home" onChanged={refreshAll} />
+      <CardSheet view="home:home" cards={shipped} onChanged={refreshAll} />
     </div>
   );
 }

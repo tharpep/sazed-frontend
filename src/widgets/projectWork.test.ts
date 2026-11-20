@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { ProjectCard, Workstream, WorkstreamStatus } from "@/api/projects";
+import type { PrSnapshot, ProjectCard, Workstream, WorkstreamStatus } from "@/api/projects";
 import {
   cardFacts,
+  cardPrRef,
   countLine,
   foldSteps,
   groupStepCards,
@@ -120,6 +121,29 @@ describe("prRef", () => {
   });
 });
 
+const snapshot: PrSnapshot = {
+  repo: "tharpep/sazed-frontend",
+  number: 83,
+  url: "https://github.com/tharpep/sazed-frontend/pull/83",
+  state: "open",
+  checks: null,
+  review: null,
+  additions: null,
+  deletions: null,
+  merged_at: null,
+  fetched_at: null,
+};
+
+describe("cardPrRef", () => {
+  it("prefers the snapshot, then the session link, then a job's PR number", () => {
+    const link = { session: "s", branch: "b", pr_repo: "tharpep/chat-service", pr_number: 129 };
+    expect(cardPrRef(card({ pr: snapshot, session_link: link }))).toBe("sazed-frontend#83");
+    expect(cardPrRef(card({ session_link: link }))).toBe("chat-service#129");
+    expect(cardPrRef(card({ pr_number: 12, repo: "tharpep/sazed" }))).toBe("sazed#12");
+    expect(cardPrRef(card({}))).toBeNull();
+  });
+});
+
 describe("cardFacts", () => {
   it("never prints Sazed's two filler lines", () => {
     expect(cardFacts(card({ next: "Approve it to start" })).text).toBe("sazed");
@@ -128,8 +152,26 @@ describe("cardFacts", () => {
 
   it("gives an in-flight card its session and PR, and a waiting card its next text", () => {
     const link = { session: "ae92ef80-10d8-4188-95e2-4f13a23aa8ef", branch: "b", pr_repo: "tharpep/chat-service", pr_number: 117 };
-    expect(cardFacts(card({ stage: "doing", session_link: link })).text).toBe("sazed · ae92ef80 · chat-service#117");
+    expect(cardFacts(card({ stage: "doing", session_link: link })).text).toBe("sazed · chat-service#117 · ae92ef80");
     expect(cardFacts(card({ stage: "needs_me", next: "Ready to merge" }))).toEqual({ text: "sazed · Ready to merge", warn: true });
+  });
+
+  it("puts Sazed's reason first on an in-flight session card", () => {
+    const link = { session: "worker-runtime", branch: "b", pr_repo: "tharpep/chat-service", pr_number: 117 };
+    expect(cardFacts(card({ stage: "doing", next: "Checks failing", session_link: link })).text).toBe(
+      "sazed · Checks failing · chat-service#117 · worker-runtime"
+    );
+  });
+
+  it("names a waiting card's PR only when Sazed sent a snapshot of it", () => {
+    const pr = { ...snapshot, repo: "tharpep/sazed", number: 207 };
+    expect(cardFacts(card({ stage: "needs_me", next: "Ready to merge", pr })).text).toBe("sazed · Ready to merge · sazed#207");
+  });
+
+  it("gives a done worker-job card its PR", () => {
+    expect(cardFacts(card({ stage: "done", kind: "job", pr_number: 81, repo: "tharpep/sazed" })).text).toBe(
+      "tharpep/sazed · Done · sazed#81"
+    );
   });
 
   it("shortens only UUID session names", () => {

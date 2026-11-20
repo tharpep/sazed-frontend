@@ -101,7 +101,7 @@ export function ProjectsPage() {
                 <ProjectWidget {...shown} onBack={back} onOpenCard={openCardSheet} />
                 <ProjectPlans project={shown.slug} />
                 <ProjectDispatchRuns runs={shown.dispatch_runs ?? []} />
-                <CardSheet view="work:projects" onChanged={load} />
+                <CardSheet view="work:projects" cards={shown.workstreams.flatMap((w) => w.cards ?? [])} onChanged={load} />
               </>
             )
           ) : (

@@ -29,10 +29,20 @@ function openJob(id: string) {
   withoutEntry(() => useNavStore.getState().openSheet({ kind: "job", id }));
 }
 
-/** The sheet of the card opened over this view, if any: a backlog item or a worker job. */
-export function CardSheet({ view, onChanged }: { view: ViewKey; onChanged: () => void }) {
+/** The sheet of the card opened over this view, if any: a backlog item or a worker job. `cards`
+ * are the board cards the page already holds, which carry each card's PR snapshot. */
+export function CardSheet({
+  view,
+  cards,
+  onChanged,
+}: {
+  view: ViewKey;
+  cards: readonly ProjectCard[] | null;
+  onChanged: () => void;
+}) {
   const ref = useNavStore((s) => s.sheet[view]);
   const itemId = ref?.kind === "backlog" ? ref.id : null;
+  const card = itemId ? (cards?.find((c) => backlogId(c) === itemId) ?? null) : null;
   const [item, setItem] = useState<BacklogItem | null>(null);
   const [rankedCount, setRankedCount] = useState(0);
   const [failure, setFailure] = useState<string | null>(null);
@@ -73,6 +83,7 @@ export function CardSheet({ view, onChanged }: { view: ViewKey; onChanged: () =>
     <>
       <BacklogSheet
         item={shown}
+        card={card}
         loading={itemId !== null && !shown}
         rankedCount={rankedCount}
         onClose={close}
