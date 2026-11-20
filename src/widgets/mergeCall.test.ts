@@ -66,6 +66,7 @@ describe("merge call kinds", () => {
 
   it("read no review when none is stored, and stay a merge call", () => {
     expect(mergeKind({ ...session, pr: { ...ready, review: null } })).toBe("unreviewed");
+    expect(mergeKind({ ...session, pr: { ...ready, review: { ...ready.review!, verdict: "looks fine" } } })).toBe("unreviewed");
     expect(MERGE_LABEL.unreviewed).toBe("Ready to merge · no review");
   });
 

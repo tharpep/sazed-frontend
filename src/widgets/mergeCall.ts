@@ -26,7 +26,8 @@ export type MergeKind = "reviewed" | "unreviewed";
  * can be merged: some PRs need no thorough review. */
 export function mergeKind(card: MergeCandidate): MergeKind | null {
   if (!isMergeCall(card)) return null;
-  return card.pr!.review ? "reviewed" : "unreviewed";
+  const verdict = card.pr!.review?.verdict;
+  return verdict === "approve" || verdict === "approve_with_nits" ? "reviewed" : "unreviewed";
 }
 
 export const MERGE_LABEL: Record<MergeKind, string> = {

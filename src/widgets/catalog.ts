@@ -139,7 +139,7 @@ const projectCard = z.object({
       review: z
         .object({
           verdict: z.string().describe("approve, approve_with_nits or request_changes"),
-          source: z.string(),
+          source: z.string().nullable(),
           url: z.string(),
         })
         .nullable(),

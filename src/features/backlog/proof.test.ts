@@ -2,7 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import type { PrSnapshot } from "@/api/projects";
 
-import { diffSize, mergeCallLine, oldSnapshotText, proofLines, snapshotAge } from "./proof";
+import { diffSize, mergeCallLine, oldSnapshotText, proofLines, shortSource, snapshotAge, SOURCE_MAX } from "./proof";
+
+describe("shortSource", () => {
+  it("names a review with no source and never splits a character", () => {
+    expect(shortSource(null)).toBe("Unnamed");
+    const cut = shortSource("\u{1F600}".repeat(40));
+    expect(Array.from(cut)).toHaveLength(SOURCE_MAX);
+    expect(cut.endsWith("…")).toBe(true);
+    expect(Array.from(cut.slice(0, -1)).every((c) => c === "\u{1F600}")).toBe(true);
+  });
+});
 
 const NOW = Date.parse("2026-11-19T21:00:00+00:00");
 

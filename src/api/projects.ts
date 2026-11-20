@@ -41,7 +41,7 @@ export interface PrSnapshot {
     total: number;
     runs: { name: string; conclusion: string | null }[];
   } | null;
-  review: { verdict: string; source: string; url: string } | null;
+  review: { verdict: string; source: string | null; url: string } | null;
   additions: number | null;
   deletions: number | null;
   merged_at: string | null;

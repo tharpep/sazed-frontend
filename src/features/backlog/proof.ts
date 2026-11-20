@@ -103,7 +103,7 @@ function reviewLine(pr: PrSnapshot): ProofLine {
   return {
     key: "review",
     mark: r.verdict === "request_changes" ? "bad" : VERDICT_WORD.has(r.verdict) ? "done" : "wait",
-    title: `${r.source} review`,
+    title: `${r.source ?? "Unnamed"} review`,
     detail: "",
     value: verdictWord(r.verdict),
   };
@@ -126,8 +126,9 @@ function checksSentence(pr: PrSnapshot): string {
 export const SOURCE_MAX = 32;
 
 /** The reviewer as Sazed sends it, cut with an ellipsis past SOURCE_MAX characters. */
-export function shortSource(source: string): string {
-  return source.length > SOURCE_MAX ? `${source.slice(0, SOURCE_MAX - 1).trimEnd()}…` : source;
+export function shortSource(source: string | null): string {
+  const chars = Array.from(source ?? "Unnamed");
+  return chars.length > SOURCE_MAX ? `${chars.slice(0, SOURCE_MAX - 1).join("").trimEnd()}…` : chars.join("");
 }
 
 /** "agy review: approve. Checks 6 of 6 passed. +412 -88." for a merge call in Needs you; only the
