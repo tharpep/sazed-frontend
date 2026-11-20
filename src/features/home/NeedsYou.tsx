@@ -1,8 +1,9 @@
 import type { NeedsCard } from "@/api/command";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { openCardSheet } from "@/features/backlog/CardSheet";
-import { isMergeCall, mergeCallLine, oldSnapshotText, prName } from "@/features/backlog/proof";
+import { mergeCallLine, oldSnapshotText, prName } from "@/features/backlog/proof";
 import { cn } from "@/lib/utils";
+import { MERGE_LABEL, mergeKind, orderMergeCalls } from "@/widgets/mergeCall";
 
 import { CardActions, TOUCH_BUTTON } from "./CardActions";
 import { Group } from "./Group";
@@ -30,11 +31,12 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
   return (
     <Group name="Needs you" count={cards ? cards.length : null} empty="Nothing is waiting on you.">
       <ul className="divide-y divide-line">
-        {(cards ?? []).map((card) => {
+        {orderMergeCalls(cards ?? []).map((card) => {
           const asking = card.job_status === "needs_input";
           const plan = dispatchPlan(card);
           const bad = failed(card);
-          const merge = isMergeCall(card) ? card.pr! : null;
+          const kind = mergeKind(card);
+          const merge = kind ? card.pr! : null;
           const open = card.job_id
             ? () => onOpenJob(card.job_id!)
             : plan
@@ -77,7 +79,12 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
                   {ago(card.updated_at)}
                   {old && <span className="text-warn"> · snapshot {old}</span>}
                 </div>
-                {merge && <p className="mt-1.5 text-meta font-medium text-ink">Merge {prName(merge)}</p>}
+                {merge && kind && (
+                  <p className="mt-1.5 text-meta font-medium text-ink">
+                    {MERGE_LABEL[kind]}
+                    <span className="font-normal text-muted"> · {prName(merge)}</span>
+                  </p>
+                )}
                 {body && <p className={cn("text-meta [overflow-wrap:anywhere] text-ink-2", merge ? "mt-0.5" : "mt-1.5")}>{body}</p>}
                 <div className="mt-2.5 flex flex-wrap items-start justify-end gap-2">
                   {open && !asking && (

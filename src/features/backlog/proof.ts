@@ -122,23 +122,18 @@ function checksSentence(pr: PrSnapshot): string {
   return `Checks ${c.passed} of ${c.total} passed`;
 }
 
-/** A session card Sazed put in Needs me because its PR is ready: open, checks passing and no
- * changes requested (sazed app/board/stages.py, _linked_pr). A worker-job card in Needs me waits
- * for something else, or carries its own actions, so it is never a merge call here. */
-export function isMergeCall(card: { stage: string; job_id: string | null; pr?: PrSnapshot | null }): boolean {
-  const pr = card.pr;
-  return (
-    card.job_id == null &&
-    card.stage === "needs_me" &&
-    pr?.state === "open" &&
-    pr.checks?.state === "passing" &&
-    pr.review?.verdict !== "request_changes"
-  );
+// Sazed allows a 120-character source; past this a phone line would push the verdict out of view.
+export const SOURCE_MAX = 32;
+
+/** The reviewer as Sazed sends it, cut with an ellipsis past SOURCE_MAX characters. */
+export function shortSource(source: string): string {
+  return source.length > SOURCE_MAX ? `${source.slice(0, SOURCE_MAX - 1).trimEnd()}…` : source;
 }
 
-/** "agy review: approve. Checks 6 of 6 passed. +412 -88." for a merge call in Needs you. */
+/** "agy review: approve. Checks 6 of 6 passed. +412 -88." for a merge call in Needs you; only the
+ * reviewer is ever shortened, never the verdict, checks or diff. */
 export function mergeCallLine(pr: PrSnapshot): string {
-  const review = pr.review ? `${pr.review.source} review: ${verdictWord(pr.review.verdict)}` : "No review stored";
+  const review = pr.review ? `${shortSource(pr.review.source)} review: ${verdictWord(pr.review.verdict)}` : "No review";
   const diff = diffSize(pr);
   return [review, checksSentence(pr), diff].filter(Boolean).join(". ") + ".";
 }

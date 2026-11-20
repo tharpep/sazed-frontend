@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PrSnapshot } from "@/api/projects";
 
-import { diffSize, isMergeCall, mergeCallLine, oldSnapshotText, proofLines, snapshotAge } from "./proof";
+import { diffSize, mergeCallLine, oldSnapshotText, proofLines, snapshotAge } from "./proof";
 
 const NOW = Date.parse("2026-11-19T21:00:00+00:00");
 
@@ -42,7 +42,7 @@ const neverFetched: PrSnapshot = {
 describe("proof lines", () => {
   it("read a merged PR as the PR, its checks and its review", () => {
     const [pr, checks, review] = proofLines(merged);
-    expect(pr).toMatchObject({ mark: "done", title: "PR sazed-frontend#83", value: "+1,148 -105" });
+    expect(pr).toMatchObject({ mark: "done", title: "PR sazed-frontend#83", value: "+1,148\u00a0-105" });
     expect(pr.detail).toMatch(/^Merged Thu 19 Nov, \d\d:53$/);
     expect(checks).toMatchObject({ mark: "done", detail: "check, tests", value: "2 of 2" });
     expect(review).toMatchObject({ mark: "done", title: "agy review", value: "approve" });
@@ -132,53 +132,36 @@ describe("old snapshots", () => {
   });
 });
 
-describe("merge calls", () => {
+describe("merge call lines", () => {
   const ready: PrSnapshot = { ...merged, state: "open", merged_at: null, additions: 412, deletions: 88 };
 
-  const session = { stage: "needs_me", job_id: null };
-
-  it("are session cards in Needs me with an open, green PR and no changes requested", () => {
-    expect(isMergeCall({ ...session, pr: ready })).toBe(true);
-    expect(isMergeCall({ ...session, pr: { ...ready, review: null } })).toBe(true);
-  });
-
-  it("are never a card outside Needs me, or one whose PR is not open", () => {
-    expect(isMergeCall({ ...session, stage: "doing", pr: ready })).toBe(false);
-    expect(isMergeCall({ ...session, pr: { ...ready, state: "closed" } })).toBe(false);
-    expect(isMergeCall({ ...session, pr: { ...ready, state: "draft" } })).toBe(false);
-    expect(isMergeCall({ ...session })).toBe(false);
-  });
-
-  it("are never a PR whose checks are failing, running, missing or unfetched", () => {
-    for (const state of ["failing", "running", "none"]) {
-      expect(isMergeCall({ ...session, pr: { ...ready, checks: { ...ready.checks!, state } } })).toBe(false);
-    }
-    expect(isMergeCall({ ...session, pr: { ...ready, checks: null } })).toBe(false);
-  });
-
-  it("are never a PR with changes requested", () => {
-    expect(isMergeCall({ ...session, pr: { ...ready, review: { ...ready.review!, verdict: "request_changes" } } })).toBe(false);
-  });
-
-  it("are never a worker-job card, which keeps Sazed's next text and its own actions", () => {
-    const job = { ...session, job_id: "8f0c", actions: [{ id: "merge", label: "Merge", takes_text: false }] };
-    const readyJob = { ...job, next: "Ready to merge", pr: ready };
-    const awaitingApproval = { ...job, next: "Approve the job", pr: ready };
-    const failing = { ...job, next: "CI still failing after the fix-ups", pr: { ...ready, checks: { ...ready.checks!, state: "failing" } } };
-    expect(isMergeCall(readyJob)).toBe(false);
-    expect(isMergeCall(awaitingApproval)).toBe(false);
-    expect(isMergeCall(failing)).toBe(false);
-  });
-
-  it("name the verdict, the checks and the diff size", () => {
-    expect(mergeCallLine({ ...ready, checks: { ...ready.checks!, passed: 6, total: 6 } })).toBe(
-      "agy review: approve. Checks 6 of 6 passed. +412 -88."
+  it("keep a reviewed PR's verdict and name the reviewer as Sazed sends it", () => {
+    expect(mergeCallLine({ ...ready, checks: { ...ready.checks!, passed: 3, total: 3 } })).toBe(
+      "agy review: approve. Checks 3 of 3 passed. +412\u00a0-88."
+    );
+    expect(mergeCallLine({ ...ready, review: { ...ready.review!, source: "Claude subagent", verdict: "approve_with_nits" } })).toBe(
+      "Claude subagent review: approve with nits. Checks 2 of 2 passed. +412\u00a0-88."
     );
   });
 
-  it("say when there is no review or no checks rather than guess", () => {
+  it("say plainly when a PR has no review", () => {
+    expect(mergeCallLine({ ...ready, review: null, checks: { ...ready.checks!, passed: 3, total: 3 } })).toBe(
+      "No review. Checks 3 of 3 passed. +412\u00a0-88."
+    );
+  });
+
+  it("shorten a long reviewer name and keep the verdict, checks and diff whole", () => {
+    const source = "Claude Opus subagent, 2026-11-20, second pass after the fix-ups landed on the branch";
+    const line = mergeCallLine({ ...ready, review: { ...ready.review!, source }, checks: { ...ready.checks!, passed: 3, total: 3 } });
+    expect(line).toBe("Claude Opus subagent, 2026-11-2… review: approve. Checks 3 of 3 passed. +412 -88.");
+    expect(mergeCallLine({ ...ready, review: { ...ready.review!, source: "Claude Opus subagent, 2026-11-20" } })).toMatch(
+      /^Claude Opus subagent, 2026-11-20 review: approve\./
+    );
+  });
+
+  it("say when there are no checks rather than guess", () => {
     expect(mergeCallLine({ ...ready, review: null, checks: { state: "none", passed: 0, total: 0, runs: [] }, additions: null })).toBe(
-      "No review stored. No checks reported."
+      "No review. No checks reported."
     );
   });
 });

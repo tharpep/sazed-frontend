@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { approveBacklogItem, moveBacklogItem, updateBacklogItem, type BacklogItem } from "@/api/backlog";
 import { errorText } from "@/api/homelab";
 import type { ProjectCard } from "@/api/projects";
+import { mergeLabelOf } from "@/widgets/mergeCall";
 import { sessionLabel, visibleNext } from "@/widgets/projectWork";
 import { ProofBlock } from "./ProofBlock";
 import { REPOS, STATUS_LABEL, TYPE_LABEL, ageLabel, isOpenStatus, sourceLabel, workLabel } from "./format";
@@ -181,7 +182,13 @@ export function BacklogSheet({ item, card, loading = false, rankedCount, onClose
             </p>
           )}
 
-          {card?.pr && <ProofBlock pr={card.pr} reason={card.stage === "done" ? "" : visibleNext(card)} />}
+          {card?.pr && (
+            <ProofBlock
+              pr={card.pr}
+              reason={card.stage === "done" ? "" : visibleNext(card)}
+              mergeLabel={mergeLabelOf(card)}
+            />
+          )}
 
           {item.summary && (
             <section aria-label="What it is" className="prose-journal text-sm">

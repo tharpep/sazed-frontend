@@ -1,5 +1,7 @@
 import type { Project, ProjectCard, SessionLink, Workstream, WorkstreamStatus } from "@/api/projects";
 
+import { mergeLabelOf } from "./mergeCall";
+
 export type CardGroup = "waiting" | "flight" | "todo" | "done";
 
 export const GROUP_ORDER: readonly CardGroup[] = ["waiting", "flight", "todo", "done"];
@@ -106,7 +108,7 @@ export function cardFacts(card: ProjectCard): { text: string; warn: boolean } {
   const group = cardGroup(card);
   const next = visibleNext(card);
   const parts: (string | null)[] = [card.repo];
-  if (group === "waiting") parts.push(next, card.pr ? cardPrRef(card) : null);
+  if (group === "waiting") parts.push(mergeLabelOf(card) ?? next, card.pr ? cardPrRef(card) : null);
   if (group === "flight") {
     // The PR goes before the session name, so a phone's truncated line keeps it.
     if (card.session_link) parts.push(next, cardPrRef(card), sessionLabel(card.session_link.session));

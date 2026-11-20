@@ -168,6 +168,22 @@ describe("cardFacts", () => {
     expect(cardFacts(card({ stage: "needs_me", next: "Ready to merge", pr })).text).toBe("sazed · Ready to merge · sazed#207");
   });
 
+  it("says which kind of merge call a waiting session card is", () => {
+    const green = {
+      ...snapshot,
+      repo: "tharpep/sazed",
+      number: 207,
+      checks: { state: "passing", passed: 2, total: 2, runs: [] },
+    };
+    const review = { verdict: "approve", source: "Claude subagent", url: green.url };
+    expect(cardFacts(card({ stage: "needs_me", next: "Ready to merge", pr: { ...green, review } })).text).toBe(
+      "sazed · Ready to merge · reviewed · sazed#207"
+    );
+    expect(cardFacts(card({ stage: "needs_me", next: "Ready to merge", pr: green })).text).toBe(
+      "sazed · Ready to merge · no review · sazed#207"
+    );
+  });
+
   it("gives a done worker-job card its PR", () => {
     expect(cardFacts(card({ stage: "done", kind: "job", pr_number: 81, repo: "tharpep/sazed" })).text).toBe(
       "tharpep/sazed · Done · sazed#81"

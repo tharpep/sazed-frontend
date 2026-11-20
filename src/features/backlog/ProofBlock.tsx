@@ -9,17 +9,19 @@ const GLYPH_TONE: Record<Mark, string> = { done: "text-ok", bad: "text-err", wai
 const LINK = "text-primary after:absolute after:inset-0 after:content-[''] hover:underline";
 const GLYPH_WORD: Record<Mark, string> = { done: "Done:", bad: "Problem:", wait: "Waiting:" };
 
-/** A card's PR, checks and review from Sazed's snapshot, with Sazed's reason the card waits. */
-export function ProofBlock({ pr, reason }: { pr: PrSnapshot; reason: string }) {
+/** A card's PR, checks and review from Sazed's snapshot, with Sazed's reason the card waits; a
+ * merge call says which kind it is in the heading instead. */
+export function ProofBlock({ pr, reason, mergeLabel }: { pr: PrSnapshot; reason: string; mergeLabel: string | null }) {
   const old = oldSnapshotText(pr);
   return (
     <section aria-label="Proof" className="flex flex-col gap-1.5">
       <h3 className="flex flex-wrap items-baseline gap-x-2 text-sm font-medium text-ink">
         Proof
+        {mergeLabel && <span className="text-meta font-normal text-ink-2">{mergeLabel}</span>}
         {!pr.fetched_at && <span className="text-caption font-normal text-muted">not fetched from GitHub yet</span>}
         {old && <span className="text-caption font-normal text-warn">snapshot {old}</span>}
       </h3>
-      {reason && <p className="text-meta text-ink-2">{reason}</p>}
+      {reason && !mergeLabel && <p className="text-meta text-ink-2">{reason}</p>}
       <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
         {proofLines(pr).map((line) => (
           <li key={line.key} className="relative grid min-h-11 grid-cols-[18px_minmax(0,1fr)_auto] items-baseline gap-x-2.5 px-3 py-2.5 has-[a]:hover:bg-raised sm:min-h-0">
@@ -27,7 +29,7 @@ export function ProofBlock({ pr, reason }: { pr: PrSnapshot; reason: string }) {
               {GLYPH[line.mark]}
             </span>
             <span className="flex min-w-0 flex-col">
-              <span className="text-body text-ink">
+              <span className="text-body [overflow-wrap:anywhere] text-ink">
                 <span className="sr-only">{GLYPH_WORD[line.mark]} </span>
                 {line.key === "pr" ? (
                   <a href={pr.url} target="_blank" rel="noreferrer" className={LINK}>
