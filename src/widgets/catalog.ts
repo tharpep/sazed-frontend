@@ -126,10 +126,11 @@ const projectCard = z.object({
       repo: z.string(),
       number: z.number(),
       url: z.string(),
-      state: z.enum(["open", "draft", "merged", "closed"]),
+      // Plain strings, not enums: a state word from a newer Sazed must not fail the whole card.
+      state: z.string().describe("open, draft, merged or closed"),
       checks: z
         .object({
-          state: z.enum(["passing", "failing", "running", "none"]),
+          state: z.string().describe("passing, failing, running or none"),
           passed: z.number(),
           total: z.number(),
           runs: z.array(z.object({ name: z.string(), conclusion: z.string().nullable() })),
@@ -137,7 +138,7 @@ const projectCard = z.object({
         .nullable(),
       review: z
         .object({
-          verdict: z.enum(["approve", "approve_with_nits", "request_changes"]),
+          verdict: z.string().describe("approve, approve_with_nits or request_changes"),
           source: z.string(),
           url: z.string(),
         })

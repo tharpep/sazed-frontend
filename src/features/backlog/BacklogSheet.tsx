@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { DetailPanel } from "@/components/shell/DetailPanel";
 import { cn } from "@/lib/utils";
 import { approveBacklogItem, moveBacklogItem, updateBacklogItem, type BacklogItem } from "@/api/backlog";
@@ -82,9 +82,30 @@ export function BacklogSheet({ item, card, loading = false, rankedCount, onClose
     );
   }
 
+  // A card a terminal session is building has its PR already: Approve would start a second,
+  // worker-built PR, so the sheet points at the session's PR instead.
+  const sessionPr =
+    item?.pr_repo && item.pr_number != null ? `https://github.com/${item.pr_repo}/pull/${item.pr_number}` : null;
   const footerButtons = !item
     ? []
-    : isOpen && approving
+    : isOpen && item.session_label
+      ? [
+          footerButton("Dismiss", () => act(() => updateBacklogItem(item.id, { status: "dismissed" }))),
+          ...(sessionPr
+            ? [
+                <a
+                  key="Open PR"
+                  href={sessionPr}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(buttonVariants({ variant: "default", className: FOOTER_BUTTON }))}
+                >
+                  Open PR
+                </a>,
+              ]
+            : []),
+        ]
+      : isOpen && approving
       ? [
           footerButton("Back", () => setApproving(false)),
           footerButton(busy ? "Starting…" : "Start the PR", () => act(() => approveBacklogItem(item.id, repo.trim(), note)), {
@@ -138,18 +159,24 @@ export function BacklogSheet({ item, card, loading = false, rankedCount, onClose
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           {item.session_label && (
-            <p className="flex flex-wrap gap-x-1.5 text-xs text-muted">
+            // Inline text with a no-break space before each dot, so a wrapped line ends on the
+            // separator and never starts with one.
+            <p className="text-xs [overflow-wrap:anywhere] text-muted">
               <span>Session {sessionLabel(item.session_label)}</span>
-              {item.session_branch && <span className="font-mono">· {item.session_branch}</span>}
-              {item.pr_repo && item.pr_number != null && (
-                <a
-                  href={`https://github.com/${item.pr_repo}/pull/${item.pr_number}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  · {item.pr_repo.split("/").pop()}#{item.pr_number}
-                </a>
+              {item.session_branch && (
+                <>
+                  {" · "}
+                  <span className="font-mono">{item.session_branch}</span>
+                </>
+              )}
+              {/* The Proof block links the PR when it renders. */}
+              {sessionPr && !card?.pr && (
+                <>
+                  {" · "}
+                  <a href={sessionPr} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                    {item.pr_repo!.split("/").pop()}#{item.pr_number}
+                  </a>
+                </>
               )}
             </p>
           )}

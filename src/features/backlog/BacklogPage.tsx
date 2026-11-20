@@ -456,6 +456,7 @@ export function BacklogPage() {
 
       <BacklogSheet
         item={openItem}
+        card={openId ? (cards?.find((c) => backlogId(c) === openId) ?? null) : null}
         rankedCount={openItems.filter((i) => i.rank != null && isOpenStatus(i.status)).length}
         onClose={close}
         onChanged={(updated) => {

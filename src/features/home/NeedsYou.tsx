@@ -1,5 +1,6 @@
 import type { NeedsCard } from "@/api/command";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { openCardSheet } from "@/features/backlog/CardSheet";
 import { isMergeCall, mergeCallLine, oldSnapshotText, prName } from "@/features/backlog/proof";
 import { cn } from "@/lib/utils";
 
@@ -33,8 +34,14 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
           const asking = card.job_status === "needs_input";
           const plan = dispatchPlan(card);
           const bad = failed(card);
-          const open = card.job_id ? () => onOpenJob(card.job_id!) : plan ? () => openDispatch(plan) : null;
           const merge = isMergeCall(card) ? card.pr! : null;
+          const open = card.job_id
+            ? () => onOpenJob(card.job_id!)
+            : plan
+              ? () => openDispatch(plan)
+              : merge
+                ? () => openCardSheet(card)
+                : null;
           const old = merge ? oldSnapshotText(merge) : "";
           const body = card.question ?? (merge ? mergeCallLine(merge) : card.next);
           return (
@@ -73,6 +80,19 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
                 {merge && <p className="mt-1.5 text-meta font-medium text-ink">Merge {prName(merge)}</p>}
                 {body && <p className={cn("text-meta [overflow-wrap:anywhere] text-ink-2", merge ? "mt-0.5" : "mt-1.5")}>{body}</p>}
                 <div className="mt-2.5 flex flex-wrap items-start justify-end gap-2">
+                  {open && !asking && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={TOUCH_BUTTON}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        open();
+                      }}
+                    >
+                      {card.job_id ? (bad ? "Log" : "Details") : plan ? "Open plan" : "Details"}
+                    </Button>
+                  )}
                   {/* Merging stays on GitHub: the console only points there. */}
                   {merge && (
                     <a
@@ -84,19 +104,6 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
                     >
                       Open PR
                     </a>
-                  )}
-                  {open && !asking && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className={TOUCH_BUTTON}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        open();
-                      }}
-                    >
-                      {card.job_id ? (bad ? "Log" : "Details") : "Open plan"}
-                    </Button>
                   )}
                   <CardActions
                     key={asking ? "ask" : "act"}

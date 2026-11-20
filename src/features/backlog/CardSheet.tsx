@@ -15,7 +15,7 @@ import { backlogId } from "./stages";
 const FAILURE_SHOWN_MS = 8000;
 
 /** Opens a card's sheet over the view it was tapped in. */
-export function openCardSheet(card: ProjectCard) {
+export function openCardSheet(card: Pick<ProjectCard, "id" | "job_id"> & { kind: string }) {
   const id = card.kind === "job" ? card.job_id : backlogId(card);
   if (id) useNavStore.getState().openSheet({ kind: card.kind === "job" ? "job" : "backlog", id });
 }

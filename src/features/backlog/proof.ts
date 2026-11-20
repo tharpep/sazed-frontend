@@ -1,4 +1,4 @@
-import type { PrSnapshot, ReviewVerdict } from "@/api/projects";
+import type { PrSnapshot } from "@/api/projects";
 import { dayTime } from "@/widgets/projectWork";
 
 // Sazed's poller refreshes a PR at most every 6 minutes, so a snapshot twice that old has missed
@@ -15,11 +15,23 @@ export interface ProofLine {
   value: string;
 }
 
-const VERDICT_WORD: Record<ReviewVerdict, string> = {
-  approve: "approve",
-  approve_with_nits: "approve with nits",
-  request_changes: "changes requested",
-};
+const VERDICT_WORD = new Map([
+  ["approve", "approve"],
+  ["approve_with_nits", "approve with nits"],
+  ["request_changes", "changes requested"],
+]);
+
+// The same three conclusions Sazed counts as passed (sazed app/board/prs.py, _PASSED).
+const PASSED = new Set(["success", "skipped", "neutral"]);
+
+/** A word Sazed may add later reads as itself, underscores as spaces. */
+function plain(word: string): string {
+  return word.replace(/_/g, " ");
+}
+
+function verdictWord(verdict: string): string {
+  return VERDICT_WORD.get(verdict) ?? plain(verdict);
+}
 
 /** "sazed-frontend#83". */
 export function prName(pr: Pick<PrSnapshot, "repo" | "number">): string {
@@ -62,6 +74,8 @@ function prLine(pr: PrSnapshot): ProofLine {
       return { ...base, mark: "wait", detail: "Draft" };
     case "open":
       return { ...base, mark: "wait", detail: "Open" };
+    default:
+      return { ...base, mark: "wait", detail: plain(pr.state) };
   }
 }
 
@@ -70,7 +84,7 @@ function checksLine(pr: PrSnapshot): ProofLine {
   const c = pr.checks;
   if (!c) return { ...base, mark: "wait", detail: "Not fetched yet", value: "" };
   if (c.state === "none" || c.total === 0) return { ...base, mark: "wait", detail: "No checks reported", value: "" };
-  const failing = c.runs.filter((r) => r.conclusion && r.conclusion !== "success" && r.conclusion !== "skipped");
+  const failing = c.runs.filter((r) => r.conclusion && !PASSED.has(r.conclusion));
   const running = c.runs.filter((r) => !r.conclusion);
   const detail =
     c.state === "failing" && failing.length
@@ -79,7 +93,8 @@ function checksLine(pr: PrSnapshot): ProofLine {
         ? `Running: ${running.map((r) => r.name).join(", ")}`
         : c.runs.map((r) => r.name).join(", ");
   const mark: Mark = c.state === "passing" ? "done" : c.state === "failing" ? "bad" : "wait";
-  return { ...base, mark, detail, value: `${c.passed} of ${c.total}` };
+  const known = ["passing", "failing", "running"].includes(c.state);
+  return { ...base, mark, detail: known ? detail : [plain(c.state), detail].filter(Boolean).join(": "), value: `${c.passed} of ${c.total}` };
 }
 
 function reviewLine(pr: PrSnapshot): ProofLine {
@@ -87,10 +102,10 @@ function reviewLine(pr: PrSnapshot): ProofLine {
   if (!r) return { key: "review", mark: "wait", title: "Review", detail: "No review stored", value: "" };
   return {
     key: "review",
-    mark: r.verdict === "request_changes" ? "bad" : "done",
+    mark: r.verdict === "request_changes" ? "bad" : VERDICT_WORD.has(r.verdict) ? "done" : "wait",
     title: `${r.source} review`,
     detail: "",
-    value: VERDICT_WORD[r.verdict],
+    value: verdictWord(r.verdict),
   };
 }
 
@@ -107,14 +122,23 @@ function checksSentence(pr: PrSnapshot): string {
   return `Checks ${c.passed} of ${c.total} passed`;
 }
 
-/** A card waits on a merge when its PR is open and Sazed put it in Needs me. */
-export function isMergeCall(card: { stage: string; pr?: PrSnapshot | null }): boolean {
-  return card.stage === "needs_me" && card.pr?.state === "open";
+/** A session card Sazed put in Needs me because its PR is ready: open, checks passing and no
+ * changes requested (sazed app/board/stages.py, _linked_pr). A worker-job card in Needs me waits
+ * for something else, or carries its own actions, so it is never a merge call here. */
+export function isMergeCall(card: { stage: string; job_id: string | null; pr?: PrSnapshot | null }): boolean {
+  const pr = card.pr;
+  return (
+    card.job_id == null &&
+    card.stage === "needs_me" &&
+    pr?.state === "open" &&
+    pr.checks?.state === "passing" &&
+    pr.review?.verdict !== "request_changes"
+  );
 }
 
 /** "agy review: approve. Checks 6 of 6 passed. +412 -88." for a merge call in Needs you. */
 export function mergeCallLine(pr: PrSnapshot): string {
-  const review = pr.review ? `${pr.review.source} review: ${VERDICT_WORD[pr.review.verdict]}` : "No review stored";
+  const review = pr.review ? `${pr.review.source} review: ${verdictWord(pr.review.verdict)}` : "No review stored";
   const diff = diffSize(pr);
   return [review, checksSentence(pr), diff].filter(Boolean).join(". ") + ".";
 }

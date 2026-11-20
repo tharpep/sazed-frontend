@@ -27,24 +27,21 @@ export interface SessionLink {
   pr_number: number | null;
 }
 
-export type PrState = "open" | "draft" | "merged" | "closed";
-export type ChecksState = "passing" | "failing" | "running" | "none";
-export type ReviewVerdict = "approve" | "approve_with_nits" | "request_changes";
-
 /** Sazed's last snapshot of a card's PR, refreshed by its poller. A PR never fetched has only
- * repo, number, url and state; checks, review and fetched_at are null. */
+ * repo, number, url and state; checks, review and fetched_at are null. The three state words are
+ * plain strings so a newer Sazed's new word still renders; proof.ts names the known ones. */
 export interface PrSnapshot {
   repo: string;
   number: number;
   url: string;
-  state: PrState;
+  state: string;
   checks: {
-    state: ChecksState;
+    state: string;
     passed: number;
     total: number;
     runs: { name: string; conclusion: string | null }[];
   } | null;
-  review: { verdict: ReviewVerdict; source: string; url: string } | null;
+  review: { verdict: string; source: string; url: string } | null;
   additions: number | null;
   deletions: number | null;
   merged_at: string | null;
