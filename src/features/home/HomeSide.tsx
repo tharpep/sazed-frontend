@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import type { Project, ProjectCard } from "@/api/projects";
 import { openCardSheet } from "@/features/backlog/CardSheet";
 import { cn } from "@/lib/utils";
-import { prRef, stepNumbers } from "@/widgets/projectWork";
+import { cardPrRef, stepNumbers } from "@/widgets/projectWork";
 import { MiniTrack } from "@/widgets/stepTrack";
 
 import { MoreLink } from "./Group";
@@ -140,7 +140,7 @@ export function ShippedBox({ cards, projectOf }: { cards: ProjectCard[] | null; 
                     <span className="line-clamp-2 text-meta text-ink">{c.title}</span>
                     <span className="font-mono text-caption text-muted tabular-nums">{clockOf(c.done_at!)}</span>
                     <span className="col-span-2 truncate text-caption text-muted">
-                      {[project, prRef(c.session_link) ?? "Marked done"].filter(Boolean).join(" · ")}
+                      {[project, cardPrRef(c) ?? "Marked done"].filter(Boolean).join(" · ")}
                     </span>
                   </button>
                 </li>

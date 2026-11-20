@@ -121,6 +121,36 @@ const projectCard = z.object({
     })
     .nullable()
     .optional(),
+  pr: z
+    .object({
+      repo: z.string(),
+      number: z.number(),
+      url: z.string(),
+      // Plain strings, not enums: a state word from a newer Sazed must not fail the whole card.
+      state: z.string().describe("open, draft, merged or closed"),
+      checks: z
+        .object({
+          state: z.string().describe("passing, failing, running or none"),
+          passed: z.number(),
+          total: z.number(),
+          runs: z.array(z.object({ name: z.string(), conclusion: z.string().nullable() })),
+        })
+        .nullable(),
+      review: z
+        .object({
+          verdict: z.string().describe("approve, approve_with_nits or request_changes"),
+          source: z.string().nullable(),
+          url: z.string(),
+        })
+        .nullable(),
+      additions: z.number().nullable(),
+      deletions: z.number().nullable(),
+      merged_at: z.string().nullable(),
+      fetched_at: z.string().nullable(),
+    })
+    .nullable()
+    .optional()
+    .describe("Sazed's last snapshot of the card's PR; absent from older payloads"),
   repo: z.string().nullable(),
   item_type: z.string().nullable(),
   effort: z.string().nullable(),

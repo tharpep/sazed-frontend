@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ageSince, heardLabel, isStale } from "./heard";
+import { ageSince, DISPATCH_STALE_AFTER_S, heardLabel, isStale } from "./heard";
 
 describe("last heard", () => {
   const now = Date.parse("2026-11-19T12:00:00Z");
@@ -23,5 +23,10 @@ describe("last heard", () => {
     expect(isStale(120)).toBe(false);
     expect(isStale(121)).toBe(true);
     expect(isStale(null)).toBe(false);
+  });
+
+  it("gives a dispatch task the reaper's longer dispatch grace", () => {
+    expect(isStale(150, DISPATCH_STALE_AFTER_S)).toBe(false);
+    expect(isStale(151, DISPATCH_STALE_AFTER_S)).toBe(true);
   });
 });

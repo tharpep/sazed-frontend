@@ -2,6 +2,7 @@ import type {
   BoardBar,
   BoardProgress,
   CardStage,
+  PrSnapshot,
   Project,
   ProjectCard,
   Workstream,
@@ -13,6 +14,30 @@ const ago = (hours: number) => new Date(NOW - hours * 3_600_000).toISOString();
 
 type CardSpec = [title: string, stage: CardStage, next?: string, pr?: number, session?: string];
 type WsSpec = [title: string, status: WorkstreamStatus, summary: string, cards: CardSpec[], dependsOn?: string[]];
+
+function prSnapshot(stage: CardStage, repo: string, number: number): PrSnapshot {
+  const merged = stage === "done";
+  return {
+    repo,
+    number,
+    url: `https://github.com/${repo}/pull/${number}`,
+    state: merged ? "merged" : "open",
+    checks: {
+      state: stage === "doing" ? "running" : "passing",
+      passed: stage === "doing" ? 1 : 2,
+      total: 2,
+      runs: [
+        { name: "check", conclusion: "success" },
+        { name: "tests", conclusion: stage === "doing" ? null : "success" },
+      ],
+    },
+    review: stage === "doing" ? null : { verdict: "approve", source: "agy", url: `https://github.com/${repo}/pull/${number}` },
+    additions: 240 + number,
+    deletions: 30,
+    merged_at: merged ? ago(1) : null,
+    fetched_at: ago(0.05),
+  };
+}
 
 let seq = 0;
 function card(spec: CardSpec, repo: string, workstream: string): ProjectCard {
@@ -30,6 +55,7 @@ function card(spec: CardSpec, repo: string, workstream: string): ProjectCard {
     session_link: session
       ? { session, branch: `feature/${session}`, pr_repo: `tharpep/${repo}`, pr_number: 100 + seq }
       : null,
+    pr: session || pr ? prSnapshot(stage, `tharpep/${repo}`, pr ?? 100 + seq) : null,
     repo,
     item_type: "task",
     effort: null,

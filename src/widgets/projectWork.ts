@@ -1,5 +1,7 @@
 import type { Project, ProjectCard, SessionLink, Workstream, WorkstreamStatus } from "@/api/projects";
 
+import { mergeLabelOf } from "./mergeCall";
+
 export type CardGroup = "waiting" | "flight" | "todo" | "done";
 
 export const GROUP_ORDER: readonly CardGroup[] = ["waiting", "flight", "todo", "done"];
@@ -73,6 +75,16 @@ export function prRef(link: SessionLink | null | undefined): string | null {
   return `${link.pr_repo.split("/").pop()}#${link.pr_number}`;
 }
 
+/** A card's PR as "sazed#207": from Sazed's PR snapshot, else the session link, else a worker
+ * job's PR number on the card's repo. */
+export function cardPrRef(card: ProjectCard): string | null {
+  if (card.pr) return `${card.pr.repo.split("/").pop()}#${card.pr.number}`;
+  const linked = prRef(card.session_link);
+  if (linked) return linked;
+  if (card.pr_number != null && card.repo) return `${card.repo.split("/").pop()}#${card.pr_number}`;
+  return null;
+}
+
 /** A session named by its UUID reads as its first eight characters, as Claude Code shows it. */
 export function sessionLabel(session: string): string {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(session) ? session.slice(0, 8) : session;
@@ -96,12 +108,13 @@ export function cardFacts(card: ProjectCard): { text: string; warn: boolean } {
   const group = cardGroup(card);
   const next = visibleNext(card);
   const parts: (string | null)[] = [card.repo];
-  if (group === "waiting") parts.push(next);
+  if (group === "waiting") parts.push(mergeLabelOf(card) ?? next, card.pr ? cardPrRef(card) : null);
   if (group === "flight") {
-    if (card.session_link) parts.push(sessionLabel(card.session_link.session), prRef(card.session_link));
+    // The PR goes before the session name, so a phone's truncated line keeps it.
+    if (card.session_link) parts.push(next, cardPrRef(card), sessionLabel(card.session_link.session));
     else if (card.job_id) parts.push(next);
   }
-  if (group === "done") parts.push(card.done_at ? `Done ${dayTime(card.done_at)}` : "Done", prRef(card.session_link));
+  if (group === "done") parts.push(card.done_at ? `Done ${dayTime(card.done_at)}` : "Done", cardPrRef(card));
   return { text: parts.filter(Boolean).join(" · "), warn: group === "waiting" };
 }
 

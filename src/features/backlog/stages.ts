@@ -52,6 +52,6 @@ export function olderDone(boardCards: readonly ProjectCard[], doneItems: readonl
 export const itemCardId = (id: string) => `item:${id}`;
 
 /** The backlog id behind an item card; null for a job card. */
-export function backlogId(card: ProjectCard): string | null {
+export function backlogId(card: Pick<ProjectCard, "id"> & { kind: string }): string | null {
   return card.kind === "item" ? card.id.slice("item:".length) : null;
 }

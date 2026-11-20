@@ -27,6 +27,27 @@ export interface SessionLink {
   pr_number: number | null;
 }
 
+/** Sazed's last snapshot of a card's PR, refreshed by its poller. A PR never fetched has only
+ * repo, number, url and state; checks, review and fetched_at are null. The three state words are
+ * plain strings so a newer Sazed's new word still renders; proof.ts names the known ones. */
+export interface PrSnapshot {
+  repo: string;
+  number: number;
+  url: string;
+  state: string;
+  checks: {
+    state: string;
+    passed: number;
+    total: number;
+    runs: { name: string; conclusion: string | null }[];
+  } | null;
+  review: { verdict: string; source: string | null; url: string } | null;
+  additions: number | null;
+  deletions: number | null;
+  merged_at: string | null;
+  fetched_at: string | null;
+}
+
 export interface ProjectCard {
   id: string;
   kind: "item" | "job";
@@ -38,6 +59,8 @@ export interface ProjectCard {
   // Optional because the gateway's MCP cards may still relay a shape from before Sazed sent them.
   done_at?: string | null;
   session_link?: SessionLink | null;
+  // Optional for the same reason: a Sazed before the PR poller, and older MCP payloads, send none.
+  pr?: PrSnapshot | null;
   repo: string | null;
   item_type: string | null;
   effort: string | null;

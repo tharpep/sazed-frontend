@@ -1,6 +1,9 @@
 import type { NeedsCard } from "@/api/command";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { openCardSheet } from "@/features/backlog/CardSheet";
+import { mergeCallLine, oldSnapshotText, prName } from "@/features/backlog/proof";
 import { cn } from "@/lib/utils";
+import { MERGE_LABEL, mergeKind, orderMergeCalls } from "@/widgets/mergeCall";
 
 import { CardActions, TOUCH_BUTTON } from "./CardActions";
 import { Group } from "./Group";
@@ -28,12 +31,21 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
   return (
     <Group name="Needs you" count={cards ? cards.length : null} empty="Nothing is waiting on you.">
       <ul className="divide-y divide-line">
-        {(cards ?? []).map((card) => {
+        {orderMergeCalls(cards ?? []).map((card) => {
           const asking = card.job_status === "needs_input";
           const plan = dispatchPlan(card);
           const bad = failed(card);
-          const open = card.job_id ? () => onOpenJob(card.job_id!) : plan ? () => openDispatch(plan) : null;
-          const body = card.question ?? card.next;
+          const kind = mergeKind(card);
+          const merge = kind ? card.pr! : null;
+          const open = card.job_id
+            ? () => onOpenJob(card.job_id!)
+            : plan
+              ? () => openDispatch(plan)
+              : merge
+                ? () => openCardSheet(card)
+                : null;
+          const old = merge ? oldSnapshotText(merge) : "";
+          const body = card.question ?? (merge ? mergeCallLine(merge) : card.next);
           return (
             <li
               key={card.id}
@@ -50,7 +62,7 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
                 <div className="text-body font-medium [overflow-wrap:anywhere] text-ink">{card.title}</div>
                 <div className="text-caption text-muted">
                   {[card.repo, plan && `plan ${plan}`].filter(Boolean).map((part) => `${part} · `).join("")}
-                  {card.pr_url && (
+                  {card.pr_url && !merge && (
                     <>
                       <a
                         href={card.pr_url}
@@ -65,8 +77,15 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
                     </>
                   )}
                   {ago(card.updated_at)}
+                  {old && <span className="text-warn"> · snapshot {old}</span>}
                 </div>
-                {body && <p className="mt-1.5 text-meta [overflow-wrap:anywhere] text-ink-2">{body}</p>}
+                {merge && kind && (
+                  <p className="mt-1.5 text-meta font-medium text-ink">
+                    {MERGE_LABEL[kind]}
+                    <span className="font-normal text-muted"> · {prName(merge)}</span>
+                  </p>
+                )}
+                {body && <p className={cn("text-meta [overflow-wrap:anywhere] text-ink-2", merge ? "mt-0.5" : "mt-1.5")}>{body}</p>}
                 <div className="mt-2.5 flex flex-wrap items-start justify-end gap-2">
                   {open && !asking && (
                     <Button
@@ -78,8 +97,20 @@ export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
                         open();
                       }}
                     >
-                      {card.job_id ? (bad ? "Log" : "Details") : "Open plan"}
+                      {card.job_id ? (bad ? "Log" : "Details") : plan ? "Open plan" : "Details"}
                     </Button>
+                  )}
+                  {/* Merging stays on GitHub: the console only points there. */}
+                  {merge && (
+                    <a
+                      href={merge.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className={cn(buttonVariants({ variant: "outline", size: "sm", className: TOUCH_BUTTON }))}
+                    >
+                      Open PR
+                    </a>
                   )}
                   <CardActions
                     key={asking ? "ask" : "act"}
