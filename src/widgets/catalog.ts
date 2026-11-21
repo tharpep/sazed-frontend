@@ -23,6 +23,7 @@ import { JobWidget } from "./JobWidget";
 import { JobsWidget } from "./JobsWidget";
 import { ProjectsWidget } from "./ProjectsWidget";
 import { ProjectWidget } from "./ProjectWidget";
+import { projectFromBrief } from "./projectBrief";
 import { StorageWidget } from "./StorageWidget";
 import { TaskWidget } from "./TaskWidget";
 import { UpcomingWidget } from "./UpcomingWidget";
@@ -229,7 +230,7 @@ export interface WidgetDef {
   // Erased here because the catalog is heterogeneous; widget() has already checked the pair.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: React.ComponentType<any>;
-  props: z.ZodObject;
+  props: z.ZodType;
   ownership: "locked" | "ambient" | "agent" | "system";
   description: string;
   describe: (props: never) => string;
@@ -238,7 +239,7 @@ export interface WidgetDef {
 }
 
 /** Ties a component to its schema: it won't compile unless the component accepts the schema's output. */
-function widget<S extends z.ZodObject>(
+function widget<S extends z.ZodType>(
   def: Omit<WidgetDef, "component" | "props" | "describe"> & {
     component: React.ComponentType<z.output<S>>;
     props: S;
@@ -384,10 +385,12 @@ export const WIDGET_CATALOG = {
       subtitle: z.string().nullish(),
       stats: z
         .array(z.object({ label: z.string(), value: z.string(), tone: tone.nullish() }))
+        .max(4)
         .nullish()
         .describe("Up to 4 headline numbers"),
       rows: z
         .array(z.object({ label: z.string(), value: z.string().nullish(), tone: tone.nullish() }))
+        .max(6)
         .nullish()
         .describe("Up to 6 rows"),
       note: z.string().nullish(),
@@ -420,7 +423,7 @@ export const WIDGET_CATALOG = {
   }),
   ProjectsWidget: widget({
     component: ProjectsWidget,
-    props: z.object({ projects: z.array(project) }),
+    props: z.object({ projects: z.array(z.union([project, projectFromBrief])) }),
     describe: (p) => `Projects: ${p.projects.length}${p.projects[0] ? `, first ${p.projects[0].title}` : ""}`,
     ownership: "agent",
     description: "Every project as a row: a plain sentence, a progress bar, and its workstreams when opened.",
@@ -428,7 +431,7 @@ export const WIDGET_CATALOG = {
   }),
   ProjectWidget: widget({
     component: ProjectWidget,
-    props: project,
+    props: z.union([project, projectFromBrief]),
     describe: (p) => `Project ${p.title}: ${p.headline}`,
     ownership: "agent",
     description: "One project as an ordered ladder of workstreams with their cards, then what is in flight, needs the user, and is next.",

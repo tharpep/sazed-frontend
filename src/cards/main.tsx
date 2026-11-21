@@ -31,8 +31,11 @@ app.ontoolresult = ({ structuredContent, content, isError }) => {
     return;
   }
   const first = content?.[0];
-  const reason = first?.type === "text" ? first.text : "The tool returned no data.";
-  root.render(<FallbackCard name={widgetName} reason={reason} data={null} />);
+  const text = first?.type === "text" ? first.text : "";
+  console.warn(`Card ${widgetName}: no structured result`, { isError, text });
+  // Without isError the text may be the whole payload as JSON, so only an error's first line shows.
+  const reason = isError && text ? text.split("\n")[0] : "the tool returned no data";
+  root.render(<FallbackCard name={widgetName} reason={reason} />);
 };
 app.onhostcontextchanged = applyHost;
 
