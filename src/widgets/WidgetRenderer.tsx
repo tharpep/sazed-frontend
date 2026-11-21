@@ -13,16 +13,23 @@ interface WidgetRendererProps {
 interface Problem {
   path: PropertyKey[];
   message: string;
+  /** The payload has a key this branch forbids with z.never(), so it is the other shape. */
+  foreign: boolean;
 }
 
-// A union reports every branch's issues; the branch with the fewest is the shape the payload meant.
+function fit(problems: Problem[]): number {
+  return (problems.some((p) => p.foreign) ? 1_000_000 : 0) + problems.length;
+}
+
+// A union reports every branch's issues. The shape the payload meant is the branch it has no
+// foreign key for, then the one with the fewest problems.
 function leafProblems(issues: readonly z.core.$ZodIssue[], prefix: PropertyKey[] = []): Problem[] {
   return issues.flatMap((issue) => {
     const path = [...prefix, ...issue.path];
     if (issue.code === "invalid_union" && issue.errors.length > 0) {
-      return issue.errors.map((branch) => leafProblems(branch, path)).reduce((a, b) => (b.length < a.length ? b : a));
+      return issue.errors.map((branch) => leafProblems(branch, path)).reduce((a, b) => (fit(b) < fit(a) ? b : a));
     }
-    return [{ path, message: issue.message }];
+    return [{ path, message: issue.message, foreign: issue.code === "invalid_type" && issue.expected === "never" }];
   });
 }
 

@@ -23,7 +23,7 @@ import { JobWidget } from "./JobWidget";
 import { JobsWidget } from "./JobsWidget";
 import { ProjectsWidget } from "./ProjectsWidget";
 import { ProjectWidget } from "./ProjectWidget";
-import { projectFromBrief, projectsFromBrief } from "./projectBrief";
+import { projectFromBrief } from "./projectBrief";
 import { StorageWidget } from "./StorageWidget";
 import { TaskWidget } from "./TaskWidget";
 import { UpcomingWidget } from "./UpcomingWidget";
@@ -423,7 +423,7 @@ export const WIDGET_CATALOG = {
   }),
   ProjectsWidget: widget({
     component: ProjectsWidget,
-    props: z.union([z.object({ projects: z.array(project) }), projectsFromBrief]),
+    props: z.object({ projects: z.array(z.union([project, projectFromBrief])) }),
     describe: (p) => `Projects: ${p.projects.length}${p.projects[0] ? `, first ${p.projects[0].title}` : ""}`,
     ownership: "agent",
     description: "Every project as a row: a plain sentence, a progress bar, and its workstreams when opened.",

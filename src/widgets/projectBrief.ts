@@ -6,6 +6,8 @@ import type { BoardBar, BoardProgress, Project, ProjectCard, Workstream } from "
 // brief instead of the full project. The model reads the same payload, so the card adapts the
 // brief rather than the gateway sending more. Bars, step counts and the current step are
 // rebuilt with Sazed's own rules; projectBrief.test.ts checks them against full payloads.
+// A list may mix both shapes: board_projects detail="full" shortens low-ranked projects to the
+// brief when the result grows too large.
 
 const progress = z.object({
   done: z.number(),
@@ -41,10 +43,16 @@ const briefProject = z.object({
   headline: z.string(),
   latest_update: z.string().nullable(),
   steps: z.array(briefStep),
+  // Marks a full project as the other shape, so the fallback reports the full branch's problems
+  // (WidgetRenderer's leafProblems; pinned in projectBrief.test.ts).
+  workstreams: z.never().optional(),
 });
 
 type BriefStep = z.infer<typeof briefStep>;
 type BriefProject = z.infer<typeof briefProject>;
+
+// Sazed's _current in app/board/rollup.py: the first step in this status order, else none.
+const CURRENT_ORDER = ["needs_me", "in_flight", "next", "blocked"] as const;
 
 const NO_BAR: BoardBar = { done: 0, in_flight: 0, needs_me: 0, next: 0 };
 
@@ -106,7 +114,7 @@ function toProject(brief: BriefProject): Project {
   const live = workstreams.filter((w) => w.status !== "dropped");
   const sum = (key: keyof BoardProgress) => workstreams.reduce((n, w) => n + w.progress[key], 0);
   const mean = (key: keyof BoardBar) => (live.length ? live.reduce((n, w) => n + w.bar[key], 0) / live.length : 0);
-  const current = live.find((w) => w.status !== "done");
+  const current = CURRENT_ORDER.map((status) => live.find((w) => w.status === status)).find(Boolean);
   return {
     id: brief.slug,
     slug: brief.slug,
@@ -130,7 +138,3 @@ function toProject(brief: BriefProject): Project {
 }
 
 export const projectFromBrief = briefProject.transform(toProject);
-
-export const projectsFromBrief = z
-  .object({ projects: z.array(briefProject) })
-  .transform(({ projects }) => ({ projects: projects.map(toProject) }));

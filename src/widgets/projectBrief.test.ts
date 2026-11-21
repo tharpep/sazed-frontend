@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import * as z from "zod";
 
 import type { Project } from "@/api/projects";
+import { mockProject, mockProjects } from "@/mock/projects";
 
 import { getWidget } from "./catalog";
+import { fallbackLine } from "./FallbackCard";
 import { shortReason } from "./WidgetRenderer";
 
 type Status = "done" | "dropped" | "needs_me" | "in_flight" | "blocked" | "next" | "planned";
@@ -60,6 +62,29 @@ describe("ProjectsWidget on the gateway's summary payload", () => {
     expect(b.bar.next).toBeCloseTo(0.266, 3);
     expect([b.steps_done, b.steps_total, b.current?.id]).toEqual([9, 14, "s10"]);
   });
+
+  it("parses a list mixing full projects and briefs, as a size-capped full call sends", () => {
+    const full = mockProject(mockProjects()[0].slug)!;
+    const parsed = schema.safeParse({ projects: [full, WITH_DROPPED], truncated: "1 of 2 shortened" });
+    expect(parsed.success).toBe(true);
+  });
+});
+
+describe("current step", () => {
+  const currentOf = (statuses: Status[]) =>
+    (getWidget("ProjectWidget")!.props.parse(brief("p", statuses.map((s, i) => step(i + 1, s, i + 1, [0, 0, 1])))) as Project)
+      .current?.id ?? null;
+
+  it("follows Sazed's order: needs_me, then in_flight, then next, then blocked", () => {
+    expect(currentOf(["done", "blocked", "next"])).toBe("s3");
+    expect(currentOf(["next", "in_flight", "planned"])).toBe("s2");
+    expect(currentOf(["done", "next", "blocked", "in_flight", "needs_me"])).toBe("s5");
+    expect(currentOf(["done", "blocked", "planned"])).toBe("s2");
+  });
+
+  it("is none when every live step is done or planned", () => {
+    expect(currentOf(["done", "planned", "dropped"])).toBeNull();
+  });
 });
 
 describe("ProjectWidget on the gateway's summary payload", () => {
@@ -73,11 +98,25 @@ describe("ProjectWidget on the gateway's summary payload", () => {
   });
 });
 
+describe("fallbackLine", () => {
+  it("caps the whole line at 160 characters, a payload-chosen name or key included", () => {
+    expect(fallbackLine("W".repeat(3000), "not in the widget catalog")).toHaveLength(160);
+    expect(fallbackLine("ProjectWidget", `${"k".repeat(5000)}: Invalid input (1 field invalid)`)).toHaveLength(160);
+    expect(fallbackLine("InfoCard", "rows: Too big")).toBe("Couldn't show the InfoCard card: rows: Too big");
+  });
+});
+
 describe("shortReason", () => {
   it("names the first failing field of the closest union branch and counts the failures", () => {
     const parsed = getWidget("ProjectWidget")!.props.safeParse({ ...WITH_DROPPED, steps: "none" });
     expect(parsed.success).toBe(false);
     expect(shortReason(parsed.error as z.ZodError)).toBe("steps: Invalid input: expected array, received string (1 field invalid)");
+  });
+
+  it("blames a field the full project really lacks, not the brief's steps", () => {
+    const { bar: _bar, progress: _progress, ...broken } = mockProject(mockProjects()[0].slug)!;
+    const parsed = getWidget("ProjectWidget")!.props.safeParse(broken);
+    expect(shortReason(parsed.error as z.ZodError)).toMatch(/^(bar|progress): .* \(2 fields invalid\)$/);
   });
 
   it("counts every failing field", () => {
