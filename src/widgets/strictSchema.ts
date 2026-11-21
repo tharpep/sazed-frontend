@@ -16,6 +16,8 @@ const UNSUPPORTED_LIMITS = [
  * into the description so the model still sees them, and `oneOf` becomes `anyOf`. */
 export function toStrictJsonSchema(schema: z.ZodType): Record<string, unknown> {
   const json = z.toJSONSchema(schema, {
+    // The project widgets transform a brief into a project; the model writes the input side.
+    io: "input",
     override: ({ jsonSchema }) => {
       const node = jsonSchema as Record<string, unknown>;
       if (node.oneOf) {
