@@ -13,6 +13,7 @@ import {
   sessionTitle,
   span,
   staleSessions,
+  staleSince,
   staleSteps,
   statusWord,
   stepText,
@@ -161,6 +162,15 @@ describe("stale banner", () => {
     expect(staleSteps(["item:1"], null, projects)).toEqual([]);
   });
 
+  it("dates the banner by the stale cards' own sessions, never by a session live elsewhere", () => {
+    const heard = (id: string, at: string | null) =>
+      ({ id, session_link: { session: "x", branch: null, pr_repo: null, pr_number: null, last_heard_at: at } }) as ProjectCard;
+    const list = [heard("item:1", "2026-11-20T05:40:00Z"), heard("item:2", "2026-11-21T09:00:00Z"), heard("item:9", "2026-11-21T11:59:00Z")];
+    expect(staleSince(["item:1", "item:2"], list)).toBe("2026-11-21T09:00:00Z");
+    expect(staleSince(["item:3"], [heard("item:3", null)])).toBeNull();
+    expect(staleSince(["item:1"], null)).toBeNull();
+  });
+
   it("names each stale card's session once", () => {
     expect(staleSessions(["item:1", "item:2", "item:3"], cards)).toEqual(["cc-1", "cc-2"]);
     expect(listSome(["a", "b", "c", "d", "e"])).toBe("a, b, c and 2 more");
@@ -171,6 +181,20 @@ describe("stale banner", () => {
 describe("reading the command's session fields", () => {
   it("reads both as absent from a Sazed before slice 3", () => {
     expect(readSessionFields({})).toEqual({ sessions: undefined, session_health: undefined });
+  });
+
+  it("makes one malformed row safe on its own instead of breaking Home", () => {
+    const bad = { ...session("s"), link: { status: "ambiguous", card_id: null }, card: { id: 7 }, question: { text: null } };
+    const [row] = readSessionFields({ sessions: [bad] }).sessions!;
+    expect(row.link.candidates).toEqual([]);
+    expect(row.card).toBeNull();
+    expect(row.question?.text).toBe("");
+    expect(linkWord(row)).toBe("several cards match");
+    expect(() => sessionTitle(row)).not.toThrow();
+    expect(readSessionFields({ sessions: [{ ...session("t"), link: null, status: 3 }] }).sessions![0]).toMatchObject({
+      link: { status: "none", candidates: [] },
+      status: "",
+    });
   });
 
   it("drops malformed rows and keeps good ones", () => {

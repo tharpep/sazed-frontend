@@ -56,7 +56,7 @@ export interface CommandSummary {
 export async function getCommand(): Promise<CommandSummary> {
   const raw = (await apiFetch("/board/command")) as CommandSummary;
   const command = { ...raw, ...readSessionFields(raw) };
-  if (mockingSessions()) return { ...command, ...(await import("@/mock/sessions")).mockSessionFields() };
+  if (import.meta.env.DEV && mockingSessions()) return { ...command, ...(await import("@/mock/sessions")).mockSessionFields() };
   return command;
 }
 

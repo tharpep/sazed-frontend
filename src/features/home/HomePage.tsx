@@ -27,7 +27,7 @@ import { Running } from "./Running";
 import { QuietLine, StaleBanner } from "./SessionHealth";
 import { questionCount } from "./sessions";
 import { useHeartbeats } from "./useHeartbeats";
-import { useSessionDetails } from "./useSessionDetails";
+import { useRunningDetails } from "./sessionDetail";
 import {
   failedStep,
   latestFailure,
@@ -211,7 +211,7 @@ export function HomePage() {
   const done = command?.done ?? null;
   const sessions = command?.sessions;
   const health = command?.session_health;
-  const details = useSessionDetails(sessions);
+  const details = useRunningDetails(sessions);
   const asked = questionCount(sessions);
   const runningCount = (working?.length ?? 0) + (sessions?.length ?? 0);
   // Only a Sazed that reports sessions can say nothing runs anywhere; an older one keeps today's groups.
@@ -308,10 +308,9 @@ export function HomePage() {
         </div>
       </div>
       <JobSheet jobId={openJob} onClose={() => setOpenJob(null)} onChanged={loadCommand} onOpenJob={setOpenJob} />
-      <CardSheet view="home:home" cards={shipped} onChanged={refreshAll} />
+      <CardSheet view="home:home" cards={shipped} sessions={sessions} onChanged={refreshAll} />
       <AgentStepsSheet
-        detail={openAgent ? (details[openAgent.session] ?? null) : null}
-        agentId={openAgent ? openAgent.agent : undefined}
+        open={openAgent}
         onClose={() => setOpenAgent(null)}
       />
     </div>

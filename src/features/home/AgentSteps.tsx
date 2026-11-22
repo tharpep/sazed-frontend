@@ -1,18 +1,22 @@
 import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 
-import type { SessionAgent, SessionDetail } from "@/api/sessions";
+import type { SessionAgent } from "@/api/sessions";
 import { DetailPanel } from "@/components/shell/DetailPanel";
 import { cn } from "@/lib/utils";
 import { sessionLabel } from "@/widgets/projectWork";
 
+import { useSessionDetail } from "./sessionDetail";
 import { agentLine, agentName, stepText, visibleSteps } from "./sessions";
 import { clockOf } from "./shipped";
 
 export function HostChip({ host }: { host: string | null }) {
   if (!host) return null;
   return (
-    <span className="inline-block max-w-[16ch] truncate rounded-[5px] border border-line px-1.5 align-bottom font-mono text-[11px] leading-[18px] text-ink-2">
+    <span
+      title={host}
+      className="inline-block max-w-[16ch] truncate rounded-[5px] border border-line px-1.5 align-bottom font-mono text-[11px] leading-[18px] text-ink-2"
+    >
       {host}
     </span>
   );
@@ -88,11 +92,14 @@ export function AgentStepList({ agent }: { agent: SessionAgent }) {
         </button>
       )}
       <ol className="divide-y divide-line">
-        {rows.map((step) => {
+        {rows.map((step, i) => {
           const { head, target, line } = stepText(step);
+          const now = agent.state === "running" && i === rows.length - 1;
           return (
             <li key={`${step.ts}:${step.seq}`} className="grid grid-cols-[44px_minmax(0,1fr)] gap-x-2 py-2">
-              <span className="font-mono text-caption text-muted tabular-nums">{clockOf(step.at)}</span>
+              <span className="font-mono text-caption text-muted tabular-nums" title={now ? clockOf(step.at) : undefined}>
+                {now ? "now" : clockOf(step.at)}
+              </span>
               <span className="min-w-0">
                 <span className="line-clamp-3 text-meta [overflow-wrap:anywhere] text-ink" title={target || undefined}>
                   <span className="font-medium">{head}</span>
@@ -112,22 +119,22 @@ export function AgentStepList({ agent }: { agent: SessionAgent }) {
   );
 }
 
-/** The steps of one agent of a session, opened from its row (mockup h-agent). */
+/** The steps of one agent of a session, opened from its row (mockup h-agent). It opens on the tap,
+ * with a loading line until the session's detail arrives. */
 export function AgentStepsSheet({
-  detail,
-  agentId,
+  open,
   onClose,
 }: {
-  detail: SessionDetail | null;
-  /** undefined is closed; null is the main thread. */
-  agentId: string | null | undefined;
+  /** null is closed; agent null is the main thread. */
+  open: { session: string; agent: string | null } | null;
   onClose: () => void;
 }) {
-  const agent = agentId === undefined ? null : (detail?.agents.find((a) => a.agent_id === agentId) ?? null);
+  const { detail, error } = useSessionDetail(open?.session ?? null);
+  const agent = open ? (detail?.agents.find((a) => a.agent_id === open.agent) ?? null) : null;
   return (
     <DetailPanel
-      open={agentId !== undefined && detail !== null}
-      title={agent ? agentName(agent) : "Agent"}
+      open={open !== null}
+      title={agent ? agentName(agent) : open?.agent === null ? "Main thread" : "Agent"}
       description="Agent steps, newest last"
       onClose={onClose}
     >
@@ -143,7 +150,19 @@ export function AgentStepsSheet({
           {detail.card && ` · ${detail.card.title}`}
         </p>
       )}
-      {agent ? <AgentStepList agent={agent} /> : <p className="text-meta text-muted">This agent's steps are no longer kept.</p>}
+      {agent ? (
+        <AgentStepList agent={agent} />
+      ) : (
+        <p className="text-meta text-muted">
+          {detail
+            ? "This agent's steps are no longer kept."
+            : error === "gone"
+              ? "Sazed no longer has this session."
+              : error
+                ? "Couldn't load this session's steps. Trying again shortly."
+                : "Loading the steps…"}
+        </p>
+      )}
       <p className="text-caption text-muted">Steps only: tool, target, one result line. The full transcript stays in Claude.</p>
     </DetailPanel>
   );

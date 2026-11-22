@@ -1,58 +1,58 @@
 import { useEffect, useState } from "react";
 
 import type { SessionLink } from "@/api/projects";
-import { getSession, type SessionDetail } from "@/api/sessions";
 import { cn } from "@/lib/utils";
 import { AgentRows, AgentStepList, HostChip, RunGlyph } from "@/features/home/AgentSteps";
+import { useSessionDetail } from "@/features/home/sessionDetail";
 import { agentName, heardOf, isWarn, sourceWord, statusWord } from "@/features/home/sessions";
 import { clockOf } from "@/features/home/shipped";
 import { sessionLabel } from "@/widgets/projectWork";
 
-const POLL_MS = 10_000;
-
-/** What the card's live session is doing now, and its agents (mockup h-sheet-live). Absent for a
- * card with no reporting session, so an older Sazed shows the sheet as before. */
-export function SessionNow({ link }: { link: SessionLink }) {
-  const id = link.session_id ?? null;
-  const ended = link.session_status === "ended";
-  const [detail, setDetail] = useState<SessionDetail | null>(null);
+/** What the card's live session is doing now, and its agents (mockup h-sheet-live). `liveId` comes
+ * from the command poll and wins over the card's board snapshot, which can be minutes old; an
+ * "ended" snapshot counts only when no live session names the card. */
+export function SessionNow({
+  liveId,
+  link,
+  named,
+}: {
+  liveId: string | null;
+  link: SessionLink | null;
+  /** The sheet's session line already names the session, so Now leaves its name out. */
+  named: boolean;
+}) {
+  const id = liveId ?? link?.session_id ?? null;
+  const ended = !liveId && link?.session_status === "ended";
+  const { detail, error } = useSessionDetail(ended ? null : id);
   const [picked, setPicked] = useState<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    setDetail(null);
-    setPicked(undefined);
-    if (!id || ended) return;
-    let live = true;
-    const load = () => {
-      if (document.hidden) return;
-      getSession(id).then(
-        (d) => live && setDetail(d),
-        () => undefined
-      );
-    };
-    load();
-    const timer = setInterval(load, POLL_MS);
-    return () => {
-      live = false;
-      clearInterval(timer);
-    };
-  }, [id, ended]);
+  useEffect(() => setPicked(undefined), [id]);
 
   if (!id) return null;
-  const status = detail?.status ?? link.session_status ?? "";
-  const heard = heardOf(detail?.last_heard_at ?? link.last_heard_at, status);
-  const doing = detail?.doing ?? link.doing;
+  const status = detail?.status ?? (liveId ? "" : (link?.session_status ?? ""));
+  const heard = heardOf(detail?.last_heard_at ?? link?.last_heard_at, status);
+  const doing = detail?.doing ?? link?.doing;
+  const name = `Claude Code session ${sessionLabel(id)}`;
 
   if (ended) {
     return (
       <p className="text-meta text-muted">
-        Claude Code session {sessionLabel(id)} ended · {heard.text}
+        {named ? "The session" : name} ended · {heard.text}
       </p>
     );
   }
 
   const word = statusWord(status);
   const agent = picked === undefined ? null : (detail?.agents.find((a) => a.agent_id === picked) ?? null);
+  const meta = [
+    !named && name,
+    detail?.host && <HostChip key="host" host={detail.host} />,
+    detail && `started ${clockOf(detail.started_at)}`,
+    word && word !== "not heard from" && word,
+    <span key="heard" className={cn(heard.warn && "text-warn")}>
+      {heard.warn && "not heard from, "}
+      {heard.text.replace(/^last /, "")}
+    </span>,
+  ].filter(Boolean);
   return (
     <section aria-label="Now" className="flex flex-col gap-1.5">
       <h3 className="text-sm font-medium text-ink">Now</h3>
@@ -66,21 +66,18 @@ export function SessionNow({ link }: { link: SessionLink }) {
         </p>
       </div>
       <p className="text-caption [overflow-wrap:anywhere] text-muted">
-        Claude Code session {sessionLabel(id)}
-        {detail?.host && (
-          <>
-            {" · "}
-            <HostChip host={detail.host} />
-          </>
-        )}
-        {detail && ` · started ${clockOf(detail.started_at)}`}
-        {word && word !== "not heard from" && ` · ${word}`}
-        {" · "}
-        <span className={cn(heard.warn && "text-warn")}>
-          {heard.warn && "not heard from, "}
-          {heard.text.replace(/^last /, "")}
-        </span>
+        {meta.map((part, i) => (
+          <span key={i}>
+            {i > 0 && " · "}
+            {part}
+          </span>
+        ))}
       </p>
+      {!detail && error && (
+        <p className="text-caption text-muted">
+          {error === "gone" ? "Sazed no longer has this session's steps." : "Couldn't load this session's agents. Trying again shortly."}
+        </p>
+      )}
       {detail?.question && (
         <div className="rounded-[10px] border border-warn/70 px-3 py-2.5">
           <p className="text-meta font-medium text-warn">Needs you</p>

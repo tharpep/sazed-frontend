@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { dayTime } from "@/widgets/projectWork";
 
 import { openProject } from "./homeNav";
-import { listSome, staleSessions, staleSteps } from "./sessions";
+import { listSome, staleSessions, staleSince, staleSteps } from "./sessions";
 import { clockOf } from "./shipped";
 
 function when(iso: string, now = new Date()): string {
@@ -39,6 +39,7 @@ export function StaleBanner({
   if (n === 0) return null;
   const steps = staleSteps(health.stale_card_ids, cards, projects);
   const sessions = staleSessions(health.stale_card_ids, cards);
+  const since = staleSince(health.stale_card_ids, cards);
   const shown = steps.slice(0, 3);
   return (
     <section
@@ -47,18 +48,20 @@ export function StaleBanner({
     >
       <p className="font-medium text-warn">
         {n} {n === 1 ? "card says" : "cards say"} &ldquo;being built&rdquo; but no session has reported
-        {health.last_heard_at ? ` since ${dayTime(health.last_heard_at)}.` : " for them yet."}
+        {since ? ` since ${dayTime(since)}.` : " for them."}
       </p>
       {shown.length > 0 && (
-        <p className="flex flex-wrap items-center gap-x-1.5">
-          {shown.map((s, i) => (
-            <span key={`${s.slug}:${s.step}`} className="inline-flex items-center gap-x-1.5">
-              <button type="button" onClick={() => openProject(s.slug)} className={cn(STEP_BUTTON, "text-left text-ink")}>
-                {s.project} · {s.step}
-                {s.count > 1 && <span className="ml-1 text-muted">({s.count})</span>}
-              </button>
-              {i < shown.length - 1 && <span aria-hidden="true">,</span>}
-            </span>
+        <p className="flex flex-col items-start">
+          {shown.map((s) => (
+            <button
+              key={`${s.slug}:${s.step}`}
+              type="button"
+              onClick={() => openProject(s.slug)}
+              className={cn(STEP_BUTTON, "text-left text-ink")}
+            >
+              {s.project} · {s.step}
+              {s.count > 1 && <span className="ml-1 text-muted">({s.count})</span>}
+            </button>
           ))}
           {steps.length > shown.length && <span className="text-muted">and {steps.length - shown.length} more steps</span>}
         </p>

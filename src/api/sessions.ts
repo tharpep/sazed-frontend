@@ -79,19 +79,10 @@ export interface SessionHealth {
   stale_card_ids: string[];
 }
 
-export interface SessionList {
-  live: Session[];
-  recent: Session[];
-  silent_after_s: number;
-  idle_silent_after_s: number;
-  window_hours: number;
-  now: string;
-}
-
 // Dev only: `localStorage["sazed-mock-sessions"] = "1"` serves fixtures (src/mock/sessions.ts) in
-// place of the session fields, so the pages can be driven before any hook reports.
+// place of the session fields, so the pages can be driven before any hook reports. Callers test
+// import.meta.env.DEV themselves, so a production build drops the fixtures' chunk.
 export function mockingSessions(): boolean {
-  if (!import.meta.env.DEV) return false;
   try {
     return localStorage.getItem("sazed-mock-sessions") === "1";
   } catch {
@@ -99,29 +90,69 @@ export function mockingSessions(): boolean {
   }
 }
 
-export function getSessions(): Promise<SessionList> {
-  return apiFetch("/sessions") as Promise<SessionList>;
-}
-
 export async function getSession(id: string): Promise<SessionDetail> {
-  if (mockingSessions()) {
+  if (import.meta.env.DEV && mockingSessions()) {
     const found = (await import("@/mock/sessions")).mockSessionDetail(id);
     if (found) return found;
   }
-  return apiFetch(`/sessions/${encodeURIComponent(id)}`) as Promise<SessionDetail>;
+  const raw = (await apiFetch(`/sessions/${encodeURIComponent(id)}`)) as SessionDetail;
+  const agents = Array.isArray(raw.agents)
+    ? raw.agents.filter((a) => a && typeof a === "object").map((a) => ({ ...a, steps: Array.isArray(a.steps) ? a.steps : [] }))
+    : [];
+  return { ...raw, ...readSession(raw), agents };
+}
+
+const str = (v: unknown): string | null => (typeof v === "string" ? v : null);
+const LINKS = new Set(["card_id", "branch", "ambiguous", "unknown_card", "none"]);
+
+/** One session row with every field the console reads made safe, or null when it has no id or
+ * last-heard time. One malformed row degrades alone instead of breaking Home. */
+export function readSession(raw: unknown): Session | null {
+  if (!raw || typeof raw !== "object") return null;
+  const s = raw as Record<string, unknown>;
+  if (typeof s.session_id !== "string" || typeof s.last_heard_at !== "string") return null;
+  const link = (s.link ?? {}) as Record<string, unknown>;
+  const card = s.card as Record<string, unknown> | null;
+  const project = s.project as Record<string, unknown> | null;
+  const question = s.question as Record<string, unknown> | null;
+  return {
+    ...(s as unknown as Session),
+    host: str(s.host),
+    repo: str(s.repo),
+    branch: str(s.branch),
+    started_at: str(s.started_at) ?? s.last_heard_at,
+    state: str(s.state) ?? "",
+    status: str(s.status) ?? "",
+    doing: str(s.doing),
+    doing_source: str(s.doing_source),
+    question:
+      question && typeof question === "object"
+        ? { text: str(question.text) ?? "", agent_id: str(question.agent_id), asked_at: str(question.asked_at) ?? s.last_heard_at }
+        : null,
+    link: {
+      status: LINKS.has(link.status as string) ? (link.status as Session["link"]["status"]) : "none",
+      card_id: str(link.card_id),
+      candidates: Array.isArray(link.candidates) ? link.candidates.filter((c): c is string => typeof c === "string") : [],
+    },
+    card:
+      card && typeof card === "object" && typeof card.id === "string" && typeof card.title === "string"
+        ? { id: card.id, title: card.title, stage: str(card.stage) ?? "", next: str(card.next) ?? "" }
+        : null,
+    project:
+      project && typeof project === "object" && typeof project.slug === "string"
+        ? { slug: project.slug, title: str(project.title) ?? project.slug }
+        : null,
+  };
 }
 
 /** A Sazed before slice 3 sends neither key, and a malformed value must not break Home: both read
- * as absent. */
+ * as absent, and a malformed row is dropped or made safe on its own. */
 export function readSessionFields(raw: { sessions?: unknown; session_health?: unknown }): {
   sessions: Session[] | undefined;
   session_health: SessionHealth | undefined;
 } {
   const sessions = Array.isArray(raw.sessions)
-    ? (raw.sessions as unknown[]).filter(
-        (s): s is Session =>
-          typeof s === "object" && s !== null && typeof (s as Session).session_id === "string" && typeof (s as Session).last_heard_at === "string"
-      )
+    ? (raw.sessions as unknown[]).map(readSession).filter((s): s is Session => s !== null)
     : undefined;
   const h = raw.session_health as SessionHealth | null | undefined;
   const session_health =

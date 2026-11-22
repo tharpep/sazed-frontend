@@ -39,7 +39,7 @@ export function sessionTitle(s: Pick<Session, "card" | "branch" | "repo" | "sess
 /** The meta line's lead: the project, or why there is no card. */
 export function linkWord(s: Pick<Session, "card" | "project" | "link">): string {
   if (s.card) return s.project?.title ?? "No step";
-  if (s.link?.status === "ambiguous") return `${s.link.candidates.length} cards match`;
+  if (s.link?.status === "ambiguous") return s.link.candidates?.length ? `${s.link.candidates.length} cards match` : "several cards match";
   if (s.link?.status === "unknown_card") return "card not on the board";
   return "no card";
 }
@@ -159,6 +159,19 @@ export function staleSessions(staleIds: readonly string[], cards: readonly Proje
   const ids = new Set(staleIds.map(withPrefix));
   const labels = cards.flatMap((c) => (ids.has(c.id) && c.session_link ? [sessionLabel(c.session_link.session)] : []));
   return [...new Set(labels)];
+}
+
+/** The newest last-heard time of the stale cards' own sessions, or null when none is known. Never
+ * the newest of any session: that one may be reporting right now on another card. */
+export function staleSince(staleIds: readonly string[], cards: readonly ProjectCard[] | null): string | null {
+  if (!cards) return null;
+  const ids = new Set(staleIds.map(withPrefix));
+  let newest: string | null = null;
+  for (const c of cards) {
+    const at = ids.has(c.id) ? c.session_link?.last_heard_at : null;
+    if (at && (!newest || Date.parse(at) > Date.parse(newest))) newest = at;
+  }
+  return newest;
 }
 
 /** "a, b, c and 7 more". */
