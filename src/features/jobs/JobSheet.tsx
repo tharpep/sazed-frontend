@@ -19,6 +19,7 @@ import { errorText } from "@/api/homelab";
 import { jobCardId } from "@/api/command";
 import { CardActions, TOUCH_BUTTON } from "@/features/home/CardActions";
 import { ageSince, heardLabel, isStale } from "@/features/home/heard";
+import { DispatchPreview } from "./DispatchPreview";
 import { Timeline } from "./Timeline";
 import { KIND_LABEL, PAUSE_REASON, STATUS_LABEL, duration, requesterLabel, statusTone, stepsFromEvents } from "./format";
 
@@ -118,6 +119,8 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
   const active = !!job && ACTIVE_STATUSES.includes(job.status);
   const heardAge = ageSince(job?.heartbeat_at);
   const paused = job?.status === "paused";
+  const dispatch = job?.kind === "dispatch";
+  const draftPr = !!job?.meta?.pr_draft || dispatch;
   const footer =
     job && (active || paused) ? (
       <>
@@ -174,7 +177,9 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
             </p>
           )}
 
-          {job?.status === "running" && (
+          {job && dispatch && <DispatchPreview job={job} />}
+
+          {job?.status === "running" && !dispatch && (
             <CardActions
               cardId={jobCardId(job.id)}
               actions={[{ id: "steer", label: "Steer", takes_text: true }]}
@@ -214,10 +219,10 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
               rel="noreferrer"
               className="inline-flex min-h-11 items-center self-start rounded-md border border-border px-3 py-1.5 text-sm text-primary hover:bg-surface sm:min-h-0"
             >
-              Open {job.meta.pr_draft ? "draft " : ""}pull request #{job.meta.pr_number} on GitHub
+              Open {draftPr ? "draft " : ""}pull request #{job.meta.pr_number} on GitHub
             </a>
           )}
-          {job?.meta?.pr_url && !job.meta.pr_draft && (
+          {job?.meta?.pr_url && !draftPr && (
             <p className={cn("text-xs", job.meta.ci_state === "failure" ? "text-destructive" : "text-muted")}>
               {job.meta.ci_state === "success"
                 ? "CI passed."
@@ -246,7 +251,7 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
             <p className="text-xs text-muted">Changed: {job.meta.changed_files.join(", ")}</p>
           )}
 
-          {job && CONTINUABLE_STATUSES.includes(job.status) && (
+          {job && !dispatch && CONTINUABLE_STATUSES.includes(job.status) && (
             <section aria-label="Follow up" className="flex flex-col gap-2">
               <textarea
                 value={followUp}

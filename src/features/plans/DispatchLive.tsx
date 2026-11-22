@@ -57,6 +57,10 @@ function openProject(slug: string) {
   useNavStore.getState().openItem({ kind: "project", id: slug });
 }
 
+function openJob(id: string) {
+  useNavStore.getState().openItem({ kind: "job", id });
+}
+
 const Empty = ({ children }: { children: string }) => <p className="text-caption text-muted">{children}</p>;
 
 export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBack: () => void; onOpenPlan: (slug: string) => void }) {
@@ -131,6 +135,19 @@ export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBac
               {data.repo} · onto <span className="font-mono">integ/{data.plan}</span>
             </span>
             <span className="font-mono">{data.host}</span>
+            {data.pr_url && (
+              <a href={data.pr_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                Draft PR{data.pr_number != null && ` #${data.pr_number}`}
+              </a>
+            )}
+            {data.job_id && (
+              <span>
+                Job{" "}
+                <button type="button" onClick={() => openJob(data.job_id!)} className="font-mono text-primary hover:underline">
+                  {data.job_id.slice(0, 8)}
+                </button>
+              </span>
+            )}
             {data.project && (
               <span>
                 Project{" "}

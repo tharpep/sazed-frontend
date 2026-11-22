@@ -66,6 +66,11 @@ export interface DispatchTask {
 
 export interface DispatchPlan extends DispatchPlanSummary {
   now?: string;
+  job_id?: string | null;
+  pr_url?: string | null;
+  pr_number?: number | null;
+  pr_head_sha?: string | null;
+  exported_at?: string | null;
   tasks: DispatchTask[];
 }
 
