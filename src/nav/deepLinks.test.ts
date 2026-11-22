@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDeepLink } from "./deepLinks";
+import { parseDeepLink, parseOpenLink } from "./deepLinks";
 
 describe("parseDeepLink: the old links in the build plan's table", () => {
   it.each([
@@ -88,4 +88,40 @@ describe("parseDeepLink: fallbacks", () => {
   it.each(["", "?item=b-1", "?page="])("%j is not a deep link", (search) => {
     expect(parseDeepLink(search)).toBeNull();
   });
+});
+
+describe("parseDeepLink: a view's picker choice", () => {
+  it("opens the Homelab storage view", () => {
+    expect(parseDeepLink("?page=system.homelab.storage")).toEqual({
+      hub: "system",
+      view: "homelab",
+      sub: { key: "system:homelab", value: "storage" },
+    });
+  });
+
+  it.each(["?page=system.homelab.nope", "?page=work.projects.active", "?page=system.homelab.toString"])(
+    "%s falls back to Home",
+    (search) => {
+      expect(parseDeepLink(search)).toEqual({ hub: "home" });
+    },
+  );
+});
+
+describe("parseOpenLink: the form phone notices link to", () => {
+  it.each([
+    ["?open=job:5c1d9a3e-0000-4000-8000-000000000001", { kind: "job", id: "5c1d9a3e-0000-4000-8000-000000000001" }],
+    ["?open=backlog:b-1", { kind: "backlog", id: "b-1" }],
+    ["?open=automation:a1", { kind: "automation", id: "a1" }],
+    ["?open=dispatch:phone-links.v2", { kind: "dispatch", id: "phone-links.v2" }],
+    ["?open=service:sazed-api", { kind: "service", id: "sazed-api" }],
+  ])("%s", (search, expected) => {
+    expect(parseOpenLink(search)).toEqual(expected);
+  });
+
+  it.each(["", "?open=", "?open=job", "?open=job:", "?open=:x", "?open=plan:p", "?open=job:a/b", "?open=job:a%3Fb", "?open=constructor:x"])(
+    "%j is not an open link",
+    (search) => {
+      expect(parseOpenLink(search)).toBeNull();
+    },
+  );
 });
