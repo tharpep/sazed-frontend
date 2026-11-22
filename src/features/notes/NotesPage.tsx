@@ -92,7 +92,7 @@ function NotesBody({ chip, q, notes, total }: Loaded) {
   if (chip === "agents") return <p className="text-sm text-muted">No agent notes yet.</p>;
   return (
     <EmptyState title="No notes of yours yet">
-      What you type or dictate here becomes a note in your vault's inbox. You never pick a folder.
+      What you type or dictate here is saved as a note. You never pick a folder.
     </EmptyState>
   );
 }
