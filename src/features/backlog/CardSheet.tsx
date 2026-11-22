@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getBacklogItem, listBacklog, type BacklogItem } from "@/api/backlog";
 import { errorText } from "@/api/homelab";
 import type { ProjectCard } from "@/api/projects";
+import type { Session } from "@/api/sessions";
 import { JobSheet } from "@/features/jobs/JobSheet";
 import { backInHistory, withoutEntry } from "@/nav/history";
 import type { ViewKey } from "@/nav/hubViews";
@@ -34,15 +35,19 @@ function openJob(id: string) {
 export function CardSheet({
   view,
   cards,
+  sessions,
   onChanged,
 }: {
   view: ViewKey;
   cards: readonly ProjectCard[] | null;
+  /** Live sessions from the command poll, where the page has one: fresher than `cards`. */
+  sessions?: readonly Session[];
   onChanged: () => void;
 }) {
   const ref = useNavStore((s) => s.sheet[view]);
   const itemId = ref?.kind === "backlog" ? ref.id : null;
   const card = itemId ? (cards?.find((c) => backlogId(c) === itemId) ?? null) : null;
+  const live = itemId ? (sessions?.find((s) => s.card && (s.card.id === `item:${itemId}` || s.card.id === itemId)) ?? null) : null;
   const [item, setItem] = useState<BacklogItem | null>(null);
   const [rankedCount, setRankedCount] = useState(0);
   const [failure, setFailure] = useState<string | null>(null);
@@ -84,6 +89,7 @@ export function CardSheet({
       <BacklogSheet
         item={shown}
         card={card}
+        liveSessionId={live?.session_id ?? null}
         loading={itemId !== null && !shown}
         rankedCount={rankedCount}
         onClose={close}

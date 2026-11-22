@@ -25,11 +25,24 @@ interface Props {
   cards: NeedsCard[] | null;
   onOpenJob: (jobId: string) => void;
   onChanged: () => void;
+  /** Questions from sessions, which sit on their rows under Running rather than here. */
+  onRuns?: number;
 }
 
-export function NeedsYou({ cards, onOpenJob, onChanged }: Props) {
+export function NeedsYou({ cards, onOpenJob, onChanged, onRuns = 0 }: Props) {
   return (
-    <Group name="Needs you" count={cards ? cards.length : null} empty="Nothing is waiting on you.">
+    <Group
+      name="Needs you"
+      count={cards ? cards.length + onRuns : null}
+      empty="Nothing is waiting on you."
+      extra={
+        onRuns > 0 && (
+          <span className="text-meta font-normal text-muted">
+            {onRuns} {onRuns === 1 ? "sits on its run" : "sit on their runs"} below
+          </span>
+        )
+      }
+    >
       <ul className="divide-y divide-line">
         {orderMergeCalls(cards ?? []).map((card) => {
           const asking = card.job_status === "needs_input";

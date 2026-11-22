@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type { ProjectCard } from "./projects";
+import { mockingSessions, readSessionFields, type Session, type SessionHealth } from "./sessions";
 
 export interface CardAction {
   id: "approve" | "decline" | "answer" | "steer" | "stop" | "resume" | "merge";
@@ -47,10 +48,16 @@ export interface CommandSummary {
   needs: NeedsCard[];
   working: WorkingJob[];
   done: { succeeded: number; failed: number; latest: DoneJob[]; window_hours: number };
+  // Both absent from a Sazed before slice 3 (sazed#212).
+  sessions?: Session[];
+  session_health?: SessionHealth;
 }
 
-export function getCommand(): Promise<CommandSummary> {
-  return apiFetch("/board/command") as Promise<CommandSummary>;
+export async function getCommand(): Promise<CommandSummary> {
+  const raw = (await apiFetch("/board/command")) as CommandSummary;
+  const command = { ...raw, ...readSessionFields(raw) };
+  if (import.meta.env.DEV && mockingSessions()) return { ...command, ...(await import("@/mock/sessions")).mockSessionFields() };
+  return command;
 }
 
 export const jobCardId = (jobId: string) => `job:${jobId}`;

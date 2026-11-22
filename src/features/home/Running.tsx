@@ -1,10 +1,13 @@
 import { jobCardId, type WorkingJob } from "@/api/command";
+import type { Session, SessionAgent, SessionDetail } from "@/api/sessions";
 import { cn } from "@/lib/utils";
 
 import { CardActions } from "./CardActions";
 import { Group, MoreLink } from "./Group";
 import { ageSince, DISPATCH_STALE_AFTER_S, heardLabel, isStale, JOB_STALE_AFTER_S } from "./heard";
 import { goTo, openDispatch } from "./homeNav";
+import { SessionRow } from "./SessionRow";
+import { orderSessions } from "./sessions";
 import { StepLine } from "./StepLine";
 import { clock } from "./steps";
 
@@ -29,20 +32,35 @@ interface Props {
   jobs: WorkingJob[] | null;
   /** heartbeat_at per worker job id, from useHeartbeats. */
   heard: Record<string, string | null>;
+  /** Live Claude Code sessions; undefined from a Sazed before slice 3. */
+  sessions?: Session[];
+  details?: Record<string, SessionDetail>;
+  onOpenSession?: (session: Session) => void;
+  onOpenAgent?: (session: Session, agent: SessionAgent) => void;
   onOpenJob: (jobId: string) => void;
   onChanged: () => void;
 }
 
 /** Running work, one row each. Home offers only Stop; Steer stays in the job sheet a tap away. */
-export function Running({ jobs, heard, onOpenJob, onChanged }: Props) {
+export function Running({ jobs, heard, sessions, details, onOpenSession, onOpenAgent, onOpenJob, onChanged }: Props) {
+  const live = orderSessions(sessions ?? []);
   return (
     <Group
       name="Running"
-      count={jobs ? jobs.length : null}
+      count={jobs ? jobs.length + live.length : null}
       empty="No agents are working."
       extra={<MoreLink onClick={() => goTo({ hub: "agents", view: "runs" })}>All runs</MoreLink>}
     >
       <ul>
+        {live.map((session) => (
+          <SessionRow
+            key={session.session_id}
+            session={session}
+            detail={details?.[session.session_id]}
+            onOpen={() => onOpenSession?.(session)}
+            onOpenAgent={(agent) => onOpenAgent?.(session, agent)}
+          />
+        ))}
         {(jobs ?? []).map((job) => {
           const open = job.job_id ? () => onOpenJob(job.job_id!) : job.plan ? () => openDispatch(job.plan!) : null;
           const stop = job.actions.filter((a) => a.id === "stop");

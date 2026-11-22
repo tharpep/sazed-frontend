@@ -111,7 +111,7 @@ export function cardFacts(card: ProjectCard): { text: string; warn: boolean } {
   if (group === "waiting") parts.push(mergeLabelOf(card) ?? next, card.pr ? cardPrRef(card) : null);
   if (group === "flight") {
     // The PR goes before the session name, so a phone's truncated line keeps it.
-    if (card.session_link) parts.push(next, cardPrRef(card), sessionLabel(card.session_link.session));
+    if (card.session_link) parts.push(next || card.session_link.doing || null, cardPrRef(card), sessionLabel(card.session_link.session));
     else if (card.job_id) parts.push(next);
   }
   if (group === "done") parts.push(card.done_at ? `Done ${dayTime(card.done_at)}` : "Done", cardPrRef(card));
