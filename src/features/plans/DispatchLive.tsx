@@ -18,7 +18,7 @@ const POLL_MS = 3000;
 function usePlan(plan: string) {
   const [data, setData] = useState<DispatchPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const settled = data ? isSettled(data.tasks) : false;
+  const settled = data ? isSettled(data.tasks) && (!data.job_id || !!data.pr_url) : false;
 
   useEffect(() => {
     setData(null);
@@ -199,7 +199,7 @@ export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBac
                       <TaskCard key={t.id} task={t} byId={byId} selected={t.id === selected?.id} fresh={fresh.has(t.id)} onSelect={select} />
                     ))}
                     <SystemBox node="integ" title={`integ/${data.plan}`} mono>
-                      {`${landed.length} landed. ${allLanded ? "Draft PR opens on export." : "Draft PR when all land."}`}
+                      {`${landed.length} landed. ${data.pr_url ? "Draft PR open." : allLanded ? "Draft PR opens on export." : "Draft PR when all land."}`}
                     </SystemBox>
                   </div>
                 </div>

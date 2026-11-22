@@ -170,7 +170,9 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
                   ? "Waiting for your approval."
                   : job.status === "needs_input"
                     ? "Waiting for your answer."
-                    : `Working: ${steps.length} steps so far…`}
+                    : dispatch
+                      ? "Working…"
+                      : `Working: ${steps.length} steps so far…`}
               {job.status === "running" && (
                 <span className={cn(isStale(heardAge) && "text-warn")}> · {heardLabel(heardAge)}</span>
               )}
@@ -219,7 +221,7 @@ export function JobSheet({ jobId, onClose, onChanged, onOpenJob }: Props) {
               rel="noreferrer"
               className="inline-flex min-h-11 items-center self-start rounded-md border border-border px-3 py-1.5 text-sm text-primary hover:bg-surface sm:min-h-0"
             >
-              Open {draftPr ? "draft " : ""}pull request #{job.meta.pr_number} on GitHub
+              Open {draftPr ? "draft " : ""}pull request{job.meta.pr_number != null && ` #${job.meta.pr_number}`} on GitHub
             </a>
           )}
           {job?.meta?.pr_url && !draftPr && (
