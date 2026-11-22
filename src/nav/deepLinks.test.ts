@@ -118,7 +118,7 @@ describe("parseOpenLink: the form phone notices link to", () => {
     expect(parseOpenLink(search)).toEqual(expected);
   });
 
-  it.each(["", "?open=", "?open=job", "?open=job:", "?open=:x", "?open=plan:p", "?open=job:a/b", "?open=job:a%3Fb", "?open=constructor:x"])(
+  it.each(["", "?open=", "?open=job", "?open=job:", "?open=:x", "?open=plan:p", "?open=job:a/b", "?open=job:a%3Fb", "?open=job:.", "?open=job:..", "?open=constructor:x"])(
     "%j is not an open link",
     (search) => {
       expect(parseOpenLink(search)).toBeNull();

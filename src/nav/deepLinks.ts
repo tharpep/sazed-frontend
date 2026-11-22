@@ -7,8 +7,9 @@ export type DeepLink = NavTarget & { items?: ItemRef[]; sub?: { key: SubKey; val
 export const OPEN_KINDS = ["backlog", "job", "automation", "dispatch", "service"] as const satisfies readonly ItemKind[];
 export type OpenKind = (typeof OPEN_KINDS)[number];
 
-// Same rule as the gateway's REF_ID (api-gateway app/notices.py), so its links always parse.
-const OPEN_ID = /^[A-Za-z0-9._-]{1,200}$/;
+// Same rule as the gateway's REF_ID (api-gateway app/notices.py), so its links always parse. Dots
+// alone are refused: fetch resolves `.` and `..` in a path to another route.
+const OPEN_ID = /^(?!\.+$)[A-Za-z0-9._-]{1,200}$/;
 
 /** `?open=<kind>:<id>`, the form phone notices link to, or null. */
 export function parseOpenLink(search: string): { kind: OpenKind; id: string } | null {

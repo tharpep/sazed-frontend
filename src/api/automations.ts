@@ -23,7 +23,7 @@ export type AutomationAction =
   | { type: "agent"; name: "scout" | "triage" | "map"; params?: { max_ideas?: number } };
 
 export interface AutomationOutputs {
-  pushover: { title?: string | null; priority?: number } | null;
+  pushover: { title?: string | null } | null;
   journal: { category?: "career" | "personal"; subcategory?: string } | null;
   skip_if_nothing: boolean;
 }
