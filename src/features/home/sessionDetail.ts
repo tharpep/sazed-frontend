@@ -33,12 +33,16 @@ function emit(id: string) {
   for (const l of listeners) l();
 }
 
-/** Asks Sazed for a session's detail unless a request is in flight, the id is gone, or the last
- * one was under 10 s ago. `heard` skips a session Sazed has not heard from since the last answer. */
+/** Asks Sazed for a session's detail unless a request is in flight, the last one was under 10 s
+ * ago, or the id answered 404 and Sazed has not heard from it since. `heard` also skips a session
+ * Sazed has not heard from since the last answer. */
 export function loadSessionDetail(id: string, heard: string | null = null) {
   const now = Date.now();
   const e = cache.get(id);
-  if (e && (e.inflight || e.error === "gone" || now - e.at < EVERY_MS)) return;
+  // A 404 during a Sazed redeploy must not hide a session until reload: a newer last-heard time
+  // asks again.
+  const gone = e?.error === "gone" && (heard === null || heard === e.heard);
+  if (e && (e.inflight || gone || now - e.at < EVERY_MS)) return;
   if (e && heard !== null && e.heard === heard && e.detail) return;
   const seq = (e?.seq ?? 0) + 1;
   cache.set(id, { detail: e?.detail ?? null, error: e?.error ?? null, at: now, heard: e?.heard ?? null, seq, inflight: true });
@@ -54,7 +58,7 @@ export function loadSessionDetail(id: string, heard: string | null = null) {
       const cur = cache.get(id);
       if (!cur || cur.seq !== seq) return;
       const gone = err instanceof ApiError && err.status === 404;
-      cache.set(id, { ...cur, error: gone ? "gone" : "failed", at: Date.now(), inflight: false });
+      cache.set(id, { ...cur, error: gone ? "gone" : "failed", heard: heard ?? cur.heard, at: Date.now(), inflight: false });
       emit(id);
     }
   );
@@ -74,11 +78,29 @@ export function useSessionDetail(id: string | null): DetailState {
   const state = useSyncExternalStore(subscribe, () => read(id));
   useEffect(() => {
     if (!id) return;
+    watched.set(id, (watched.get(id) ?? 0) + 1);
     loadSessionDetail(id);
     const timer = setInterval(() => !document.hidden && loadSessionDetail(id), EVERY_MS);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      const n = (watched.get(id) ?? 1) - 1;
+      if (n > 0) watched.set(id, n);
+      else watched.delete(id);
+    };
   }, [id]);
   return state;
+}
+
+const watched = new Map<string, number>();
+
+/** Forgets every session that is neither live nor open in a sheet, so the cache stays the size of
+ * the live list. */
+export function pruneSessionDetails(liveIds: ReadonlySet<string>) {
+  for (const id of [...cache.keys()]) {
+    if (liveIds.has(id) || watched.has(id)) continue;
+    cache.delete(id);
+    snapshots.delete(id);
+  }
 }
 
 /** Home's agent rows: only running sessions can have agents worth a row, so only they are fetched,
@@ -86,7 +108,9 @@ export function useSessionDetail(id: string | null): DetailState {
 export function useRunningDetails(sessions: readonly Session[] | undefined): Record<string, SessionDetail> {
   useSyncExternalStore(subscribe, () => version);
   useEffect(() => {
-    for (const s of sessions ?? []) if (s.status === "running") loadSessionDetail(s.session_id, s.last_heard_at);
+    if (!sessions) return;
+    pruneSessionDetails(new Set(sessions.map((s) => s.session_id)));
+    for (const s of sessions) if (s.status === "running") loadSessionDetail(s.session_id, s.last_heard_at);
   }, [sessions]);
   const out: Record<string, SessionDetail> = {};
   for (const s of sessions ?? []) {
