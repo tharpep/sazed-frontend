@@ -11,6 +11,7 @@ import type { ProjectCard } from "@/api/projects";
 import { mergeLabelOf } from "@/widgets/mergeCall";
 import { sessionLabel, visibleNext } from "@/widgets/projectWork";
 import { ProofBlock } from "./ProofBlock";
+import { SessionNow } from "./SessionNow";
 import { REPOS, STATUS_LABEL, TYPE_LABEL, ageLabel, isOpenStatus, sourceLabel, workLabel } from "./format";
 
 interface Props {
@@ -181,6 +182,8 @@ export function BacklogSheet({ item, card, loading = false, rankedCount, onClose
               )}
             </p>
           )}
+
+          {card?.session_link?.session_id && <SessionNow link={card.session_link} />}
 
           {card?.pr && (
             <ProofBlock

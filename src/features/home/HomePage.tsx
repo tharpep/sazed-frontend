@@ -8,13 +8,15 @@ import { getCommand, type CommandSummary } from "@/api/command";
 import { fetchCalendarToday, fetchTasksDueToday } from "@/api/display";
 import { fetchServices, fetchStorage, type Service } from "@/api/homelab";
 import { listProjects, type Project, type ProjectCard } from "@/api/projects";
-import { CardSheet } from "@/features/backlog/CardSheet";
+import type { Session } from "@/api/sessions";
+import { CardSheet, openCardSheet } from "@/features/backlog/CardSheet";
 import { JobSheet } from "@/features/jobs/JobSheet";
 import { gib, statusOf } from "@/features/homelab/format";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useChatStore } from "@/store/chatStore";
 import { useUiStore } from "@/store/uiStore";
 
+import { AgentStepsSheet } from "./AgentSteps";
 import { AskField } from "./AskField";
 import { Done } from "./Done";
 import { LinkRows, ProjectsBox, ShippedBox, TodayBox, TodayLine } from "./HomeSide";
@@ -22,7 +24,10 @@ import { askFromHome, goTo, openSystem } from "./homeNav";
 import { NeedsYou } from "./NeedsYou";
 import { Ready } from "./Ready";
 import { Running } from "./Running";
+import { QuietLine, StaleBanner } from "./SessionHealth";
+import { questionCount } from "./sessions";
 import { useHeartbeats } from "./useHeartbeats";
+import { useSessionDetails } from "./useSessionDetails";
 import {
   failedStep,
   latestFailure,
@@ -106,6 +111,7 @@ export function HomePage() {
   const [shipped, setShipped] = useState<ProjectCard[] | null>(null);
   const [today, setToday] = useState<Today>(NO_TODAY);
   const [openJob, setOpenJob] = useState<string | null>(null);
+  const [openAgent, setOpenAgent] = useState<{ session: string; agent: string | null } | null>(null);
   const sideSeq = useRef(0);
   const failedRun = useRef<{ run: string; step: string | null } | null>(null);
 
@@ -203,6 +209,16 @@ export function HomePage() {
   const working = command?.working ?? null;
   const heard = useHeartbeats(working);
   const done = command?.done ?? null;
+  const sessions = command?.sessions;
+  const health = command?.session_health;
+  const details = useSessionDetails(sessions);
+  const asked = questionCount(sessions);
+  const runningCount = (working?.length ?? 0) + (sessions?.length ?? 0);
+  // Only a Sazed that reports sessions can say nothing runs anywhere; an older one keeps today's groups.
+  const quiet = !!command && !!health && needs!.length === 0 && runningCount === 0;
+  // A session with a card opens the card, which holds its agents; one with none opens its own steps.
+  const openSession = (s: Session) =>
+    s.card ? openCardSheet({ id: s.card.id, kind: "item", job_id: null }) : setOpenAgent({ session: s.session_id, agent: null });
   const ready = side.backlog ? readyCount(side.backlog) : null;
   const askInline = !isMobile;
 
@@ -244,11 +260,11 @@ export function HomePage() {
         <p className="mt-0.5 mb-2 text-body text-muted">
           {command ? (
             <>
-              <b className={needs!.length ? "font-medium text-warn" : "font-medium text-ink"}>
-                {needs!.length} {needs!.length === 1 ? "needs" : "need"} you
+              <b className={needs!.length + asked ? "font-medium text-warn" : "font-medium text-ink"}>
+                {needs!.length + asked} {needs!.length + asked === 1 ? "needs" : "need"} you
               </b>
               {" · "}
-              <b className="font-medium text-ink">{working!.length} running</b>
+              <b className="font-medium text-ink">{runningCount} running</b>
               {ready != null && ` · ${ready} ready`}
               {` · ${done!.succeeded + done!.failed} done`}
             </>
@@ -262,8 +278,23 @@ export function HomePage() {
 
         <div className="mt-5 grid items-start gap-7 @min-[860px]:grid-cols-[minmax(0,1fr)_300px]">
           <div className="flex min-w-0 flex-col gap-4">
-            <NeedsYou cards={needs} onOpenJob={setOpenJob} onChanged={loadCommand} />
-            <Running jobs={working} heard={heard} onOpenJob={setOpenJob} onChanged={loadCommand} />
+            {quiet && health && <QuietLine health={health} />}
+            {health && <StaleBanner health={health} cards={shipped} projects={side.projects} />}
+            {!quiet && (
+              <>
+                <NeedsYou cards={needs} onOpenJob={setOpenJob} onChanged={loadCommand} onRuns={asked} />
+                <Running
+                  jobs={working}
+                  heard={heard}
+                  sessions={sessions}
+                  details={details}
+                  onOpenSession={openSession}
+                  onOpenAgent={(s, a) => setOpenAgent({ session: s.session_id, agent: a.agent_id })}
+                  onOpenJob={setOpenJob}
+                  onChanged={loadCommand}
+                />
+              </>
+            )}
             <Ready top={side.backlog ? topReady(side.backlog) : []} total={ready} />
             <Done done={done} compact={isMobile} onOpenJob={setOpenJob} />
             {askInline && <AskField onSend={askFromHome} isStreaming={isStreaming} onStop={stopReply} />}
@@ -278,6 +309,11 @@ export function HomePage() {
       </div>
       <JobSheet jobId={openJob} onClose={() => setOpenJob(null)} onChanged={loadCommand} onOpenJob={setOpenJob} />
       <CardSheet view="home:home" cards={shipped} onChanged={refreshAll} />
+      <AgentStepsSheet
+        detail={openAgent ? (details[openAgent.session] ?? null) : null}
+        agentId={openAgent ? openAgent.agent : undefined}
+        onClose={() => setOpenAgent(null)}
+      />
     </div>
   );
 }

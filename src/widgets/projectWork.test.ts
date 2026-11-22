@@ -163,6 +163,13 @@ describe("cardFacts", () => {
     );
   });
 
+  it("gives an in-flight card its session's doing line in place of the filler, never over a reason", () => {
+    const link = { session: "cc-7", branch: "b", pr_repo: null, pr_number: null, doing: "Write the contract", session_status: "running" };
+    const filler = "Being built in a terminal session";
+    expect(cardFacts(card({ stage: "doing", next: filler, session_link: link })).text).toBe("sazed · Write the contract · cc-7");
+    expect(cardFacts(card({ stage: "doing", next: "Checks failing", session_link: link })).text).toBe("sazed · Checks failing · cc-7");
+  });
+
   it("names a waiting card's PR only when Sazed sent a snapshot of it", () => {
     const pr = { ...snapshot, repo: "tharpep/sazed", number: 207 };
     expect(cardFacts(card({ stage: "needs_me", next: "Ready to merge", pr })).text).toBe("sazed · Ready to merge · sazed#207");

@@ -19,12 +19,19 @@ export interface BoardBar {
   next: number;
 }
 
-/** A Claude Code session that linked itself to a card by hand. */
+/** A Claude Code session linked to a card, by hand or by its hooks. */
 export interface SessionLink {
   session: string;
   branch: string | null;
   pr_repo: string | null;
   pr_number: number | null;
+  // The reporting session heard from in the last 24 hours, all null when there is none. Optional
+  // because a Sazed before slice 3, and older MCP payloads, send none of the four.
+  session_id?: string | null;
+  last_heard_at?: string | null;
+  doing?: string | null;
+  /** running, idle, ended or not_heard_from; a plain string so a newer word still renders. */
+  session_status?: string | null;
 }
 
 /** Sazed's last snapshot of a card's PR, refreshed by its poller. A PR never fetched has only

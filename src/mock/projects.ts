@@ -53,7 +53,16 @@ function card(spec: CardSpec, repo: string, workstream: string): ProjectCard {
     updated_at: ago(seq * 3),
     done_at: stage === "done" ? ago(seq * 3) : null,
     session_link: session
-      ? { session, branch: `feature/${session}`, pr_repo: `tharpep/${repo}`, pr_number: 100 + seq }
+      ? {
+          session,
+          branch: `feature/${session}`,
+          pr_repo: `tharpep/${repo}`,
+          pr_number: 100 + seq,
+          session_id: `${session}-0000-4000-8000-000000000000`,
+          last_heard_at: ago(0.01),
+          doing: `Working on ${title.toLowerCase()}`,
+          session_status: "running",
+        }
       : null,
     pr: session || pr ? prSnapshot(stage, `tharpep/${repo}`, pr ?? 100 + seq) : null,
     repo,

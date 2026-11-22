@@ -119,6 +119,10 @@ const projectCard = z.object({
       branch: z.string().nullable(),
       pr_repo: z.string().nullable(),
       pr_number: z.number().nullable(),
+      session_id: z.string().nullable().optional(),
+      last_heard_at: z.string().nullable().optional(),
+      doing: z.string().nullable().optional(),
+      session_status: z.string().nullable().optional().describe("running, idle, ended or not_heard_from"),
     })
     .nullable()
     .optional(),
