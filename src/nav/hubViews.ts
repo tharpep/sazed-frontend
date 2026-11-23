@@ -52,6 +52,7 @@ export const HUB_VIEWS = [
     id: "library",
     label: "Library",
     views: [
+      { id: "notes", label: "Notes" },
       { id: "knowledge", label: "Knowledge" },
       { id: "journal", label: "Journal" },
     ],

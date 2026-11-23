@@ -11,6 +11,7 @@ import { HomePage } from "@/features/home/HomePage";
 import { HomelabPage } from "@/features/homelab/HomelabPage";
 import { JournalPage } from "@/features/journal/JournalPage";
 import { KnowledgePage } from "@/features/kb/KnowledgePage";
+import { NotesPage } from "@/features/notes/NotesPage";
 import { PlansPage } from "@/features/plans/PlansPage";
 import { RunsPage } from "@/features/plans/RunsPage";
 import { ProfilesPage } from "@/features/profiles/ProfilesPage";
@@ -32,6 +33,7 @@ const COMPONENTS: Record<ViewKey, ComponentType> = {
   "system:activity": ActivityPage,
   "system:usage": ClaudeUsagePage,
   "system:integrations": GatewayPage,
+  "library:notes": NotesPage,
   "library:knowledge": KnowledgePage,
   "library:journal": JournalPage,
   "apps:apps": AppsPage,
