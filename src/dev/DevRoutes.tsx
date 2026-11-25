@@ -83,6 +83,9 @@ function MockPage() {
   const Mock = useMemo(() => (active ? lazy(active.load) : null), [active]);
 
   if (!variants || !active || !Mock) return <Navigate to="/dev" replace />;
+  if (variant && variant !== active.variant) {
+    return <Navigate to={`/dev/mocks/${name}/${active.variant}?${search}`} replace />;
+  }
 
   const body = (
     <Suspense fallback={null}>
@@ -92,6 +95,13 @@ function MockPage() {
   if (search.has("bare")) return <div className="h-dvh bg-bg">{body}</div>;
 
   const frame: Frame = search.get("frame") === "phone" ? "phone" : "desktop";
+  const mockParams = new URLSearchParams(search);
+  mockParams.delete("frame");
+  const hrefFor = (nextVariant: string, nextFrame: Frame) => {
+    const params = new URLSearchParams(mockParams);
+    if (nextFrame === "phone") params.set("frame", "phone");
+    return `/dev/mocks/${name}/${nextVariant}?${params}`;
+  };
   return (
     <Page>
       <DevHeader title={name}>
@@ -99,16 +109,14 @@ function MockPage() {
           <Segmented
             label="Variant"
             value={active.variant}
-            onChange={(next) => navigate(`/dev/mocks/${name}/${next}?${search}`)}
+            onChange={(next) => navigate(hrefFor(next, frame))}
             options={variants.map((m) => ({ value: m.variant, label: m.variant }))}
           />
         )}
         <Segmented
           label="Frame"
           value={frame}
-          onChange={(next) =>
-            navigate(`/dev/mocks/${name}/${active.variant}${next === "phone" ? "?frame=phone" : ""}`)
-          }
+          onChange={(next) => navigate(hrefFor(active.variant, next))}
           options={[...FRAMES]}
         />
       </DevHeader>
@@ -116,7 +124,7 @@ function MockPage() {
         <div className="flex min-h-0 flex-1 justify-center bg-shell p-4">
           <iframe
             title={`${name} on a phone`}
-            src={`/dev/mocks/${name}/${active.variant}?bare`}
+            src={`/dev/mocks/${name}/${active.variant}?bare&${mockParams}`}
             className="h-full max-h-[812px] w-[390px] rounded-xl border border-line bg-bg"
           />
         </div>

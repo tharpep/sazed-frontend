@@ -15,6 +15,10 @@ describe("parseMockPath", () => {
     expect(parseMockPath("./mocks/finance.h.tsx")).toEqual({ name: "finance", variant: "h" });
   });
 
+  it("keeps every part after the name as the variant", () => {
+    expect(parseMockPath("./mocks/finance.h.v2.tsx")).toEqual({ name: "finance", variant: "h.v2" });
+  });
+
   it("calls a single-file mock main", () => {
     expect(parseMockPath("./mocks/notes.tsx")).toEqual({ name: "notes", variant: "main" });
   });

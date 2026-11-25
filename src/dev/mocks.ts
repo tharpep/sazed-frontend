@@ -8,8 +8,8 @@ export interface MockVariant {
 }
 
 export function parseMockPath(path: string): { name: string; variant: string } {
-  const [name, variant = "main"] = path.replace("./mocks/", "").replace(/\.tsx$/, "").split(".");
-  return { name, variant };
+  const [name, ...rest] = path.replace("./mocks/", "").replace(/\.tsx$/, "").split(".");
+  return { name, variant: rest.join(".") || "main" };
 }
 
 export const mocks: Record<string, MockVariant[]> = {};
