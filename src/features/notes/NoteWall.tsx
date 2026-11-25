@@ -3,7 +3,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { groupByDay, noteWeight, splitColumns } from "./format";
 import { NoteCard } from "./NoteCard";
 
-export function NoteWall({ notes }: { notes: Note[] }) {
+export function NoteWall({ notes, onOpen }: { notes: Note[]; onOpen: (note: Note) => void }) {
   const columns = useIsMobile() ? 2 : 3;
 
   return (
@@ -18,7 +18,7 @@ export function NoteWall({ notes }: { notes: Note[] }) {
             {splitColumns(day.notes, columns, noteWeight).map((column, i) => (
               <div key={i} className="flex min-w-0 flex-1 flex-col gap-2">
                 {column.map((note) => (
-                  <NoteCard key={note.path} note={note} />
+                  <NoteCard key={note.path} note={note} onOpen={onOpen} />
                 ))}
               </div>
             ))}

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 
 import { errorText } from "@/api/homelab";
-import { listNotes, type NoteFolder, type NotesResult } from "@/api/notes";
+import { listNotes, type Note, type NoteFolder, type NotesResult } from "@/api/notes";
 import { ToolsRow } from "@/components/shell/ToolsRow";
 import { EmptyState } from "@/components/system";
 import { Button } from "@/components/ui/button";
 import { CaptureBox } from "./CaptureBox";
+import { NoteSheet } from "./NoteSheet";
 import { NoteHits, NotesSearch } from "./NotesSearch";
 import { NoteWall } from "./NoteWall";
 
@@ -31,7 +32,8 @@ interface Loaded extends NotesResult {
 export function NotesPage() {
   const [chip, setChip] = useState<Chip>("mine");
   const [q, setQ] = useState("");
-  const [captures, setCaptures] = useState(0);
+  const [reloads, setReloads] = useState(0);
+  const [open, setOpen] = useState<Note | null>(null);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +53,7 @@ export function NotesPage() {
     return () => {
       current = false;
     };
-  }, [chip, q, captures]);
+  }, [chip, q, reloads]);
 
   const shown = loaded?.chip === chip && Boolean(loaded.q) === Boolean(q) ? loaded : null;
 
@@ -59,7 +61,7 @@ export function NotesPage() {
     <div className="flex h-full min-h-0 flex-col bg-bg">
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4 pb-8">
-          <CaptureBox onCaptured={() => setCaptures((n) => n + 1)} />
+          <CaptureBox onCaptured={() => setReloads((n) => n + 1)} />
 
           <NotesSearch onQuery={setQ} />
 
@@ -79,16 +81,17 @@ export function NotesPage() {
 
           {error && <p className="text-sm text-destructive">Couldn't load notes: {error}</p>}
           {!shown && !error && <p className="text-sm text-muted">Loading…</p>}
-          {shown && <NotesBody {...shown} />}
+          {shown && <NotesBody {...shown} onOpen={setOpen} />}
         </div>
       </div>
+      <NoteSheet note={open} onClose={() => setOpen(null)} onChanged={() => setReloads((n) => n + 1)} />
     </div>
   );
 }
 
-function NotesBody({ chip, q, notes, total }: Loaded) {
-  if (q) return <NoteHits q={q} notes={notes} total={total} />;
-  if (notes.length > 0) return <NoteWall notes={notes} />;
+function NotesBody({ chip, q, notes, total, onOpen }: Loaded & { onOpen: (note: Note) => void }) {
+  if (q) return <NoteHits q={q} notes={notes} total={total} onOpen={onOpen} />;
+  if (notes.length > 0) return <NoteWall notes={notes} onOpen={onOpen} />;
   if (chip === "agents") return <p className="text-sm text-muted">No agent notes yet.</p>;
   return (
     <EmptyState title="No notes of yours yet">
