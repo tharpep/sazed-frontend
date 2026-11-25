@@ -7,7 +7,8 @@ import { ChatHub } from "./features/chat/ChatHub";
 import { Composer } from "./features/chat/Composer";
 import { askFromHome } from "./features/home/homeNav";
 import { useIsMobile } from "./hooks/useIsMobile";
-import { parseDeepLink } from "./nav/deepLinks";
+import { parseDeepLink, parseOpenLink } from "./nav/deepLinks";
+import { followOpenLink } from "./nav/openLink";
 import { viewDef } from "./nav/hubs";
 import { useUiStore } from "./store/uiStore";
 import { useNavStore } from "./store/navStore";
@@ -27,10 +28,17 @@ function App() {
 
   useEffect(() => {
     const link = parseDeepLink(window.location.search);
+    const open = parseOpenLink(window.location.search);
+    if (link || new URLSearchParams(window.location.search).has("open")) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
     if (link) {
       link.items?.forEach((item) => useNavStore.getState().openItem(item));
       useNavStore.getState().go(link.hub, link.view);
-      window.history.replaceState(null, "", window.location.pathname);
+      if (link.sub) useNavStore.getState().setSub(link.sub.key, link.sub.value as never);
+    } else if (open) {
+      useNavStore.getState().go("home");
+      void followOpenLink(open);
     }
   }, []);
 
