@@ -84,7 +84,12 @@ export function NotesPage() {
           {shown && <NotesBody {...shown} onOpen={setOpen} />}
         </div>
       </div>
-      <NoteSheet note={open} onClose={() => setOpen(null)} onChanged={() => setReloads((n) => n + 1)} />
+      <NoteSheet
+        note={open}
+        onClose={() => setOpen(null)}
+        onChanged={() => setReloads((n) => n + 1)}
+        onKeep={setOpen}
+      />
     </div>
   );
 }

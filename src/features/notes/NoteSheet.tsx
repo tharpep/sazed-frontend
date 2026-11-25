@@ -19,13 +19,15 @@ interface Props {
   note: Note | null;
   onClose: () => void;
   onChanged: () => void;
+  onKeep: (note: Note) => void;
 }
 
-type Leave = "cancel" | "close";
+type Leave = "cancel" | "close" | "switch";
 
 const FOOTER_BUTTON = "h-11 px-3 sm:h-8";
 
-export function NoteSheet({ note, onClose, onChanged }: Props) {
+export function NoteSheet({ note: requested, onClose, onChanged, onKeep }: Props) {
+  const [note, setNote] = useState<Note | null>(requested);
   const path = note?.path ?? null;
   const [full, setFull] = useState<FullNote | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,12 @@ export function NoteSheet({ note, onClose, onChanged }: Props) {
 
   const dirty = fixing && full !== null && isDirty(full.text, draft);
 
+  useEffect(() => {
+    if ((requested?.path ?? null) === path) return;
+    if (dirty) setLeaving("switch");
+    else setNote(requested);
+  }, [requested, path, dirty]);
+
   function leave(what: Leave) {
     if (dirty) {
       setLeaving(what);
@@ -65,11 +73,15 @@ export function NoteSheet({ note, onClose, onChanged }: Props) {
 
   function finish(what: Leave) {
     setLeaving(null);
+    setFixing(false);
+    setError(null);
     if (what === "close") onClose();
-    else {
-      setFixing(false);
-      setError(null);
-    }
+    if (what === "switch") setNote(requested);
+  }
+
+  function keep() {
+    if (leaving === "switch" && note) onKeep(note);
+    setLeaving(null);
   }
 
   function startFix() {
@@ -186,13 +198,13 @@ export function NoteSheet({ note, onClose, onChanged }: Props) {
         <p className="text-xs text-muted">Written by an agent. Read-only here.</p>
       )}
 
-      <Dialog open={leaving !== null} onOpenChange={(open) => !open && setLeaving(null)}>
+      <Dialog open={leaving !== null} onOpenChange={(open) => !open && keep()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Discard your changes?</DialogTitle>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setLeaving(null)}>
+            <Button variant="outline" onClick={keep}>
               Keep editing
             </Button>
             <Button variant="destructive" onClick={() => leaving && finish(leaving)}>
