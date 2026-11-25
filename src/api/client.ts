@@ -34,7 +34,7 @@ export async function gatewayFetch(path: string, options?: RequestInit): Promise
   const res = await fetch(url, { ...options, headers });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    throw new ApiError(text || `HTTP ${res.status}`, res.status);
   }
   if (res.status === 204) return null;
   const contentType = res.headers.get("Content-Type") ?? "";

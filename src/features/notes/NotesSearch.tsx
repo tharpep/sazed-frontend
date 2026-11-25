@@ -32,9 +32,10 @@ interface HitsProps {
   q: string;
   notes: Note[];
   total: number;
+  onOpen: (note: Note) => void;
 }
 
-export function NoteHits({ q, notes, total }: HitsProps) {
+export function NoteHits({ q, notes, total, onOpen }: HitsProps) {
   if (notes.length === 0) return <p className="text-meta text-muted">No notes of yours match {q}.</p>;
 
   const now = new Date();
@@ -45,21 +46,27 @@ export function NoteHits({ q, notes, total }: HitsProps) {
       </p>
       <ul className="divide-y divide-line overflow-hidden rounded-[10px] border border-line">
         {notes.map((note) => (
-          <li key={note.path} className="flex flex-col gap-0.5 bg-surface px-3 py-2">
-            <p className="text-body break-words whitespace-pre-line text-ink">
-              {splitMatch(note.match ?? cardText(note), q).map((piece, i) =>
-                piece.hit ? (
-                  <mark key={i} className="rounded-[2px] bg-primary/20 text-ink">
-                    {piece.text}
-                  </mark>
-                ) : (
-                  piece.text
-                )
-              )}
-            </p>
-            <p className="text-caption text-muted">
-              {groupByDay([note], now)[0].label} · {note.folder}
-            </p>
+          <li key={note.path} className="bg-surface">
+            <button
+              type="button"
+              onClick={() => onOpen(note)}
+              className="flex min-h-11 w-full flex-col gap-0.5 px-3 py-2 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
+            >
+              <span className="text-body block break-words whitespace-pre-line text-ink">
+                {splitMatch(note.match ?? cardText(note), q).map((piece, i) =>
+                  piece.hit ? (
+                    <mark key={i} className="rounded-[2px] bg-primary/20 text-ink">
+                      {piece.text}
+                    </mark>
+                  ) : (
+                    piece.text
+                  )
+                )}
+              </span>
+              <span className="text-caption block text-muted">
+                {groupByDay([note], now)[0].label} · {note.folder}
+              </span>
+            </button>
           </li>
         ))}
       </ul>
