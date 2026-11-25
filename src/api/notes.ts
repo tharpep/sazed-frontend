@@ -45,3 +45,33 @@ export async function captureNote(content: string): Promise<CaptureResult> {
     body: JSON.stringify({ content, source: "console" }),
   }) as Promise<CaptureResult>;
 }
+
+export interface FullNote {
+  path: string;
+  folder: NoteFolder;
+  title: string;
+  time: string;
+  source: string | null;
+  text: string;
+  version: string;
+}
+
+export interface SavedNote {
+  path: string;
+  version: string;
+}
+
+export async function readNote(path: string): Promise<FullNote> {
+  return gatewayFetch(`/vault/note?path=${encodeURIComponent(path)}`) as Promise<FullNote>;
+}
+
+export async function saveNote(path: string, content: string, version: string): Promise<SavedNote> {
+  return gatewayFetch("/vault/note", {
+    method: "PUT",
+    body: JSON.stringify({ path, content, version }),
+  }) as Promise<SavedNote>;
+}
+
+export async function deleteNote(path: string): Promise<void> {
+  await gatewayFetch(`/vault/note?path=${encodeURIComponent(path)}`, { method: "DELETE" });
+}
