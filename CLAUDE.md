@@ -38,7 +38,10 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 - `src/mock/data.ts` — TypeScript interfaces only: `Message`, `Session`, `MessageBlock`/`ToolBlock`/`UIBlock`. No hardcoded message/session data; content comes from the API.
 - `src/api/` — `client.ts` (apiFetch), `chat.ts` (postMessage), `conversations.ts` (list, get, process), `memory.ts` (get, put, delete), `journal.ts` (listEntries with cursor pagination, CRUD, listSubcategories), `display.ts`, `audit.ts`, `finance.ts`.
 - `src/store/` — Zustand: `chatStore`, `sessionStore`, `navStore` (hub, view, open items), `uiStore` (private apps revealed, Settings open), `settingsStore`, `configStore`, `kbStore`, `memoryStore`.
-- `src/components/ui/` — shadcn/ui primitives (button, dialog, sheet, dropdown-menu, tooltip, scroll-area, separator, switch, textarea, avatar, tabs, badge). Owned source, restyled per component as they're used — not consumed as a themed package.
+- `src/components/ui/` — shadcn/ui primitives, owned source restyled to DESIGN.md, not consumed as a themed package. `/dev/gallery` shows every one.
+  - Add one with `pnpm exec shadcn add <name>`. `components.json` also names three Base UI registries: `@diceui` (kanban, sortable), `@tablecn` (data table) and `@coss` (extra form parts; add its items one at a time with `--dry-run`, it can overwrite same-named files). `.mcp.json` runs shadcn's MCP server so agents can search them.
+  - After adding, change `import { cn } from "cn"` to `@/lib/utils` and remove the `cn` package: the repo's `cn()` is what keeps the type scale through class merging. Replace `bg-muted` and `bg-accent` with `bg-raised`: here `muted` is a text colour and `accent` is the warn colour.
+- `src/dev/` — the dev-only `/dev` route (`import.meta.env.DEV`, outside `AuthGate`, absent from production builds). `/dev/gallery` (`Gallery.tsx`) has one demo per file in `components/ui` and `components/system`; `gallery.test.ts` fails when a file has none. `/dev/mocks/<name>` renders `src/dev/mocks/<name>.tsx`, or variants `<name>.<variant>.tsx`, with a variant switch and a 390px phone frame.
 - `src/components/theme/` — `ThemeProvider`, `ThemeToggle`.
 - `src/components/system/` — the shared components from DESIGN.md (Page/PageBody, StatusPill, Segmented, ListSection/ListRow, EmptyState). Use these for new pages and when moving a page over.
 - `src/components/layout/` — `AppShell`; responsive navigation lives in `src/components/shell/`.
@@ -103,6 +106,8 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 ## Conventions
 
 - Visual work follows `DESIGN.md` (direction D: tokens, type scale, shell, components). Start from the approved mockup and say how when you improve on it.
+- Before writing a component, look in this order: `src/components/system/`, `src/components/ui/`, the official shadcn registry, the three registries in `components.json`, and only then build it by hand.
+- Mock up a new page in `src/dev/mocks/` on the real components with made-up data. The approved mock becomes the page by swapping the made-up data for API calls. A standalone HTML mockup is for work where the visual language itself is in question.
 - Chat, journal, and the navigation shell are Tailwind utility classes + shadcn/ui primitives, following the OKLCH token system and Named Rules in `DESIGN.md` (read it before touching visual code in these areas) and the brand/product guidance in `PRODUCT.md`. No CSS Modules in these three areas.
 - Settings, Finance and the older widgets remain CSS Modules, styled through `legacy-compat.css`'s token aliases. If you're touching one of these and want it on the new system, that's a real (unscoped) redesign task — flag it rather than half-converting.
 - Markdown rendering is enabled in chat message bodies (`react-markdown` + `remark-gfm` + `rehype-highlight`, same stack the journal editor's read view already used).

@@ -105,7 +105,8 @@ Activity (`src/features/activity/`) is the reference page: `DayChart` (totals pl
 
 **Do**
 - Start from the mockup, and say how and why when you improve on it.
-- Use the components above before hand-rolling a header, row, tab set or empty state.
+- Use the components above before hand-rolling a header, row, tab set or empty state. `/dev/gallery` (dev server only) shows every component in `src/components/ui/` and `src/components/system/`; the shell's parts are not in it yet.
+- Build a new page's mockup in `src/dev/mocks/` on these components, so the approved mockup becomes the page.
 - Translate internals: model IDs to names ("Sonnet 5.5"), cron to sentences, outcomes to words ("Failed at the second opinion step").
 - Group repeated events (one row per run, steps inside), put what needs Pryce first, summarize before detail.
 
