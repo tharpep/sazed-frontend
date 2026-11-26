@@ -4,11 +4,19 @@ import { diffSize } from "@/features/backlog/proof";
 import { CardAnswer, CardFrame, CardHeader, CardSection, MoreLine, Num, TightRow } from "./card/frame";
 import { CardActions, Callout, Dot } from "./card/marks";
 import { mergeKind, mergeLabelOf, orderMergeCalls } from "./mergeCall";
-import { dayTime } from "./projectWork";
 
 export const MERGE_ROWS = 4;
 export const OTHER_ROWS = 3;
 const RUNNING_NAMED = 2;
+const FAILED = new Set(["failed", "timed_out"]);
+
+/** "10:41" today, "25 Nov" before, in local time. */
+export function shortTime(iso: string, now = new Date()): string {
+  const d = new Date(iso);
+  return d.toDateString() === now.toDateString()
+    ? d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
+    : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
 
 function candidate(item: NeedsYouItem) {
   return { stage: item.stage ?? "", job_id: item.job_id ?? null, pr: item.pr };
@@ -51,6 +59,8 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
   const parts = needsParts(needs);
   const [question, ...laterQuestions] = parts.questions;
   const rest = [...laterQuestions, ...parts.others];
+  const shown = rest.slice(0, parts.merges.length ? 1 : OTHER_ROWS);
+  const hidden = rest.length - shown.length;
   const reviewed = parts.merges.filter((n) => mergeKind(candidate(n)) === "reviewed").length;
   const unsent = total - needs.length;
   const running = working.length + (session_count ?? 0);
@@ -62,19 +72,20 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
       {total ? <CardAnswer>{needsAnswer(parts) || plural(total, "item", "items")}</CardAnswer> : <CardAnswer tail={doneLine}>Nothing needs you</CardAnswer>}
 
       {question && (
-        <Callout sub={[question.title, question.repo, question.updated_at && dayTime(question.updated_at)].filter(Boolean).join(" · ")}>
+        <Callout sub={[question.title, question.repo, question.updated_at && shortTime(question.updated_at)].filter(Boolean).join(" · ")}>
           {question.question}
         </Callout>
       )}
 
-      {rest.slice(0, OTHER_ROWS).map((item) => (
+      {shown.map((item, i) => (
         <TightRow key={item.id}>
-          <Dot tone={item.question ? "warn" : "info"} />
+          <Dot tone={item.question ? "warn" : FAILED.has(item.job_status ?? "") ? "err" : "info"} />
           <span className="min-w-0 flex-1 truncate">{item.title}</span>
-          {item.next && <span className="max-w-[40%] truncate text-[12px] text-card-ink-3">{item.next}</span>}
+          <span className="max-w-[40%] flex-none truncate text-[12px] text-card-ink-3">
+            {i === shown.length - 1 && hidden ? `+${hidden} more` : item.next}
+          </span>
         </TightRow>
       ))}
-      {rest.length > OTHER_ROWS && <MoreLine>+{rest.length - OTHER_ROWS} more waiting</MoreLine>}
 
       {parts.merges.length > 0 && (
         <>
@@ -92,13 +103,14 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
             {[
               parts.merges.length > MERGE_ROWS && `+${parts.merges.length - MERGE_ROWS} more`,
               `${reviewed} reviewed, ${parts.merges.length - reviewed} no review`,
+              unsent > 0 && `${unsent} not listed`,
             ]
               .filter(Boolean)
               .join(" · ")}
           </MoreLine>
         </>
       )}
-      {unsent > 0 && <MoreLine>+{unsent} more not listed here</MoreLine>}
+      {unsent > 0 && !parts.merges.length && <MoreLine>+{unsent} more not listed</MoreLine>}
 
       {running > 0 && (
         <div className="mt-1 truncate border-t border-card-line pt-1.5 text-[12px] text-card-ink-3">

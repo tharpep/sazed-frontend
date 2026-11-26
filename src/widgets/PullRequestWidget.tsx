@@ -1,6 +1,6 @@
 import type { PullRequestView } from "@/api/command";
 import type { PrSnapshot } from "@/api/projects";
-import { diffSize, oldSnapshotText, PASSED, prName, proofLines } from "@/features/backlog/proof";
+import { diffSize, oldSnapshotText, PASSED, prName, proofLines, shortSource } from "@/features/backlog/proof";
 
 import { CardAnswer, CardFrame, CardHeader, LabelRow, Num } from "./card/frame";
 import { CardActions, Pill, Square, Squares, StackedMeter, TONE_TEXT, type Tone } from "./card/marks";
@@ -104,7 +104,7 @@ function Review({ pr }: { pr: PrSnapshot }) {
   const line = proofLines(pr).find((l) => l.key === "review")!;
   return (
     <LabelRow label="Review">
-      <span className="block truncate text-[12px] text-card-ink-3">{pr.review ? `${line.title}: ${line.value}` : "none yet"}</span>
+      <span className="block truncate text-[12px] text-card-ink-3">{pr.review ? `${line.value} · ${shortSource(pr.review.source)}` : "none yet"}</span>
     </LabelRow>
   );
 }
@@ -140,7 +140,7 @@ export function PullRequestWidget(card: PullRequestView) {
         right={
           <>
             {old && <span className="text-card-warn">{old}</span>}
-            <Pill tone={pill.tone}>{pill.word}</Pill>
+            {pill.word !== pr.state.replace(/_/g, " ") && <Pill tone={pill.tone}>{pill.word}</Pill>}
           </>
         }
       >
