@@ -40,13 +40,13 @@ export function Fold({ title, summary, children, className }: FoldProps) {
 
 /** Outlined amber ring: this row has something waiting in To check. */
 export function CheckRing() {
-  return <span className="block size-2.5 shrink-0 rounded-full border-[1.5px] border-warn" aria-label="Needs a check" />;
+  return <span className="block size-2.5 shrink-0 rounded-full border-[1.5px] border-warn" role="img" aria-label="Needs a check" />;
 }
 
 /** Dashed amber ring: this figure is older than its feed promises. */
 export function StaleRing() {
   return (
-    <span className="block size-2.5 shrink-0 rounded-full border-[1.5px] border-dashed border-warn" aria-label="Older than usual" />
+    <span className="block size-2.5 shrink-0 rounded-full border-[1.5px] border-dashed border-warn" role="img" aria-label="Older than usual" />
   );
 }
 

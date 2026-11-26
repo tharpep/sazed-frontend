@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Line, LineChart, XAxis, YAxis } from "recharts";
 
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ function Trail({ account }: { account: Account }) {
           <li key={`${s.source}-${s.asOf}`} className="grid grid-cols-[10px_minmax(0,1fr)_auto] items-baseline gap-x-2.5 px-3 py-2">
             <span
               className={cn("size-2 rounded-full", i === last ? "bg-ink" : "border border-muted")}
+              role={i === last ? "img" : undefined}
               aria-label={i === last ? "Current figure" : undefined}
             />
             <span className="flex min-w-0 flex-col">
@@ -136,7 +138,9 @@ interface AccountSheetProps {
 }
 
 export function AccountSheet({ state, accountId, open, onOpenChange, onManual, onCapture }: AccountSheetProps) {
-  const account = state.accounts.find((a) => a.id === accountId) ?? null;
+  const [shown, setShown] = useState(accountId);
+  if (accountId && accountId !== shown) setShown(accountId);
+  const account = state.accounts.find((a) => a.id === (accountId ?? shown)) ?? null;
   const figure = account?.figure ?? null;
 
   return (

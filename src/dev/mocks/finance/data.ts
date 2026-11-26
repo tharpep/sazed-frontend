@@ -198,7 +198,7 @@ export interface FinanceState {
   statements: CardSpend[] | null;
   alerts: AlertItem[];
   inactive: InactiveCharge[];
-  notByEmail: string;
+  notByEmail: string[];
   capture: Capture;
   manual: ManualEntry;
   sortedThisWeek: string;
@@ -230,8 +230,13 @@ const INACTIVE: InactiveCharge[] = [
   { name: "Auto insurance", note: "Yearly renewal, next expected Apr 2027" },
 ];
 
-const NOT_BY_EMAIL =
-  "Even with all of these on, email does not carry: the brokerage and Roth IRA value, the checking balance, a card's balance between statements (except Capital One's Thursday email), available credit, or the loan principal. Those stay screenshot or typed figures.";
+const NOT_BY_EMAIL = [
+  "The brokerage and Roth IRA value",
+  "The checking balance",
+  "A card's balance between statements (except Capital One's Thursday email)",
+  "Available credit",
+  "The loan principal",
+];
 
 const pts = (rows: [string, number][]): SeriesPoint[] => rows.map(([date, value]) => ({ date, value }));
 const trail = (rows: [SnapshotSource, string, number, string][]): BalanceSnapshot[] =>

@@ -17,20 +17,13 @@ function byService(alerts: AlertItem[]): [string, AlertItem[]][] {
   return [...groups];
 }
 
-// data.ts holds this as one sentence; the list is what sits between "does not carry:" and the next full stop.
-function notByEmailList(sentence: string): string[] {
-  const body = sentence.match(/does not carry: (.+?)\. /)?.[1];
-  if (!body) return [sentence];
-  return body.split(/, (?:or )?/).map((s) => s.charAt(0).toUpperCase() + s.slice(1));
-}
-
 export function AlertsSheet({ state, open, onOpenChange }: {
   state: FinanceState;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const on = state.alerts.filter((a) => a.status === "on").length;
-  const missing = notByEmailList(state.notByEmail);
+  const missing = state.notByEmail;
   return (
     <FinanceSheet title="Alerts to turn on" count={`${on} of ${state.alerts.length} on`} open={open} onOpenChange={onOpenChange}>
       <div className="flex flex-col gap-2.5">

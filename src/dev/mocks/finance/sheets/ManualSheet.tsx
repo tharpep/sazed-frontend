@@ -44,7 +44,7 @@ function ManualForm({ state, id, onAccount }: ManualFormProps) {
         <FieldLabel htmlFor="manual-amount">{account.owed ? "Balance owed" : "Balance"}</FieldLabel>
         <div className="relative">
           <Input
-            key={`${id}-${masked}`}
+            key={id}
             id="manual-amount"
             inputMode="decimal"
             autoComplete="off"
