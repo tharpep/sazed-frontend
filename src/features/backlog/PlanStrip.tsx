@@ -85,7 +85,7 @@ export function stripCells(step: PlanStep, card: Pick<ProjectCard, "plan_approva
     step === "plan"
       ? { label: "Approve plan", sub: "the design is right", state: "current" }
       : step === "stale"
-        ? { label: "Approve plan again", sub: "the plan changed since approval", state: "current" }
+        ? { label: "Approve plan again", sub: "the plan changed", state: "current" }
         : { label: "Plan approved", sub: approval ? who(approval) : "", state: "done" };
   const second: Cell =
     step === "ready"

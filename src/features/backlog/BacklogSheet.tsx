@@ -120,7 +120,8 @@ export function BacklogSheet({
       .join(", ");
   const asking = step === "plan" || step === "stale";
   // The worker job is the way a card gets built without a terminal until an orchestrator runs.
-  const jobPath = isOpen && !item?.session_label && !liveSessionId && (step === "ready" || step === "started");
+  const jobPath =
+    isOpen && !item?.session_label && !liveSessionId && (step === "ready" || (step === "started" && card?.next === PLAN_NEXT.started));
 
   function footerButton(label: string, onClick: () => void, opts: { primary?: boolean; disabled?: boolean } = {}) {
     return (
