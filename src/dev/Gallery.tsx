@@ -1,10 +1,15 @@
 import { useState, type ReactNode } from "react";
 import { Bell, ChevronDown, Plus } from "lucide-react";
+import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import { EmptyState, ListRow, ListSection, Segmented, StatusPill, type Tone } from "@/components/system";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +60,17 @@ const RUNS = [
   { name: "Backlog scout", model: "Opus 5.5", cost: "$0.31", took: "2m 4s" },
   { name: "Inbox triage", model: "Haiku 5.5", cost: "$0.01", took: "6s" },
 ];
+
+const SPEND = [
+  { day: "Mon", cost: 0.42 },
+  { day: "Tue", cost: 0.61 },
+  { day: "Wed", cost: 0.38 },
+  { day: "Thu", cost: 0.95 },
+  { day: "Fri", cost: 0.72 },
+  { day: "Sat", cost: 0.2 },
+  { day: "Sun", cost: 0.31 },
+];
+const SPEND_CONFIG = { cost: { label: "Model spend", color: "var(--color-primary)" } } satisfies ChartConfig;
 
 function SegmentedDemo() {
   const [value, setValue] = useState<"all" | "needs" | "errors">("all");
@@ -149,6 +165,46 @@ const demos: Record<string, () => ReactNode> = {
         </Button>
       </div>
     </div>
+  ),
+  "ui/card": () => (
+    <Card className="max-w-sm">
+      <CardHeader>
+        <CardTitle>Model spend</CardTitle>
+        <CardDescription>Last 7 days</CardDescription>
+      </CardHeader>
+      <CardContent className="font-mono text-heading text-ink">$3.59</CardContent>
+    </Card>
+  ),
+  "ui/chart": () => (
+    <ChartContainer config={SPEND_CONFIG} className="h-40 w-full max-w-lg">
+      <AreaChart data={SPEND} margin={{ left: 8, right: 8 }}>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="day" tickLine={false} axisLine={false} />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <Area dataKey="cost" type="monotone" stroke="var(--color-cost)" fill="var(--color-cost)" fillOpacity={0.15} />
+      </AreaChart>
+    </ChartContainer>
+  ),
+  "ui/checkbox": () => (
+    <div className="flex items-center gap-3">
+      <Checkbox defaultChecked aria-label="Checked" />
+      <Checkbox aria-label="Unchecked" />
+      <Checkbox disabled aria-label="Disabled" />
+    </div>
+  ),
+  "ui/collapsible": () => (
+    <Collapsible className="flex max-w-sm flex-col gap-2">
+      <CollapsibleTrigger className={buttonVariants({ variant: "ghost", className: "self-start text-meta" })}>
+        Recent runs
+        <span className="font-mono text-caption text-muted">3</span>
+        <ChevronDown aria-hidden="true" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="flex flex-col gap-1 text-meta text-ink-2">
+        {RUNS.map((run) => (
+          <span key={run.name}>{run.name}</span>
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
   ),
   "ui/dialog": () => (
     <Dialog>
