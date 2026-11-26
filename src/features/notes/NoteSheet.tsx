@@ -31,26 +31,15 @@ interface Props {
   onClose: () => void;
   onChanged: () => void;
   onKeep: (note: Note) => void;
-  topics?: Topic[];
-  onMoved?: (note: Note) => void;
+  topics: Topic[];
+  onMoved: (note: Note) => void;
 }
-
-const NO_TOPICS: Topic[] = [];
-
-function ignoreMoved() {}
 
 type Leave = "cancel" | "close" | "switch";
 
 const FOOTER_BUTTON = "h-11 px-3 sm:h-8";
 
-export function NoteSheet({
-  note: requested,
-  onClose,
-  onChanged,
-  onKeep,
-  topics = NO_TOPICS,
-  onMoved = ignoreMoved,
-}: Props) {
+export function NoteSheet({ note: requested, onClose, onChanged, onKeep, topics, onMoved }: Props) {
   const [note, setNote] = useState<Note | null>(requested);
   const path = note?.path ?? null;
   const [full, setFull] = useState<FullNote | null>(null);

@@ -144,8 +144,11 @@ export function NotesPage() {
         note={moving}
         topics={topics}
         onClose={() => setMoving(null)}
-        onMoved={() => {
+        onMoved={(moved) => {
           setMoving(null);
+          if (open?.path === moved.from) {
+            setOpen({ ...open, path: moved.path, topic: moved.topic, folder: "notes" });
+          }
           reload();
         }}
       />
