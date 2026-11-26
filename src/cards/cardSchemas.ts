@@ -13,6 +13,8 @@ export const CARD_WIDGETS = [
   "InfoCard",
   "ProjectsWidget",
   "ProjectWidget",
+  "NeedsYouWidget",
+  "PullRequestWidget",
 ] as const;
 
 /** Each card's props as JSON Schema: the bridge api-gateway's contract test validates tool output against. */

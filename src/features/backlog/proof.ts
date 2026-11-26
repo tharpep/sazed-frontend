@@ -22,7 +22,7 @@ const VERDICT_WORD = new Map([
 ]);
 
 // The same three conclusions Sazed counts as passed (sazed app/board/prs.py, _PASSED).
-const PASSED = new Set(["success", "skipped", "neutral"]);
+export const PASSED = new Set(["success", "skipped", "neutral"]);
 
 /** A word Sazed may add later reads as itself, underscores as spaces. */
 function plain(word: string): string {
@@ -39,7 +39,7 @@ export function prName(pr: Pick<PrSnapshot, "repo" | "number">): string {
 }
 
 /** "+1,148 -105", or "" when Sazed has no diff size yet. */
-export function diffSize(pr: PrSnapshot): string {
+export function diffSize(pr: Pick<PrSnapshot, "additions" | "deletions">): string {
   if (pr.additions == null || pr.deletions == null) return "";
   // A no-break space, so a wrapping line never splits the pair.
   return `+${pr.additions.toLocaleString("en-US")} -${pr.deletions.toLocaleString("en-US")}`;

@@ -22,6 +22,28 @@
   --color-ok: var(--color-text-success, light-dark(oklch(0.560 0.140 155), oklch(0.740 0.140 155)));
   --color-warn: var(--color-text-warning, light-dark(oklch(0.620 0.140 70), oklch(0.800 0.130 80)));
   --color-err: var(--color-text-danger, light-dark(oklch(0.550 0.190 27), oklch(0.700 0.170 25)));
+  /* The card token set (redesign H). The console theme defines the same names. Fill shades map
+     to the host's border colours, the closest the host variable list offers. */
+  --color-card-bg: var(--color-background-primary, light-dark(#fff, #30302e));
+  --color-card-ink: var(--color-text-primary, light-dark(#141413, #faf9f5));
+  --color-card-ink-2: var(--color-text-secondary, light-dark(#3d3d3a, #c2c0b6));
+  --color-card-ink-3: var(--color-text-tertiary, light-dark(#73726c, #9c9a92));
+  --color-card-line: var(--color-border-tertiary, light-dark(#1f1e1d26, #dedcd126));
+  --color-card-line-2: var(--color-border-secondary, light-dark(#1f1e1d4d, #dedcd14d));
+  --color-card-track: light-dark(color-mix(in srgb, var(--color-card-ink) 9%, transparent), color-mix(in srgb, var(--color-card-ink) 13%, transparent));
+  --color-card-ok: var(--color-text-success, light-dark(#265b19, #7ab948));
+  --color-card-ok-fill: var(--color-border-success, light-dark(#437426, #599130));
+  --color-card-ok-tint: var(--color-background-success, light-dark(#e9f1dc, #1b4614));
+  --color-card-warn: var(--color-text-warning, light-dark(#5a4815, #d1a041));
+  --color-card-warn-fill: var(--color-border-warning, light-dark(#805c1f, #a87829));
+  --color-card-warn-tint: var(--color-background-warning, light-dark(#f6eedf, #483a0f));
+  --color-card-err: var(--color-text-danger, light-dark(#7f2c28, #ee8884));
+  --color-card-err-fill: var(--color-border-danger, light-dark(#a73d39, #cd5c58));
+  --color-card-err-tint: var(--color-background-danger, light-dark(#f7ecec, #602a28));
+  --color-card-info: var(--color-text-info, light-dark(#3266ad, #80aadd));
+  --color-card-info-fill: var(--color-border-info, light-dark(#4682d5, #4682d5));
+  --color-card-info-tint: var(--color-background-info, light-dark(#d6e4f6, #253e5f));
+
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;
   --text-meta: 0.8125rem;

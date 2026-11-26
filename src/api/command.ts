@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { ProjectCard } from "./projects";
+import type { PrSnapshot, ProjectCard } from "./projects";
 import { mockingSessions, readSessionFields, type Session, type SessionHealth } from "./sessions";
 
 export interface CardAction {
@@ -51,6 +51,36 @@ export interface CommandSummary {
   // Both absent from a Sazed before slice 3 (sazed#212).
   sessions?: Session[];
   session_health?: SessionHealth;
+}
+
+/** The PR fields the Needs you card reads from a needs item. */
+export interface NeedsYouPr extends Pick<PrSnapshot, "repo" | "number" | "url" | "state" | "additions" | "deletions"> {
+  checks: Pick<NonNullable<PrSnapshot["checks"]>, "state" | "passed" | "total"> | null;
+  review: Pick<NonNullable<PrSnapshot["review"]>, "verdict"> | null;
+}
+
+/** One needs item as the board_command card carries it. A dispatch item has no stage or job. */
+export interface NeedsYouItem extends Pick<NeedsCard, "id" | "kind" | "title" | "repo" | "next" | "question"> {
+  stage?: NeedsCard["stage"] | null;
+  job_id?: string | null;
+  job_status?: string | null;
+  updated_at?: string | null;
+  pr?: NeedsYouPr | null;
+}
+
+/** The board_command tool's trimmed view of /board/command: what the Needs you card draws. */
+export interface NeedsYouView {
+  needs: NeedsYouItem[];
+  needs_total?: number | null;
+  working: Pick<WorkingJob, "kind" | "title" | "elapsed_s">[];
+  done: { succeeded: number; failed: number; window_hours?: number | null };
+  session_count?: number | null;
+  open_url?: string | null;
+}
+
+/** The board_card tool's card, as the Pull request card reads it; pr is absent on most cards. */
+export interface PullRequestView extends Pick<ProjectCard, "id" | "title" | "stage" | "next" | "repo" | "job_id" | "job_status" | "pr"> {
+  open_url?: string | null;
 }
 
 export async function getCommand(): Promise<CommandSummary> {
