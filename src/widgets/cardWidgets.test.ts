@@ -5,7 +5,7 @@ import * as samples from "@/mock/cardSamples";
 import { getWidget } from "./catalog";
 import { MERGE_LABEL } from "./mergeCall";
 import { needsAnswer, needsParts } from "./NeedsYouWidget";
-import { prPill, prVerdict, PullRequestWidget, sizeShare } from "./PullRequestWidget";
+import { prPill, prVerdict, PullRequestWidget, sizeShare, topNames } from "./PullRequestWidget";
 import { NeedsYouWidget } from "./NeedsYouWidget";
 import { isGitHubLink } from "./card/links";
 import { isConsoleLink } from "@/nav/openRef";
@@ -31,6 +31,12 @@ describe("card links", () => {
       "https://sazed.tail77c590.ts.net/?open=job:..",
       "https://sazed.tail77c590.ts.net/?page=nowhere",
       "https://sazed.tail77c590.ts.net/",
+      "https://user:pass@sazed.tail77c590.ts.net/?open=job:1",
+      "https://user@sazed.tail77c590.ts.net/?open=job:1",
+      "https://192.168.50.155/?open=job:1",
+      "https://3232248475/?open=job:1",
+      "https://[::1]/?open=job:1",
+      "https://sazed.tail77c590.ts.net:8443/?open=job:1",
     ]) {
       expect(isConsoleLink(bad)).toBe(false);
     }
@@ -119,6 +125,16 @@ describe("PullRequestWidget props", () => {
   it("parse a pr with no checks, review, additions or deletions keys, and an unknown stage", () => {
     const { checks: _c, review: _r, additions: _a, deletions: _d, ...pr } = samples.prReal.pr!;
     expect(prSchema.safeParse({ ...samples.prReal, stage: "archived", pr }).success).toBe(true);
+  });
+
+  it("parse a pr with no merged_at or fetched_at keys", () => {
+    const { merged_at: _m, fetched_at: _f, ...pr } = samples.prReal.pr!;
+    expect(prSchema.safeParse({ ...samples.prReal, pr }).success).toBe(true);
+  });
+
+  it("name at most three runs per group, then a count", () => {
+    expect(topNames(["a", "b"])).toBe("a, b");
+    expect(topNames(["a", "b", "c", "d", "e"])).toBe("a, b, c +2 more");
   });
 
   it("scale the size bar on a log scale: the mockup's 500 lines fill about four fifths", () => {

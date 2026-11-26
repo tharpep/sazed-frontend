@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -86,23 +86,37 @@ export function Callout({ children, sub, onClampedChange }: { children: ReactNod
 
   useLayoutEffect(() => onClampedChange?.(clipped && !open), [clipped, open, onClampedChange]);
 
+  // The toggle moves between the bottom (collapsed) and the top (expanded), so focus follows it.
+  const toggled = useRef(false);
+  const button = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (toggled.current) button.current?.focus();
+  }, [open]);
+
+  const toggle = (clipped || open) && (
+    <button
+      ref={button}
+      type="button"
+      aria-expanded={open}
+      onClick={() => {
+        toggled.current = true;
+        setOpen(!open);
+      }}
+      className="relative ml-auto flex-none cursor-pointer rounded border-0 bg-transparent p-0 text-[12px] font-medium text-card-warn underline underline-offset-2 after:absolute after:-inset-x-1 after:-inset-y-3.5 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card-info-fill"
+    >
+      {open ? "Show less" : "Show full question"}
+    </button>
+  );
+
   return (
     <div className="mb-2 rounded-lg bg-card-warn-tint px-2.5 py-2">
+      {open && <div className="mb-1 flex">{toggle}</div>}
       <div ref={text} className={cn("font-medium whitespace-pre-wrap [overflow-wrap:anywhere] text-card-warn", !open && "line-clamp-6")}>
         {children}
       </div>
       <div className="flex items-baseline gap-x-3 text-[12px]">
-        {sub && <span className={cn("min-w-0 flex-1 text-card-ink-2", clipped || open ? "truncate" : "[overflow-wrap:anywhere]")}>{sub}</span>}
-        {(clipped || open) && (
-          <button
-            type="button"
-            aria-expanded={open}
-            onClick={() => setOpen(!open)}
-            className="ml-auto min-h-6 flex-none cursor-pointer rounded border-0 bg-transparent p-0 font-medium text-card-warn underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card-info-fill"
-          >
-            {open ? "Show less" : "Show full question"}
-          </button>
-        )}
+        {sub && <span className="line-clamp-2 min-w-0 flex-1 [overflow-wrap:anywhere] text-card-ink-2">{sub}</span>}
+        {!open && toggle}
       </div>
     </div>
   );

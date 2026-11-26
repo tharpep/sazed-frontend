@@ -69,6 +69,14 @@ export function sizeShare(lines: number): number {
   return Math.min(1, Math.log10(lines + 1) / Math.log10(SIZE_FULL + 1));
 }
 
+const NAMED_RUNS = 3;
+
+/** "a, b, c +2 more": the first three run names, then a count. */
+export function topNames(names: readonly string[]): string {
+  const shown = names.slice(0, NAMED_RUNS).join(", ");
+  return names.length > NAMED_RUNS ? `${shown} +${names.length - NAMED_RUNS} more` : shown;
+}
+
 function Checks({ pr }: { pr: CardPr }) {
   const c = pr.checks;
   if (!c) return <LabelRow label="Checks"><span className="text-[12px] text-card-ink-3">not fetched yet</span></LabelRow>;
@@ -77,7 +85,7 @@ function Checks({ pr }: { pr: CardPr }) {
   }
   const failing = c.runs.filter((r) => r.conclusion && !PASSED.has(r.conclusion)).map((r) => r.name);
   const running = c.runs.filter((r) => !r.conclusion).map((r) => r.name);
-  const named = [failing.length && `Failing: ${failing.join(", ")}`, running.length && `Running: ${running.join(", ")}`].filter(Boolean).join(" · ");
+  const named = [failing.length && `Failing: ${topNames(failing)}`, running.length && `Running: ${topNames(running)}`].filter(Boolean).join(" · ");
   return (
     <>
       <LabelRow

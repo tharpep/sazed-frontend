@@ -86,7 +86,9 @@ export interface NeedsYouView {
 }
 
 /** Sazed's PR snapshot as the Pull request card reads it. */
-export interface CardPr extends Pick<PrSnapshot, "repo" | "number" | "url" | "state" | "merged_at" | "fetched_at"> {
+export interface CardPr extends Pick<PrSnapshot, "repo" | "number" | "url" | "state"> {
+  merged_at?: string | null;
+  fetched_at?: string | null;
   checks?: PrSnapshot["checks"];
   review?: PrSnapshot["review"];
   additions?: number | null;

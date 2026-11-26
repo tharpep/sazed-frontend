@@ -2533,9 +2533,7 @@
               "repo",
               "number",
               "url",
-              "state",
-              "merged_at",
-              "fetched_at"
+              "state"
             ]
           },
           {

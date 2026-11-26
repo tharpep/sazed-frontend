@@ -28,7 +28,9 @@ export function isConsoleLink(href: string): boolean {
   } catch {
     return false;
   }
-  if (url.protocol !== "https:") return false;
+  if (url.protocol !== "https:" || url.username || url.password || url.port) return false;
+  // An IP literal: IPv6 in brackets, or IPv4 (URL normalises other numeric forms to dotted quads).
+  if (url.hostname.startsWith("[") || /^\d+(\.\d+){3}$/.test(url.hostname)) return false;
   if (parseOpenLink(url.search)) return true;
   const page = url.searchParams.get("page");
   return !!page && isHub(page.split(".")[0]);

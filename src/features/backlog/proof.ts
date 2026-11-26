@@ -46,14 +46,14 @@ export function diffSize(pr: { additions?: number | null; deletions?: number | n
 }
 
 /** Seconds since the snapshot was taken, or null when the PR was never fetched. */
-export function snapshotAge(pr: Pick<PrSnapshot, "fetched_at">, now = Date.now()): number | null {
+export function snapshotAge(pr: { fetched_at?: string | null }, now = Date.now()): number | null {
   if (!pr.fetched_at) return null;
   const at = Date.parse(pr.fetched_at);
   return Number.isNaN(at) ? null : Math.max(0, Math.round((now - at) / 1000));
 }
 
 /** "25 min old" once the snapshot is past the old mark; "" while it is fresh or never taken. */
-export function oldSnapshotText(pr: Pick<PrSnapshot, "state" | "fetched_at">, now = Date.now()): string {
+export function oldSnapshotText(pr: { state: string; fetched_at?: string | null }, now = Date.now()): string {
   // Sazed fetches a merged or closed PR once more and then never again, so that snapshot is final.
   if (pr.state === "merged" || pr.state === "closed") return "";
   const age = snapshotAge(pr, now);

@@ -80,6 +80,7 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
   const reviewed = parts.merges.filter((n) => mergeKind(candidate(n)) === "reviewed").length;
   const unsent = total - needs.length;
   const running = working.length + (session_count ?? 0);
+  const foldRunning = clamped && running > 0 && parts.merges.length > 0;
   const doneLine = `${done.succeeded} done${done.failed ? `, ${done.failed} failed` : ""} in ${done.window_hours ?? 24}h`;
 
   return (
@@ -123,6 +124,7 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
               `${reviewed} reviewed, ${parts.merges.length - reviewed} no review`,
               clamped && hidden > 0 && `${hidden} more waiting`,
               unsent > 0 && `${unsent} not listed`,
+              foldRunning && `${running} running`,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -131,7 +133,7 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
       )}
       {unsent > 0 && !parts.merges.length && <MoreLine>+{unsent} more not listed</MoreLine>}
 
-      {running > 0 && (
+      {running > 0 && !foldRunning && (
         <div className="mt-1 truncate border-t border-card-line pt-1.5 text-[12px] text-card-ink-3">
           Running: {running}
           {working.slice(0, RUNNING_NAMED).map((job, i) => (

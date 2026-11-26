@@ -266,6 +266,8 @@ const cardPr = prSnapshot.extend({
   review: prSnapshot.shape.review.optional(),
   additions: z.number().nullish(),
   deletions: z.number().nullish(),
+  merged_at: z.string().nullish(),
+  fetched_at: z.string().nullish(),
 });
 
 const pullRequestView = projectCard
