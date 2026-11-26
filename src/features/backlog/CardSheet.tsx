@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
-import { getBacklogItem, listBacklog, type BacklogItem } from "@/api/backlog";
+import { getBacklogItem, getItemCard, listBacklog, type BacklogItem } from "@/api/backlog";
 import { errorText } from "@/api/homelab";
 import type { ProjectCard } from "@/api/projects";
-import type { Session } from "@/api/sessions";
+import { isOrchestrator, type Session } from "@/api/sessions";
 import { JobSheet } from "@/features/jobs/JobSheet";
 import { backInHistory, withoutEntry } from "@/nav/history";
 import type { ViewKey } from "@/nav/hubViews";
@@ -46,7 +46,10 @@ export function CardSheet({
 }) {
   const ref = useNavStore((s) => s.sheet[view]);
   const itemId = ref?.kind === "backlog" ? ref.id : null;
-  const card = itemId ? (cards?.find((c) => backlogId(c) === itemId) ?? null) : null;
+  const [fresh, setFresh] = useState<ProjectCard | null>(null);
+  const held = itemId ? (cards?.find((c) => backlogId(c) === itemId) ?? null) : null;
+  // A card a plan-state route just answered with is newer than the page's copy until it reloads.
+  const card = fresh && backlogId(fresh) === itemId ? fresh : held;
   const live = itemId ? (sessions?.find((s) => s.card && (s.card.id === `item:${itemId}` || s.card.id === itemId)) ?? null) : null;
   const [item, setItem] = useState<BacklogItem | null>(null);
   const [rankedCount, setRankedCount] = useState(0);
@@ -56,6 +59,12 @@ export function CardSheet({
     if (!itemId) return;
     let live = true;
     setFailure(null);
+    setFresh(null);
+    // The page's cards may not hold this one (Home holds only its Waiting rows and done cards).
+    getItemCard(itemId).then(
+      (found) => live && setFresh(found),
+      () => undefined
+    );
     getBacklogItem(itemId).then(
       (found) => live && setItem(found),
       (err) => {
@@ -98,6 +107,11 @@ export function CardSheet({
           onChanged();
         }}
         onOpenJob={openJob}
+        onCardChanged={(updated) => {
+          setFresh(updated);
+          onChanged();
+        }}
+        orchestrator={isOrchestrator(live) ? live : null}
       />
       <JobSheet jobId={ref?.kind === "job" ? ref.id : null} onClose={close} onChanged={onChanged} onOpenJob={openJob} />
       {failure && (

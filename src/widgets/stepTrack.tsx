@@ -1,7 +1,7 @@
 import type { ProjectCard, Workstream, WorkstreamStatus } from "@/api/projects";
 import { cn } from "@/lib/utils";
 
-import { cardGroup, GROUP_ORDER, liveSteps, trackText, type CardGroup } from "./projectWork";
+import { cardGroup, GROUP_ORDER, liveSteps, PLAN_NEXT, trackText, type CardGroup } from "./projectWork";
 
 // Tailwind arbitrary values, so the hatch needs nothing in globals.css.
 const HATCH = "bg-[repeating-linear-gradient(135deg,color-mix(in_oklch,var(--color-err)_24%,transparent)_0_4px,transparent_4px_8px)]";
@@ -143,24 +143,48 @@ const KEY: Record<CardGroup, string> = {
   done: "Filled: done.",
 };
 
+const READY_SQUARE = "border-muted/50 bg-muted/45";
+
+const isReady = (card: ProjectCard) => card.next === PLAN_NEXT.ready;
+
+/** What the marks mean, for the groups present; a not-started card that reads Ready to start is
+ * filled grey, and the outline names plan to approve when every other one reads that. */
+function squaresKey(cards: ProjectCard[]): string {
+  const todo = cards.filter((c) => cardGroup(c) === "todo");
+  const waiting = todo.filter((c) => !isReady(c));
+  return GROUP_ORDER.flatMap((g) => {
+    if (g !== "todo") return cards.some((c) => cardGroup(c) === g) ? [KEY[g]] : [];
+    return [
+      ...(todo.some(isReady) ? ["Grey fill: ready to start."] : []),
+      ...(waiting.length === 0 ? [] : waiting.every((c) => c.next === PLAN_NEXT.plan) ? ["Outline: plan to approve."] : [KEY.todo]),
+    ];
+  }).join(" ");
+}
+
 /** One small mark per card, hidden from screen readers: the count line above says the same. */
 export function CardSquares({ cards }: { cards: ProjectCard[] }) {
   const ordered = GROUP_ORDER.flatMap((g) => cards.filter((c) => cardGroup(c) === g));
-  const present = GROUP_ORDER.filter((g) => cards.some((c) => cardGroup(c) === g));
   return (
     <div aria-hidden="true" className="flex flex-col gap-1.5">
       <div data-squares className="flex flex-wrap gap-1">
         {ordered.map((c) => {
           const g = cardGroup(c);
           return (
-            <i key={c.id} title={c.title} className={cn("grid size-4 place-items-center rounded-[4px] border-[1.5px]", CARD_SQUARE[g])}>
+            <i
+              key={c.id}
+              title={c.title}
+              className={cn(
+                "grid size-4 place-items-center rounded-[4px] border-[1.5px]",
+                g === "todo" && isReady(c) ? READY_SQUARE : CARD_SQUARE[g]
+              )}
+            >
               {g === "flight" && <i className="block size-1.5 rounded-full bg-primary" />}
               {g === "waiting" && <i className="block size-[7px] rotate-45 rounded-[1px] bg-warn" />}
             </i>
           );
         })}
       </div>
-      <p className="text-caption text-muted">{present.map((g) => KEY[g]).join(" ")}</p>
+      <p className="text-caption text-muted">{squaresKey(cards)}</p>
     </div>
   );
 }

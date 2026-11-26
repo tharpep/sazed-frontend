@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type { JobStatus } from "./jobs";
+import type { ProjectCard } from "./projects";
 
 // --- Types (mirror sazed app/backlog + routers/backlog.py) ---
 
@@ -78,6 +79,33 @@ export async function approveBacklogItem(id: string, repo: string, note: string)
     method: "POST",
     body: JSON.stringify({ repo, note }),
   }) as Promise<BacklogItem>;
+}
+
+/** What every plan-state route answers: the card as `GET /board/item:{id}` returns it. */
+export interface PlanStateResult {
+  changed: boolean;
+  card: ProjectCard | null;
+}
+
+// The console is always the owner (slice-4-contract.md, "The actor").
+const OWNER = "pryce";
+
+function planState(id: string, route: "approve-plan" | "start" | "withdraw", extra: object = {}): Promise<PlanStateResult> {
+  return apiFetch(`/backlog/${encodeURIComponent(id)}/${route}`, {
+    method: "POST",
+    body: JSON.stringify({ by: OWNER, ...extra }),
+  }) as Promise<PlanStateResult>;
+}
+
+/** Records the plan approved. It starts nothing. */
+export const approvePlan = (id: string) => planState(id, "approve-plan");
+/** Hands the card to an orchestrator; a 409 says why it cannot start yet. */
+export const startCard = (id: string) => planState(id, "start");
+export const withdrawStep = (id: string, step: "start" | "approval") => planState(id, "withdraw", { step });
+
+/** One card from the board, by its bare item id. */
+export async function getItemCard(id: string): Promise<ProjectCard> {
+  return apiFetch(`/board/${encodeURIComponent(`item:${id}`)}`) as Promise<ProjectCard>;
 }
 
 /** Set an open item's priority: 1 = top (others shift down), null takes it off the list. */

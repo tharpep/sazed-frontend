@@ -118,6 +118,39 @@ export function cardFacts(card: ProjectCard): { text: string; warn: boolean } {
   return { text: parts.filter(Boolean).join(" · "), warn: group === "waiting" };
 }
 
+export const PLAN_NEXT = {
+  plan: "Plan to approve",
+  stale: "Plan changed since approval",
+  ready: "Ready to start",
+  started: "Started; waiting for an orchestrator",
+} as const;
+
+export type PlanStep = keyof typeof PLAN_NEXT;
+
+/** Where a card stands on approve plan, ready, started; null for a job card, a card from a Sazed
+ * before slice 4, and a card that never entered the plan states. */
+export function planStep(card: Pick<ProjectCard, "kind" | "next" | "plan_approval" | "started">): PlanStep | null {
+  if (card.kind !== "item" || card.plan_approval === undefined) return null;
+  if (card.started) return "started";
+  if (card.plan_approval) return card.plan_approval.changed_since ? "stale" : "ready";
+  return card.next === PLAN_NEXT.plan ? "plan" : null;
+}
+
+/** "you" for the owner, "orchestrator" for any agent:<name>. */
+export function actorWord(by: string): string {
+  if (by === "pryce") return "you";
+  if (by.startsWith("agent:")) return "orchestrator";
+  return by;
+}
+
+/** "Tue 18:02" in local time. */
+export function shortWhen(iso: string): string {
+  const d = new Date(iso);
+  const day = d.toLocaleDateString("en-GB", { weekday: "short" });
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return `${day} ${time}`;
+}
+
 /** Steps that count: dropped ones are left out of every number and every track. */
 export function liveSteps(steps: readonly Workstream[]): Workstream[] {
   return steps.filter((w) => w.status !== "dropped");

@@ -5,11 +5,22 @@ import remarkGfm from "remark-gfm";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DetailPanel } from "@/components/shell/DetailPanel";
 import { cn } from "@/lib/utils";
-import { approveBacklogItem, moveBacklogItem, updateBacklogItem, type BacklogItem } from "@/api/backlog";
+import {
+  approveBacklogItem,
+  approvePlan,
+  moveBacklogItem,
+  startCard,
+  updateBacklogItem,
+  withdrawStep,
+  type BacklogItem,
+  type PlanStateResult,
+} from "@/api/backlog";
 import { errorText } from "@/api/homelab";
 import type { ProjectCard } from "@/api/projects";
+import { claudeLink, type Session } from "@/api/sessions";
 import { mergeLabelOf } from "@/widgets/mergeCall";
-import { sessionLabel, visibleNext } from "@/widgets/projectWork";
+import { PLAN_NEXT, planStep, sessionLabel, visibleNext } from "@/widgets/projectWork";
+import { openPlanSection, PlanStrip, useCardPlan } from "./PlanStrip";
 import { ProofBlock } from "./ProofBlock";
 import { SessionNow } from "./SessionNow";
 import { REPOS, STATUS_LABEL, TYPE_LABEL, ageLabel, isOpenStatus, sourceLabel, workLabel } from "./format";
@@ -27,6 +38,10 @@ interface Props {
   onClose: () => void;
   onChanged: (item: BacklogItem) => void;
   onOpenJob: (id: string) => void;
+  /** A plan-state route answered with the card as it stands now. */
+  onCardChanged?: (card: ProjectCard) => void;
+  /** The card's live session when it says it is an orchestrator. */
+  orchestrator?: Pick<Session, "session_id"> | null;
 }
 
 const field =
@@ -35,7 +50,18 @@ const field =
 const FOOTER_BUTTON = "h-11 min-w-24 flex-1 px-4 sm:h-8 sm:flex-none";
 const BODY_BUTTON = "h-11 px-3 sm:h-7 sm:px-2.5";
 
-export function BacklogSheet({ item, card, liveSessionId = null, loading = false, rankedCount, onClose, onChanged, onOpenJob }: Props) {
+export function BacklogSheet({
+  item,
+  card,
+  liveSessionId = null,
+  loading = false,
+  rankedCount,
+  onClose,
+  onChanged,
+  onOpenJob,
+  onCardChanged,
+  orchestrator = null,
+}: Props) {
   const [repo, setRepo] = useState("");
   const [note, setNote] = useState("");
   const [approving, setApproving] = useState(false);
@@ -69,8 +95,32 @@ export function BacklogSheet({ item, card, liveSessionId = null, loading = false
     }
   }
 
+  async function actCard(fn: () => Promise<PlanStateResult>) {
+    const id = item?.id;
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await fn();
+      if (result.card) onCardChanged?.(result.card);
+    } catch (err) {
+      if (shownId.current === id) setError(errorText(err));
+    } finally {
+      if (shownId.current === id) setBusy(false);
+    }
+  }
+
   const isOpen = item !== null && isOpenStatus(item.status);
   const work = item ? workLabel(item) : null;
+  const step = card ? planStep(card) : null;
+  const cardPlan = useCardPlan(step ? (card?.plan_id ?? null) : null, card?.plan_section ?? null);
+  const planRef =
+    card?.plan_id &&
+    [cardPlan ? `plan ${cardPlan.slug}` : "plan", card.plan_section && `section ${card.plan_section}`, card.plan_version != null && `v${card.plan_version}`]
+      .filter(Boolean)
+      .join(", ");
+  const asking = step === "plan" || step === "stale";
+  // The worker job is the way a card gets built without a terminal until an orchestrator runs.
+  const jobPath = isOpen && !item?.session_label && !liveSessionId && (step === "ready" || step === "started");
 
   function footerButton(label: string, onClick: () => void, opts: { primary?: boolean; disabled?: boolean } = {}) {
     return (
@@ -90,7 +140,18 @@ export function BacklogSheet({ item, card, liveSessionId = null, loading = false
   // worker-built PR, so the sheet points at the session's PR instead.
   const sessionPr =
     item?.pr_repo && item.pr_number != null ? `https://github.com/${item.pr_repo}/pull/${item.pr_number}` : null;
-  const footerButtons = !item
+  const talk = orchestrator && (
+    <a
+      key="Talk to orchestrator"
+      href={claudeLink(orchestrator)}
+      target="_blank"
+      rel="noreferrer"
+      className={cn(buttonVariants({ variant: "default", className: FOOTER_BUTTON }))}
+    >
+      Talk to orchestrator
+    </a>
+  );
+  const baseButtons = !item
     ? []
     : isOpen && item.session_label
       ? [
@@ -102,7 +163,7 @@ export function BacklogSheet({ item, card, liveSessionId = null, loading = false
                   href={sessionPr}
                   target="_blank"
                   rel="noreferrer"
-                  className={cn(buttonVariants({ variant: "default", className: FOOTER_BUTTON }))}
+                  className={cn(buttonVariants({ variant: talk ? "outline" : "default", className: FOOTER_BUTTON }))}
                 >
                   Open PR
                 </a>,
@@ -117,14 +178,26 @@ export function BacklogSheet({ item, card, liveSessionId = null, loading = false
             disabled: !repo.trim(),
           }),
         ]
-      : isOpen
+      : isOpen && asking
         ? [
-            footerButton("Dismiss", () => act(() => updateBacklogItem(item.id, { status: "dismissed" }))),
-            footerButton("Approve", () => setApproving(true), { primary: true }),
+            ...(cardPlan ? [footerButton("Open plan section", () => openPlanSection(cardPlan.slug, card?.plan_section ?? null))] : []),
+            footerButton(busy ? "Approving…" : step === "stale" ? "Approve plan again" : "Approve plan", () => actCard(() => approvePlan(item.id)), {
+              primary: true,
+            }),
           ]
-        : item.status === "approved"
-          ? [footerButton("Mark done", () => act(() => updateBacklogItem(item.id, { status: "done" })))]
-          : [footerButton("Restore", () => act(() => updateBacklogItem(item.id, { status: "new" })))];
+        : isOpen && step === "ready"
+          ? [footerButton(busy ? "Starting…" : "Start", () => actCard(() => startCard(item.id)), { primary: true })]
+          : isOpen && step === "started"
+            ? []
+            : isOpen
+              ? [
+                  footerButton("Dismiss", () => act(() => updateBacklogItem(item.id, { status: "dismissed" }))),
+                  footerButton("Approve", () => setApproving(true), { primary: true }),
+                ]
+              : item.status === "approved"
+                ? [footerButton("Mark done", () => act(() => updateBacklogItem(item.id, { status: "done" })))]
+                : [footerButton("Restore", () => act(() => updateBacklogItem(item.id, { status: "new" })))];
+  const footerButtons = talk && !approving ? [...baseButtons, talk] : baseButtons;
   const footer = footerButtons.length > 0 && (
     <>
       <span className="hidden flex-1 sm:block" />
@@ -151,6 +224,11 @@ export function BacklogSheet({ item, card, liveSessionId = null, loading = false
             <span className={cn(item.status === "shortlisted" && "text-accent")}>{STATUS_LABEL[item.status]}</span>
             {" · "}
             {facts.join(" · ")}
+            {step && card && (
+              <span className={cn("block", asking || step === "ready" ? "text-warn" : "text-ink-2")}>
+                {[card.next, planRef].filter(Boolean).join(" · ")}
+              </span>
+            )}
           </>
         )
       }
@@ -160,7 +238,53 @@ export function BacklogSheet({ item, card, liveSessionId = null, loading = false
       {!item && loading && <p className="text-sm text-muted">Loading the card…</p>}
       {item && (
         <>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {step && card && (
+            <section aria-label="Plan" className="flex flex-col gap-2">
+              <PlanStrip step={step} card={card} />
+              {cardPlan?.text && (
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-sm font-medium text-ink">The plan</h3>
+                  <div className="prose-journal line-clamp-[12] text-sm">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{cardPlan.text}</ReactMarkdown>
+                  </div>
+                </div>
+              )}
+              {asking && isOpen && <p className="text-xs text-muted">Approving says the design is right. It does not start anything.</p>}
+              {step === "started" && card.next === PLAN_NEXT.started && (
+                <p className="text-xs text-muted">Waiting for an orchestrator to pick it up from the board.</p>
+              )}
+              {isOpen && !approving && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {jobPath && (
+                    <Button size="sm" variant="outline" className={BODY_BUTTON} disabled={busy} onClick={() => setApproving(true)}>
+                      or run it as one worker job
+                    </Button>
+                  )}
+                  {card.started && (
+                    <Button size="sm" variant="ghost" className={BODY_BUTTON} disabled={busy} onClick={() => actCard(() => withdrawStep(item.id, "start"))}>
+                      Withdraw start
+                    </Button>
+                  )}
+                  {card.plan_approval && (
+                    <Button size="sm" variant="ghost" className={BODY_BUTTON} disabled={busy} onClick={() => actCard(() => withdrawStep(item.id, "approval"))}>
+                      Withdraw approval
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className={cn(BODY_BUTTON, "ml-auto")}
+                    disabled={busy}
+                    onClick={() => act(() => updateBacklogItem(item.id, { status: "dismissed" }))}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              )}
+            </section>
+          )}
+
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
           {item.session_label && (
             // Inline text with a no-break space before each dot, so a wrapped line ends on the

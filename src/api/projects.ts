@@ -55,6 +55,22 @@ export interface PrSnapshot {
   fetched_at: string | null;
 }
 
+/** Who approved a card's plan and at which version; plan, version and section are null for a card
+ * with no plan link. `by` is "pryce" or "agent:<name>". */
+export interface PlanApproval {
+  at: string;
+  by: string;
+  plan: string | null;
+  version: number | null;
+  section: string | null;
+  changed_since: boolean;
+}
+
+export interface CardStart {
+  at: string;
+  by: string;
+}
+
 export interface ProjectCard {
   id: string;
   kind: "item" | "job";
@@ -85,6 +101,9 @@ export interface ProjectCard {
   plan_id: string | null;
   plan_section: string | null;
   plan_version: number | null;
+  // Optional because a Sazed before slice 4 (migration 041), and older MCP payloads, send neither.
+  plan_approval?: PlanApproval | null;
+  started?: CardStart | null;
 }
 
 export interface Workstream {
