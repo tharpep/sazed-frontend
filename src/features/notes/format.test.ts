@@ -19,6 +19,8 @@ function note(time: Date, excerpt = "", title = "t"): Note {
     source: null,
     excerpt,
     match: null,
+    topic: null,
+    filed: null,
   };
 }
 
