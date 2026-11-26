@@ -138,7 +138,7 @@ export function readSession(raw: unknown): Session | null {
     status: str(s.status) ?? "",
     doing: str(s.doing),
     doing_source: str(s.doing_source),
-    role: str(s.role),
+    role: str(s.role) ?? undefined,
     question:
       question && typeof question === "object"
         ? { text: str(question.text) ?? "", agent_id: str(question.agent_id), asked_at: str(question.asked_at) ?? s.last_heard_at }

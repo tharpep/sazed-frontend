@@ -1,8 +1,10 @@
-import type { Session, SessionAgent, SessionDetail } from "@/api/sessions";
+import { claudeLink, isOrchestrator, type Session, type SessionAgent, type SessionDetail } from "@/api/sessions";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { sessionLabel } from "@/widgets/projectWork";
 
 import { AgentRows, HostChip, RunGlyph } from "./AgentSteps";
+import { TOUCH_BUTTON } from "./CardActions";
 import { heardOf, isWarn, linkWord, sessionTitle, sourceWord, span, statusWord, subagents } from "./sessions";
 import { clockOf } from "./shipped";
 
@@ -21,6 +23,15 @@ function Question({ session, detail }: { session: Session; detail: SessionDetail
         {asker ? `${asker.agent_type ?? "Agent"}, ` : q.agent_id ? "a subagent, " : ""}asked {clockOf(q.asked_at)}. Answer it in
         Claude Code.
       </p>
+      <a
+        href={claudeLink(session)}
+        target="_blank"
+        rel="noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className={cn(buttonVariants({ variant: "outline", size: "sm", className: cn(TOUCH_BUTTON, "mt-2 text-primary") }))}
+      >
+        Open in Claude
+      </a>
     </div>
   );
 }
@@ -39,6 +50,7 @@ export function SessionRow({ session, detail, onOpen, onOpenAgent }: Props) {
   const heard = heardOf(session.last_heard_at, session.status);
   const source = sourceWord(session.doing_source);
   const agents = subagents(detail?.agents).slice(-AGENTS_ON_HOME);
+  const orchestrator = isOrchestrator(session);
   return (
     <li
       onClick={onOpen}
@@ -66,6 +78,12 @@ export function SessionRow({ session, detail, onOpen, onOpenAgent }: Props) {
       </span>
       <p className="col-span-2 col-start-2 text-caption [overflow-wrap:anywhere] text-muted">
         <span className={cn(!session.card && "text-ink-2")}>{linkWord(session)}</span>
+        {orchestrator && (
+          <>
+            {" · "}
+            <span className="font-medium text-ink">Orchestrator</span>
+          </>
+        )}
         {" · "}Claude Code session {sessionLabel(session.session_id)}
         {session.host && (
           <>
@@ -77,6 +95,19 @@ export function SessionRow({ session, detail, onOpen, onOpenAgent }: Props) {
       </p>
       {session.question && <Question session={session} detail={detail} />}
       <AgentRows agents={agents} onOpen={onOpenAgent} className="col-span-2 col-start-2 mt-1" />
+      {orchestrator && (
+        <div className="col-span-2 col-start-2 mt-1.5">
+          <a
+            href={claudeLink(session)}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className={cn(buttonVariants({ variant: "outline", size: "sm", className: TOUCH_BUTTON }))}
+          >
+            Talk to orchestrator
+          </a>
+        </div>
+      )}
     </li>
   );
 }
