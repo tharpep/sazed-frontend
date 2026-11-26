@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useDictation } from "@/hooks/useDictation";
 
 interface Props {
-  onCaptured: () => void;
+  onCaptured: (path: string) => void;
 }
 
 export function CaptureBox({ onCaptured }: Props) {
@@ -36,9 +36,9 @@ export function CaptureBox({ onCaptured }: Props) {
     setFocused(false);
     setError(null);
     try {
-      await captureNote(text.trim());
+      const { path } = await captureNote(text.trim());
       setText("");
-      onCaptured();
+      onCaptured(path);
     } catch (err) {
       setError(`Couldn't save the note: ${errorText(err)}`);
     } finally {

@@ -1,6 +1,15 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 
-import { deleteNote, readNote, saveNote, type FullNote, type Note } from "@/api/notes";
+import {
+  deleteNote,
+  moveNote,
+  readNote,
+  saveNote,
+  type FullNote,
+  type MovedNote,
+  type Note,
+  type Topic,
+} from "@/api/notes";
 import { errorText } from "@/api/homelab";
 import { DetailPanel } from "@/components/shell/DetailPanel";
 import { Button } from "@/components/ui/button";
@@ -13,20 +22,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { MoveDialog } from "./MoveDialog";
 import { canFix, canSave, isDirty, noteFacts, saveError } from "./noteEdit";
+import { filedText, quickTopics } from "./topics";
 
 interface Props {
   note: Note | null;
   onClose: () => void;
   onChanged: () => void;
   onKeep: (note: Note) => void;
+  topics: Topic[];
+  onMoved: (note: Note) => void;
 }
 
 type Leave = "cancel" | "close" | "switch";
 
 const FOOTER_BUTTON = "h-11 px-3 sm:h-8";
 
-export function NoteSheet({ note: requested, onClose, onChanged, onKeep }: Props) {
+export function NoteSheet({ note: requested, onClose, onChanged, onKeep, topics, onMoved }: Props) {
   const [note, setNote] = useState<Note | null>(requested);
   const path = note?.path ?? null;
   const [full, setFull] = useState<FullNote | null>(null);
@@ -36,6 +49,7 @@ export function NoteSheet({ note: requested, onClose, onChanged, onKeep }: Props
   const [busy, setBusy] = useState(false);
   const [leaving, setLeaving] = useState<Leave | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [moving, setMoving] = useState(false);
 
   useEffect(() => {
     setFull(null);
@@ -45,6 +59,7 @@ export function NoteSheet({ note: requested, onClose, onChanged, onKeep }: Props
     setBusy(false);
     setLeaving(null);
     setConfirmDelete(false);
+    setMoving(false);
     if (!path) return;
     let cancelled = false;
     readNote(path)
@@ -124,6 +139,28 @@ export function NoteSheet({ note: requested, onClose, onChanged, onKeep }: Props
     }
   }
 
+  function applyMove(result: MovedNote) {
+    if (!note) return;
+    const moved: Note = { ...note, path: result.path, topic: result.topic, folder: "notes" };
+    setMoving(false);
+    setNote(moved);
+    onMoved(moved);
+    onChanged();
+  }
+
+  async function quickMove(topic: string) {
+    if (!path || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      applyMove(await moveNote(path, topic));
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
@@ -192,11 +229,27 @@ export function NoteSheet({ note: requested, onClose, onChanged, onKeep }: Props
           )}
         </>
       )}
+      {full !== null && !fixing && note && canFix(note.folder) && (
+        <FiledUnder
+          full={full}
+          topics={topics}
+          busy={busy}
+          onQuick={(topic) => void quickMove(topic)}
+          onMore={() => setMoving(true)}
+        />
+      )}
       {error && <p className="text-sm text-destructive">{error}</p>}
       {note && <p className="text-xs text-muted">Stored as {note.path}</p>}
       {note && !canFix(note.folder) && (
         <p className="text-xs text-muted">Written by an agent. Read-only here.</p>
       )}
+
+      <MoveDialog
+        note={moving && full ? full : null}
+        topics={topics}
+        onClose={() => setMoving(false)}
+        onMoved={applyMove}
+      />
 
       <Dialog open={leaving !== null} onOpenChange={(open) => !open && keep()}>
         <DialogContent>
@@ -233,5 +286,60 @@ export function NoteSheet({ note: requested, onClose, onChanged, onKeep }: Props
         </DialogContent>
       </Dialog>
     </DetailPanel>
+  );
+}
+
+const PILL = "min-h-11 rounded-full px-3.5 text-ink-2 sm:min-h-0";
+
+interface FiledUnderProps {
+  full: FullNote;
+  topics: Topic[];
+  busy: boolean;
+  onQuick: (topic: string) => void;
+  onMore: () => void;
+}
+
+function FiledUnder({ full, topics, busy, onQuick, onMore }: FiledUnderProps) {
+  const filed = filedText(full);
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-ink-2">
+        {filed ? (
+          <>
+            {filed.lead}
+            <strong className="font-semibold text-ink">{filed.topic}</strong>
+            {filed.tail}
+          </>
+        ) : (
+          "Not filed yet."
+        )}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {full.topic && (
+          <Button
+            variant="outline"
+            aria-pressed
+            tabIndex={-1}
+            className={`${PILL} pointer-events-none bg-raised text-ink`}
+          >
+            {full.topic}
+          </Button>
+        )}
+        {quickTopics(topics, full.topic).map((topic) => (
+          <Button
+            key={topic.name}
+            variant="outline"
+            disabled={busy}
+            className={PILL}
+            onClick={() => onQuick(topic.name)}
+          >
+            {topic.name}
+          </Button>
+        ))}
+        <Button variant="outline" disabled={busy} className={PILL} onClick={onMore}>
+          Move to…
+        </Button>
+      </div>
+    </div>
   );
 }

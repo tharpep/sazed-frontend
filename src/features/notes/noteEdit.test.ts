@@ -13,6 +13,8 @@ function note(time: Date, folder: Note["folder"] = "notes"): Note {
     source: null,
     excerpt: "",
     match: null,
+    topic: null,
+    filed: null,
   };
 }
 
