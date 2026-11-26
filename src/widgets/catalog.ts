@@ -9,6 +9,7 @@ import type {
   UpcomingPayment,
   WeatherData,
 } from "../api/display";
+import type { CardPr, NeedsYouItem, NeedsYouView, PullRequestView } from "../api/command";
 import type { Project } from "../api/projects";
 import { CalendarWidget } from "./CalendarWidget";
 import { ClockWidget } from "./ClockWidget";
@@ -21,6 +22,8 @@ import { HomelabWidget } from "./HomelabWidget";
 import { InfoCard } from "./InfoCard";
 import { JobWidget } from "./JobWidget";
 import { JobsWidget } from "./JobsWidget";
+import { NeedsYouWidget } from "./NeedsYouWidget";
+import { PullRequestWidget } from "./PullRequestWidget";
 import { ProjectsWidget } from "./ProjectsWidget";
 import { ProjectWidget } from "./ProjectWidget";
 import { projectFromBrief } from "./projectBrief";
@@ -220,6 +223,61 @@ const project = z.object({
     .optional(),
 });
 
+// The two new cards take stage and kind as plain strings and every PR detail as optional, so one
+// new server word or a missing key draws as text instead of a fallback.
+const needsYouItem = z.object({
+  id: z.string(),
+  kind: z.string().describe("item, job or dispatch"),
+  title: z.string(),
+  repo: z.string().nullable(),
+  next: z.string(),
+  question: z.string().nullable(),
+  stage: z.string().nullish(),
+  task: z.string().nullish().describe("A dispatch item's task"),
+  job_id: z.string().nullish(),
+  job_status: z.string().nullish(),
+  updated_at: z.string().nullish(),
+  pr: z
+    .object({
+      repo: z.string(),
+      number: z.number(),
+      url: z.string(),
+      state: z.string(),
+      checks: z.object({ state: z.string(), passed: z.number(), total: z.number() }).nullish(),
+      review: z.object({ verdict: z.string() }).nullish(),
+      additions: z.number().nullish(),
+      deletions: z.number().nullish(),
+    })
+    .nullish(),
+});
+
+const needsYouView = z.object({
+  needs: z.array(needsYouItem).describe("Needs-me cards and dispatch questions, trimmed to what the card draws"),
+  needs_total: z.number().nullish().describe("How many needs there are when the list was cut"),
+  working: z.array(z.object({ kind: z.string().describe("job or dispatch"), title: z.string(), elapsed_s: z.number() })),
+  done: z.object({ succeeded: z.number(), failed: z.number(), window_hours: z.number().nullish() }),
+  session_count: z.number().nullish().describe("Live Claude Code sessions"),
+  open_url: z.string().nullish().describe("Console Home, https, in a ?page= or ?open= shape"),
+});
+
+const prSnapshot = projectCard.shape.pr.unwrap().unwrap();
+const cardPr = prSnapshot.extend({
+  checks: prSnapshot.shape.checks.optional(),
+  review: prSnapshot.shape.review.optional(),
+  additions: z.number().nullish(),
+  deletions: z.number().nullish(),
+  merged_at: z.string().nullish(),
+  fetched_at: z.string().nullish(),
+});
+
+const pullRequestView = projectCard
+  .pick({ id: true, title: true, next: true, repo: true, job_id: true, job_status: true })
+  .extend({
+    stage: z.string().describe("inbox, next, doing, needs_me or done"),
+    pr: cardPr.nullish().describe("Sazed's last snapshot of the card's PR; absent on most cards"),
+    open_url: z.string().nullish().describe("The card in the console, https, as ?open=backlog:<id>"),
+  });
+
 // Compile-time drift check: each schema must match its API type exactly, both ways.
 type Same<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 true satisfies Same<z.infer<typeof calendarEvent>, CalendarEvent>;
@@ -229,6 +287,10 @@ true satisfies Same<z.infer<typeof upcomingPayment>, UpcomingPayment>;
 true satisfies Same<z.infer<typeof weatherData>, WeatherData>;
 true satisfies Same<z.infer<typeof gitHubIssue>, GitHubIssue>;
 true satisfies Same<z.infer<typeof project>, Project>;
+true satisfies Same<z.infer<typeof needsYouItem>, NeedsYouItem>;
+true satisfies Same<z.infer<typeof needsYouView>, NeedsYouView>;
+true satisfies Same<z.infer<typeof cardPr>, CardPr>;
+true satisfies Same<z.infer<typeof pullRequestView>, PullRequestView>;
 
 export interface WidgetDef {
   // Erased here because the catalog is heterogeneous; widget() has already checked the pair.
@@ -439,6 +501,22 @@ export const WIDGET_CATALOG = {
     describe: (p) => `Project ${p.title}: ${p.headline}`,
     ownership: "agent",
     description: "One project as an ordered ladder of workstreams with their cards, then what is in flight, needs the user, and is next.",
+    live: false,
+  }),
+  NeedsYouWidget: widget({
+    component: NeedsYouWidget,
+    props: needsYouView,
+    describe: (p) => `Needs you: ${p.needs_total ?? p.needs.length}${p.needs[0] ? `, first ${p.needs[0].title}` : ""}`,
+    ownership: "agent",
+    description: "What waits on the user: the first question in full, merge calls with checks and size, and what is running.",
+    live: false,
+  }),
+  PullRequestWidget: widget({
+    component: PullRequestWidget,
+    props: pullRequestView,
+    describe: (p) => (p.pr ? `PR ${p.pr.repo}#${p.pr.number}: ${p.pr.state}` : `Card ${p.title}: no PR`),
+    ownership: "agent",
+    description: "One board card's pull request: the merge verdict, its checks, size and review; the card itself when it has no PR.",
     live: false,
   }),
 } satisfies Record<string, WidgetDef>;
