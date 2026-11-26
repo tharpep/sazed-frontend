@@ -13,8 +13,8 @@ export const GROUP_NAME: Record<CardGroup, string> = {
   done: "Done",
 };
 
-// Sazed computes these two for nearly every open card, so printing them says nothing.
-const SILENT_NEXT = new Set(["Approve it to start", "Being built in a terminal session"]);
+// Sazed computes these for nearly every open card, so printing them says nothing.
+const SILENT_NEXT = new Set(["Approve it to start", "Plan to approve", "Being built in a terminal session"]);
 
 export function cardGroup(card: ProjectCard): CardGroup {
   if (card.stage === "needs_me") return "waiting";

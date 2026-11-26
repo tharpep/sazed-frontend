@@ -145,8 +145,9 @@ describe("cardPrRef", () => {
 });
 
 describe("cardFacts", () => {
-  it("never prints Sazed's two filler lines", () => {
+  it("never prints Sazed's filler lines", () => {
     expect(cardFacts(card({ next: "Approve it to start" })).text).toBe("sazed");
+    expect(cardFacts(card({ next: "Plan to approve" })).text).toBe("sazed");
     expect(cardFacts(card({ stage: "doing", next: "Being built in a terminal session" })).text).toBe("sazed");
   });
 
