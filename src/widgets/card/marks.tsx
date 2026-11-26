@@ -91,14 +91,14 @@ export function Callout({ children, sub, onClampedChange }: { children: ReactNod
       <div ref={text} className={cn("font-medium whitespace-pre-wrap [overflow-wrap:anywhere] text-card-warn", !open && "line-clamp-6")}>
         {children}
       </div>
-      <div className="flex flex-wrap items-baseline gap-x-3 text-[12px]">
-        {sub && <span className="min-w-0 [overflow-wrap:anywhere] text-card-ink-2">{sub}</span>}
+      <div className="flex items-baseline gap-x-3 text-[12px]">
+        {sub && <span className={cn("min-w-0 flex-1 text-card-ink-2", clipped || open ? "truncate" : "[overflow-wrap:anywhere]")}>{sub}</span>}
         {(clipped || open) && (
           <button
             type="button"
             aria-expanded={open}
             onClick={() => setOpen(!open)}
-            className="ml-auto min-h-6 cursor-pointer rounded border-0 bg-transparent p-0 font-medium text-card-warn underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card-info-fill"
+            className="ml-auto min-h-6 flex-none cursor-pointer rounded border-0 bg-transparent p-0 font-medium text-card-warn underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card-info-fill"
           >
             {open ? "Show less" : "Show full question"}
           </button>

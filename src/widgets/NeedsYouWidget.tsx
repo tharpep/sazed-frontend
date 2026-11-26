@@ -103,7 +103,7 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
           <span className="max-w-[40%] flex-none truncate text-[12px] text-card-ink-3">{item.next}</span>
         </TightRow>
       ))}
-      {hidden > 0 && <MoreLine>+{hidden} more waiting</MoreLine>}
+      {hidden > 0 && !(clamped && parts.merges.length) && <MoreLine>+{hidden} more waiting</MoreLine>}
 
       {parts.merges.length > 0 && (
         <>
@@ -121,6 +121,7 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
             {[
               parts.merges.length > mergeRows && `+${parts.merges.length - mergeRows} more`,
               `${reviewed} reviewed, ${parts.merges.length - reviewed} no review`,
+              clamped && hidden > 0 && `${hidden} more waiting`,
               unsent > 0 && `${unsent} not listed`,
             ]
               .filter(Boolean)
