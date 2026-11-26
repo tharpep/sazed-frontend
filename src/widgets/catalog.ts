@@ -9,7 +9,7 @@ import type {
   UpcomingPayment,
   WeatherData,
 } from "../api/display";
-import type { NeedsYouItem, NeedsYouView, PullRequestView } from "../api/command";
+import type { CardPr, NeedsYouItem, NeedsYouView, PullRequestView } from "../api/command";
 import type { Project } from "../api/projects";
 import { CalendarWidget } from "./CalendarWidget";
 import { ClockWidget } from "./ClockWidget";
@@ -223,14 +223,17 @@ const project = z.object({
     .optional(),
 });
 
+// The two new cards take stage and kind as plain strings and every PR detail as optional, so one
+// new server word or a missing key draws as text instead of a fallback.
 const needsYouItem = z.object({
   id: z.string(),
-  kind: z.enum(["item", "job", "dispatch"]),
+  kind: z.string().describe("item, job or dispatch"),
   title: z.string(),
   repo: z.string().nullable(),
   next: z.string(),
   question: z.string().nullable(),
-  stage: projectCard.shape.stage.nullish(),
+  stage: z.string().nullish(),
+  task: z.string().nullish().describe("A dispatch item's task"),
   job_id: z.string().nullish(),
   job_status: z.string().nullish(),
   updated_at: z.string().nullish(),
@@ -240,10 +243,10 @@ const needsYouItem = z.object({
       number: z.number(),
       url: z.string(),
       state: z.string(),
-      checks: z.object({ state: z.string(), passed: z.number(), total: z.number() }).nullable(),
-      review: z.object({ verdict: z.string() }).nullable(),
-      additions: z.number().nullable(),
-      deletions: z.number().nullable(),
+      checks: z.object({ state: z.string(), passed: z.number(), total: z.number() }).nullish(),
+      review: z.object({ verdict: z.string() }).nullish(),
+      additions: z.number().nullish(),
+      deletions: z.number().nullish(),
     })
     .nullish(),
 });
@@ -251,15 +254,27 @@ const needsYouItem = z.object({
 const needsYouView = z.object({
   needs: z.array(needsYouItem).describe("Needs-me cards and dispatch questions, trimmed to what the card draws"),
   needs_total: z.number().nullish().describe("How many needs there are when the list was cut"),
-  working: z.array(z.object({ kind: z.enum(["job", "dispatch"]), title: z.string(), elapsed_s: z.number() })),
+  working: z.array(z.object({ kind: z.string().describe("job or dispatch"), title: z.string(), elapsed_s: z.number() })),
   done: z.object({ succeeded: z.number(), failed: z.number(), window_hours: z.number().nullish() }),
   session_count: z.number().nullish().describe("Live Claude Code sessions"),
-  open_url: z.string().nullish().describe("Console Home"),
+  open_url: z.string().nullish().describe("Console Home, https, in a ?page= or ?open= shape"),
+});
+
+const prSnapshot = projectCard.shape.pr.unwrap().unwrap();
+const cardPr = prSnapshot.extend({
+  checks: prSnapshot.shape.checks.optional(),
+  review: prSnapshot.shape.review.optional(),
+  additions: z.number().nullish(),
+  deletions: z.number().nullish(),
 });
 
 const pullRequestView = projectCard
-  .pick({ id: true, title: true, stage: true, next: true, repo: true, job_id: true, job_status: true, pr: true })
-  .extend({ open_url: z.string().nullish().describe("The card in the console") });
+  .pick({ id: true, title: true, next: true, repo: true, job_id: true, job_status: true })
+  .extend({
+    stage: z.string().describe("inbox, next, doing, needs_me or done"),
+    pr: cardPr.nullish().describe("Sazed's last snapshot of the card's PR; absent on most cards"),
+    open_url: z.string().nullish().describe("The card in the console, https, as ?open=backlog:<id>"),
+  });
 
 // Compile-time drift check: each schema must match its API type exactly, both ways.
 type Same<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
@@ -272,6 +287,7 @@ true satisfies Same<z.infer<typeof gitHubIssue>, GitHubIssue>;
 true satisfies Same<z.infer<typeof project>, Project>;
 true satisfies Same<z.infer<typeof needsYouItem>, NeedsYouItem>;
 true satisfies Same<z.infer<typeof needsYouView>, NeedsYouView>;
+true satisfies Same<z.infer<typeof cardPr>, CardPr>;
 true satisfies Same<z.infer<typeof pullRequestView>, PullRequestView>;
 
 export interface WidgetDef {

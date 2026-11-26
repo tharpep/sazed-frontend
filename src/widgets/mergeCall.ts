@@ -1,10 +1,10 @@
-import type { NeedsYouPr } from "@/api/command";
+import type { CardPr, NeedsYouPr } from "@/api/command";
 import type { PrSnapshot } from "@/api/projects";
 
 interface MergeCandidate {
   stage: string;
   job_id: string | null;
-  pr?: PrSnapshot | NeedsYouPr | null;
+  pr?: PrSnapshot | NeedsYouPr | CardPr | null;
 }
 
 /** A session card Sazed put in Needs me because its PR is ready: open, checks passing and no

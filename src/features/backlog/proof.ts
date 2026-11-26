@@ -29,7 +29,7 @@ function plain(word: string): string {
   return word.replace(/_/g, " ");
 }
 
-function verdictWord(verdict: string): string {
+export function verdictWord(verdict: string): string {
   return VERDICT_WORD.get(verdict) ?? plain(verdict);
 }
 
@@ -39,21 +39,21 @@ export function prName(pr: Pick<PrSnapshot, "repo" | "number">): string {
 }
 
 /** "+1,148 -105", or "" when Sazed has no diff size yet. */
-export function diffSize(pr: Pick<PrSnapshot, "additions" | "deletions">): string {
+export function diffSize(pr: { additions?: number | null; deletions?: number | null }): string {
   if (pr.additions == null || pr.deletions == null) return "";
   // A no-break space, so a wrapping line never splits the pair.
   return `+${pr.additions.toLocaleString("en-US")} -${pr.deletions.toLocaleString("en-US")}`;
 }
 
 /** Seconds since the snapshot was taken, or null when the PR was never fetched. */
-export function snapshotAge(pr: PrSnapshot, now = Date.now()): number | null {
+export function snapshotAge(pr: Pick<PrSnapshot, "fetched_at">, now = Date.now()): number | null {
   if (!pr.fetched_at) return null;
   const at = Date.parse(pr.fetched_at);
   return Number.isNaN(at) ? null : Math.max(0, Math.round((now - at) / 1000));
 }
 
 /** "25 min old" once the snapshot is past the old mark; "" while it is fresh or never taken. */
-export function oldSnapshotText(pr: PrSnapshot, now = Date.now()): string {
+export function oldSnapshotText(pr: Pick<PrSnapshot, "state" | "fetched_at">, now = Date.now()): string {
   // Sazed fetches a merged or closed PR once more and then never again, so that snapshot is final.
   if (pr.state === "merged" || pr.state === "closed") return "";
   const age = snapshotAge(pr, now);

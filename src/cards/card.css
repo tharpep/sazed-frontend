@@ -43,6 +43,12 @@
   --color-card-info: var(--color-text-info, light-dark(#3266ad, #80aadd));
   --color-card-info-fill: var(--color-border-info, light-dark(#4682d5, #4682d5));
   --color-card-info-tint: var(--color-background-info, light-dark(#d6e4f6, #253e5f));
+  /* Text on a tint (pills): the status colour pulled 15% toward ink, so it clears 4.5:1 on the
+     tint; the host's own info pair sits at 4.48 in light. */
+  --color-card-ok-on-tint: color-mix(in srgb, var(--color-card-ok) 85%, var(--color-card-ink));
+  --color-card-warn-on-tint: color-mix(in srgb, var(--color-card-warn) 85%, var(--color-card-ink));
+  --color-card-err-on-tint: color-mix(in srgb, var(--color-card-err) 85%, var(--color-card-ink));
+  --color-card-info-on-tint: color-mix(in srgb, var(--color-card-info) 85%, var(--color-card-ink));
 
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;

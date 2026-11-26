@@ -2,16 +2,17 @@ import type { NeedsYouItem, NeedsYouView } from "@/api/command";
 import { diffSize } from "@/features/backlog/proof";
 
 import { CardAnswer, CardFrame, CardHeader, CardSection, MoreLine, Num, TightRow } from "./card/frame";
+import { consoleLink } from "./card/links";
 import { CardActions, Callout, Dot } from "./card/marks";
 import { mergeKind, mergeLabelOf, orderMergeCalls } from "./mergeCall";
 
-export const MERGE_ROWS = 4;
-export const OTHER_ROWS = 3;
+const MERGE_ROWS = 4;
+const OTHER_ROWS = 3;
 const RUNNING_NAMED = 2;
 const FAILED = new Set(["failed", "timed_out"]);
 
 /** "10:41" today, "25 Nov" before, in local time. */
-export function shortTime(iso: string, now = new Date()): string {
+function shortTime(iso: string, now = new Date()): string {
   const d = new Date(iso);
   return d.toDateString() === now.toDateString()
     ? d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
@@ -22,10 +23,18 @@ function candidate(item: NeedsYouItem) {
   return { stage: item.stage ?? "", job_id: item.job_id ?? null, pr: item.pr };
 }
 
+/** The task a question is about: the item's own task, else the one in a dispatch id, else the repo's name. */
+function taskOf(item: NeedsYouItem): string | null {
+  if (item.task) return item.task;
+  const [prefix, , task] = item.id.split(":");
+  if (prefix === "dispatch" && task) return task;
+  return item.repo?.split("/").pop() ?? null;
+}
+
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** "49m", "3h 50m"; under a minute reads "<1m". */
-export function elapsed(seconds: number): string {
+function elapsed(seconds: number): string {
   const m = Math.floor(seconds / 60);
   if (m < 1) return "<1m";
   if (m < 60) return `${m}m`;
@@ -72,20 +81,19 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
       {total ? <CardAnswer>{needsAnswer(parts) || plural(total, "item", "items")}</CardAnswer> : <CardAnswer tail={doneLine}>Nothing needs you</CardAnswer>}
 
       {question && (
-        <Callout sub={[question.title, question.repo, question.updated_at && shortTime(question.updated_at)].filter(Boolean).join(" · ")}>
+        <Callout sub={[question.title, taskOf(question), question.updated_at && shortTime(question.updated_at)].filter(Boolean).join(" · ")}>
           {question.question}
         </Callout>
       )}
 
-      {shown.map((item, i) => (
+      {shown.map((item) => (
         <TightRow key={item.id}>
           <Dot tone={item.question ? "warn" : FAILED.has(item.job_status ?? "") ? "err" : "info"} />
           <span className="min-w-0 flex-1 truncate">{item.title}</span>
-          <span className="max-w-[40%] flex-none truncate text-[12px] text-card-ink-3">
-            {i === shown.length - 1 && hidden ? `+${hidden} more` : item.next}
-          </span>
+          <span className="max-w-[40%] flex-none truncate text-[12px] text-card-ink-3">{item.next}</span>
         </TightRow>
       ))}
+      {hidden > 0 && <MoreLine>+{hidden} more waiting</MoreLine>}
 
       {parts.merges.length > 0 && (
         <>
@@ -124,7 +132,7 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
           {session_count ? `${working.length ? ", " : " · "}${plural(session_count, "session", "sessions")}` : ""}
         </div>
       )}
-      <CardActions links={open_url ? [{ label: "Open Home", href: open_url }] : []} />
+      <CardActions links={open_url ? [consoleLink("Open Home", open_url)] : []} />
     </CardFrame>
   );
 }

@@ -2150,11 +2150,7 @@
             },
             "kind": {
               "type": "string",
-              "enum": [
-                "item",
-                "job",
-                "dispatch"
-              ]
+              "description": "item, job or dispatch"
             },
             "title": {
               "type": "string"
@@ -2175,20 +2171,16 @@
               ]
             },
             "stage": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "inbox",
-                    "next",
-                    "doing",
-                    "needs_me",
-                    "done"
-                  ]
-                },
-                {
-                  "type": "null"
-                }
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "task": {
+              "description": "A dispatch item's task",
+              "type": [
+                "string",
+                "null"
               ]
             },
             "job_id": {
@@ -2287,11 +2279,7 @@
                     "repo",
                     "number",
                     "url",
-                    "state",
-                    "checks",
-                    "review",
-                    "additions",
-                    "deletions"
+                    "state"
                   ]
                 },
                 {
@@ -2325,10 +2313,7 @@
           "properties": {
             "kind": {
               "type": "string",
-              "enum": [
-                "job",
-                "dispatch"
-              ]
+              "description": "job or dispatch"
             },
             "title": {
               "type": "string"
@@ -2373,7 +2358,7 @@
         ]
       },
       "open_url": {
-        "description": "Console Home",
+        "description": "Console Home, https, in a ?page= or ?open= shape",
         "type": [
           "string",
           "null"
@@ -2396,16 +2381,6 @@
       "title": {
         "type": "string"
       },
-      "stage": {
-        "type": "string",
-        "enum": [
-          "inbox",
-          "next",
-          "doing",
-          "needs_me",
-          "done"
-        ]
-      },
       "next": {
         "type": "string"
       },
@@ -2427,8 +2402,12 @@
           "null"
         ]
       },
+      "stage": {
+        "type": "string",
+        "description": "inbox, next, doing, needs_me or done"
+      },
       "pr": {
-        "description": "Sazed's last snapshot of the card's PR; absent from older payloads",
+        "description": "Sazed's last snapshot of the card's PR; absent on most cards",
         "anyOf": [
           {
             "type": "object",
@@ -2555,10 +2534,6 @@
               "number",
               "url",
               "state",
-              "checks",
-              "review",
-              "additions",
-              "deletions",
               "merged_at",
               "fetched_at"
             ]
@@ -2569,7 +2544,7 @@
         ]
       },
       "open_url": {
-        "description": "The card in the console",
+        "description": "The card in the console, https, as ?open=backlog:<id>",
         "type": [
           "string",
           "null"
@@ -2579,11 +2554,11 @@
     "required": [
       "id",
       "title",
-      "stage",
       "next",
       "repo",
       "job_id",
-      "job_status"
+      "job_status",
+      "stage"
     ]
   }
 }

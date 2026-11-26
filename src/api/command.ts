@@ -53,15 +53,22 @@ export interface CommandSummary {
   session_health?: SessionHealth;
 }
 
+// The card views below take stage and kind as plain strings and every PR detail as optional, so a
+// new server word or a missing key draws as text instead of failing the whole card.
+
 /** The PR fields the Needs you card reads from a needs item. */
-export interface NeedsYouPr extends Pick<PrSnapshot, "repo" | "number" | "url" | "state" | "additions" | "deletions"> {
-  checks: Pick<NonNullable<PrSnapshot["checks"]>, "state" | "passed" | "total"> | null;
-  review: Pick<NonNullable<PrSnapshot["review"]>, "verdict"> | null;
+export interface NeedsYouPr extends Pick<PrSnapshot, "repo" | "number" | "url" | "state"> {
+  checks?: Pick<NonNullable<PrSnapshot["checks"]>, "state" | "passed" | "total"> | null;
+  review?: Pick<NonNullable<PrSnapshot["review"]>, "verdict"> | null;
+  additions?: number | null;
+  deletions?: number | null;
 }
 
 /** One needs item as the board_command card carries it. A dispatch item has no stage or job. */
-export interface NeedsYouItem extends Pick<NeedsCard, "id" | "kind" | "title" | "repo" | "next" | "question"> {
-  stage?: NeedsCard["stage"] | null;
+export interface NeedsYouItem extends Pick<NeedsCard, "id" | "title" | "repo" | "next" | "question"> {
+  kind: string;
+  stage?: string | null;
+  task?: string | null;
   job_id?: string | null;
   job_status?: string | null;
   updated_at?: string | null;
@@ -72,14 +79,24 @@ export interface NeedsYouItem extends Pick<NeedsCard, "id" | "kind" | "title" | 
 export interface NeedsYouView {
   needs: NeedsYouItem[];
   needs_total?: number | null;
-  working: Pick<WorkingJob, "kind" | "title" | "elapsed_s">[];
+  working: { kind: string; title: string; elapsed_s: number }[];
   done: { succeeded: number; failed: number; window_hours?: number | null };
   session_count?: number | null;
   open_url?: string | null;
 }
 
+/** Sazed's PR snapshot as the Pull request card reads it. */
+export interface CardPr extends Pick<PrSnapshot, "repo" | "number" | "url" | "state" | "merged_at" | "fetched_at"> {
+  checks?: PrSnapshot["checks"];
+  review?: PrSnapshot["review"];
+  additions?: number | null;
+  deletions?: number | null;
+}
+
 /** The board_card tool's card, as the Pull request card reads it; pr is absent on most cards. */
-export interface PullRequestView extends Pick<ProjectCard, "id" | "title" | "stage" | "next" | "repo" | "job_id" | "job_status" | "pr"> {
+export interface PullRequestView extends Pick<ProjectCard, "id" | "title" | "next" | "repo" | "job_id" | "job_status"> {
+  stage: string;
+  pr?: CardPr | null;
   open_url?: string | null;
 }
 

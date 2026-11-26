@@ -185,6 +185,10 @@
   --color-card-info: var(--color-text-info, var(--color-primary));
   --color-card-info-fill: var(--color-border-info, var(--color-primary));
   --color-card-info-tint: var(--color-background-info, color-mix(in oklch, var(--color-primary) 16%, transparent));
+  --color-card-ok-on-tint: color-mix(in srgb, var(--color-text-success, var(--color-ok)) 85%, var(--color-text-primary, var(--color-ink)));
+  --color-card-warn-on-tint: color-mix(in srgb, var(--color-text-warning, var(--color-warn)) 85%, var(--color-text-primary, var(--color-ink)));
+  --color-card-err-on-tint: color-mix(in srgb, var(--color-text-danger, var(--color-err)) 85%, var(--color-text-primary, var(--color-ink)));
+  --color-card-info-on-tint: color-mix(in srgb, var(--color-text-info, var(--color-primary)) 85%, var(--color-text-primary, var(--color-ink)));
 }
 
 @theme inline {
