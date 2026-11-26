@@ -12,6 +12,7 @@ import {
   stepNumbers,
   stepOf,
   trackText,
+  visibleNext,
 } from "./projectWork";
 
 function card(over: Partial<ProjectCard>): ProjectCard {
@@ -145,8 +146,10 @@ describe("cardPrRef", () => {
 });
 
 describe("cardFacts", () => {
-  it("never prints Sazed's two filler lines", () => {
+  it("never prints Sazed's filler lines", () => {
     expect(cardFacts(card({ next: "Approve it to start" })).text).toBe("sazed");
+    expect(visibleNext(card({ next: "Plan to approve" }))).toBe("");
+    expect(visibleNext(card({ next: "Ready to start" }))).toBe("Ready to start");
     expect(cardFacts(card({ stage: "doing", next: "Being built in a terminal session" })).text).toBe("sazed");
   });
 
