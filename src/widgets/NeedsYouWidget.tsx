@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import type { NeedsYouItem, NeedsYouView } from "@/api/command";
 import { diffSize } from "@/features/backlog/proof";
 
@@ -7,6 +9,7 @@ import { CardActions, Callout, Dot } from "./card/marks";
 import { mergeKind, mergeLabelOf, orderMergeCalls } from "./mergeCall";
 
 const MERGE_ROWS = 4;
+const CLAMPED_MERGE_ROWS = 2;
 const OTHER_ROWS = 3;
 const RUNNING_NAMED = 2;
 const FAILED = new Set(["failed", "timed_out"]);
@@ -67,8 +70,12 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
   const total = Math.max(needs_total ?? 0, needs.length);
   const parts = needsParts(needs);
   const [question, ...laterQuestions] = parts.questions;
+  // While a long question is clamped it takes most of the height budget, so the lists shorten to
+  // keep the collapsed card under the host's cap; expanding restores them.
+  const [clamped, setClamped] = useState(false);
+  const mergeRows = clamped ? CLAMPED_MERGE_ROWS : MERGE_ROWS;
   const rest = [...laterQuestions, ...parts.others];
-  const shown = rest.slice(0, parts.merges.length ? 1 : OTHER_ROWS);
+  const shown = rest.slice(0, clamped ? 0 : parts.merges.length ? 1 : OTHER_ROWS);
   const hidden = rest.length - shown.length;
   const reviewed = parts.merges.filter((n) => mergeKind(candidate(n)) === "reviewed").length;
   const unsent = total - needs.length;
@@ -81,7 +88,10 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
       {total ? <CardAnswer>{needsAnswer(parts) || plural(total, "item", "items")}</CardAnswer> : <CardAnswer tail={doneLine}>Nothing needs you</CardAnswer>}
 
       {question && (
-        <Callout sub={[question.title, taskOf(question), question.updated_at && shortTime(question.updated_at)].filter(Boolean).join(" · ")}>
+        <Callout
+          sub={[question.title, taskOf(question), question.updated_at && shortTime(question.updated_at)].filter(Boolean).join(" · ")}
+          onClampedChange={setClamped}
+        >
           {question.question}
         </Callout>
       )}
@@ -98,7 +108,7 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
       {parts.merges.length > 0 && (
         <>
           <CardSection right="checks · size">Ready to merge</CardSection>
-          {parts.merges.slice(0, MERGE_ROWS).map((item) => (
+          {parts.merges.slice(0, mergeRows).map((item) => (
             <TightRow key={item.id} title={mergeLabelOf(candidate(item)) ?? undefined}>
               <span className="min-w-0 flex-1 truncate">{item.title}</span>
               <Num className="text-card-ok">
@@ -109,7 +119,7 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
           ))}
           <MoreLine>
             {[
-              parts.merges.length > MERGE_ROWS && `+${parts.merges.length - MERGE_ROWS} more`,
+              parts.merges.length > mergeRows && `+${parts.merges.length - mergeRows} more`,
               `${reviewed} reviewed, ${parts.merges.length - reviewed} no review`,
               unsent > 0 && `${unsent} not listed`,
             ]

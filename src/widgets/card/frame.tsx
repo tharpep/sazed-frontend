@@ -39,7 +39,7 @@ export function CardAnswer({ children, tail }: { children: ReactNode; tail?: Rea
 /** A section label with an optional right-hand legend. */
 export function CardSection({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
-    <div className="mt-2.5 mb-1 flex gap-2 text-[12px] text-card-ink-3">
+    <div className="mt-2 mb-1 flex gap-2 text-[12px] text-card-ink-3">
       <span>{children}</span>
       {right && <span className="ml-auto">{right}</span>}
     </div>
@@ -48,7 +48,7 @@ export function CardSection({ children, right }: { children: ReactNode; right?: 
 
 /** The last line of a cut list. */
 export function MoreLine({ children }: { children: ReactNode }) {
-  return <div className="pt-1.5 text-[12px] text-card-ink-3">{children}</div>;
+  return <div className="pt-1 text-[12px] text-card-ink-3">{children}</div>;
 }
 
 /** A tight list row: content that grows, then fixed right columns. */

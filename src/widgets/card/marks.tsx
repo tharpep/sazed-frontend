@@ -68,8 +68,8 @@ export function StackedMeter({ parts }: { parts: { share: number; tone: Tone }[]
   );
 }
 
-/** The one thing that needs him, in a tinted block: clamped to six lines, with a toggle that shows it all. */
-export function Callout({ children, sub }: { children: ReactNode; sub?: ReactNode }) {
+/** The one thing that needs him, clamped to six lines with a toggle; onClampedChange says when the clamp hides text. */
+export function Callout({ children, sub, onClampedChange }: { children: ReactNode; sub?: ReactNode; onClampedChange?: (clamped: boolean) => void }) {
   const text = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [clipped, setClipped] = useState(false);
@@ -84,22 +84,26 @@ export function Callout({ children, sub }: { children: ReactNode; sub?: ReactNod
     return () => observer.disconnect();
   }, [open, children]);
 
+  useLayoutEffect(() => onClampedChange?.(clipped && !open), [clipped, open, onClampedChange]);
+
   return (
     <div className="mb-2 rounded-lg bg-card-warn-tint px-2.5 py-2">
       <div ref={text} className={cn("font-medium whitespace-pre-wrap [overflow-wrap:anywhere] text-card-warn", !open && "line-clamp-6")}>
         {children}
       </div>
-      {(clipped || open) && (
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-          className="mt-1 min-h-6 cursor-pointer rounded border-0 bg-transparent p-0 text-[12px] font-medium text-card-warn underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card-info-fill"
-        >
-          {open ? "Show less" : "Show full question"}
-        </button>
-      )}
-      {sub && <div className="text-[12px] [overflow-wrap:anywhere] text-card-ink-2">{sub}</div>}
+      <div className="flex flex-wrap items-baseline gap-x-3 text-[12px]">
+        {sub && <span className="min-w-0 [overflow-wrap:anywhere] text-card-ink-2">{sub}</span>}
+        {(clipped || open) && (
+          <button
+            type="button"
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+            className="ml-auto min-h-6 cursor-pointer rounded border-0 bg-transparent p-0 font-medium text-card-warn underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card-info-fill"
+          >
+            {open ? "Show less" : "Show full question"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -115,7 +119,7 @@ export interface CardLink {
 export function CardActions({ links }: { links: CardLink[] }) {
   if (!links.length) return null;
   return (
-    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+    <div className="mt-2 flex flex-wrap items-center gap-2">
       {links.slice(0, 2).map((link) =>
         link.safe ? (
           <a
