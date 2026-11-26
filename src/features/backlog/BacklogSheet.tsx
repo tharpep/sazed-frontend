@@ -52,7 +52,7 @@ export function BacklogSheet({ item, card, liveSessionId = null, loading = false
     setApproving(false);
     setBusy(false);
     setError(null);
-  }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [item?.id]);
 
   async function act(fn: () => Promise<BacklogItem>) {
     const id = item?.id;

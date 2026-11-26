@@ -9,6 +9,8 @@
     "build": "node scripts/copy-vad-assets.mjs && tsc && vite build && vite build -c vite.cards.config.ts",
     "preview": "vite preview",
     "test": "vitest run",
+    "lint": "eslint src",
+    "lint:prune": "eslint src --prune-suppressions",
     "tauri": "tauri"
   },
   "dependencies": {
@@ -50,7 +52,10 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "eslint": "^10.15.0",
+    "eslint-plugin-better-tailwindcss": "^4.11.0",
     "typescript": "~5.8.3",
+    "typescript-eslint": "^8.74.0",
     "vite": "^7.0.4",
     "vite-plugin-singlefile": "^2.3.4",
     "vitest": "^3.2.7"

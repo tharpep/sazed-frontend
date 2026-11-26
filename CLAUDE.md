@@ -9,6 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm tauri dev` — Tauri desktop window (requires Rust toolchain)
 - `pnpm build` — TypeScript check + Vite build, then `vite.cards.config.ts` builds `dist/cards/widget.html`
 - `pnpm tauri build` — Full desktop build after `pnpm build`
+- `pnpm lint` — the frontend gate (`eslint.config.js`), run in CI. It fails on a new raw `<button>`, `<input>`, `<select>`, `<textarea>` or `<table>` outside `components/ui` and `components/system`, on a font size off the type scale, and on `bg-muted` or `bg-accent`. Violations that predate the gate are counted per file in `eslint-suppressions.json`, so a file may not add one.
+- `pnpm lint:prune` — run after fixing old violations. It lowers the counts in `eslint-suppressions.json`; `pnpm lint` fails until it has run. Never raise a count by hand or with `--suppress-all`.
 
 ## Architecture
 
@@ -40,7 +42,7 @@ The app talks to the **Sazed** backend (agent API). Base URL and API key come fr
 - `src/store/` — Zustand: `chatStore`, `sessionStore`, `navStore` (hub, view, open items), `uiStore` (private apps revealed, Settings open), `settingsStore`, `configStore`, `kbStore`, `memoryStore`.
 - `src/components/ui/` — shadcn/ui primitives, owned source restyled to DESIGN.md, not consumed as a themed package. `/dev/gallery` shows every one.
   - Add one with `pnpm exec shadcn add <name>`. `components.json` also names three Base UI registries: `@diceui` (kanban, sortable), `@tablecn` (data table) and `@coss` (extra form parts; add its items one at a time with `--dry-run`, it can overwrite same-named files). `.mcp.json` runs shadcn's MCP server so agents can search them.
-  - After adding, change `import { cn } from "cn"` to `@/lib/utils` and remove the `cn` package: the repo's `cn()` is what keeps the type scale through class merging. Replace `bg-muted` and `bg-accent` with `bg-raised`: here `muted` is a text colour and `accent` is the warn colour.
+  - After adding, change `import { cn } from "cn"` to `@/lib/utils` and remove the `cn` package: the repo's `cn()` is what keeps the type scale through class merging. Replace `bg-muted` and `bg-accent` with `bg-raised`: here `muted` is a text colour and `accent` is the warn colour. `pnpm lint` catches those two; it does not catch `fill-muted` on a shape, which needs `fill-raised` for the same reason.
 - `src/dev/` — the dev-only `/dev` route (`import.meta.env.DEV`, outside `AuthGate`, absent from production builds). `/dev/gallery` (`Gallery.tsx`) has one demo per file in `components/ui` and `components/system`; `gallery.test.ts` fails when a file has none. `/dev/mocks/<name>` renders `src/dev/mocks/<name>.tsx`, or variants `<name>.<variant>.tsx`, with a variant switch and a 390px phone frame.
 - `src/components/theme/` — `ThemeProvider`, `ThemeToggle`.
 - `src/components/system/` — the shared components from DESIGN.md (Page/PageBody, StatusPill, Segmented, ListSection/ListRow, EmptyState). Use these for new pages and when moving a page over.

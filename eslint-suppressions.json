@@ -1,0 +1,626 @@
+{
+  "src/App.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/graph/GraphFocus.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/graph/GraphView.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/shell/CommandPalette.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/components/shell/DetailPanel.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/shell/HubBottomBar.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/components/shell/HubErrorBoundary.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/shell/HubMoreSheet.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/components/shell/HubRail.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/components/shell/HubTitleRow.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/components/shell/PhoneHeader.tsx": {
+    "no-restricted-syntax": {
+      "count": 5
+    }
+  },
+  "src/components/shell/Reader.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/components/shell/ToolsRow.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/shell/ViewPicker.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/components/shell/WindowBar.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/components/theme/ThemeToggle.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/ui/avatar.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 5
+    }
+  },
+  "src/components/ui/badge.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 4
+    }
+  },
+  "src/components/ui/button.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 2
+    }
+  },
+  "src/components/ui/dialog.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 4
+    }
+  },
+  "src/components/ui/dropdown-menu.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 12
+    }
+  },
+  "src/components/ui/input.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/components/ui/sheet.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 3
+    }
+  },
+  "src/components/ui/tabs.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 3
+    }
+  },
+  "src/components/ui/textarea.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/components/ui/tooltip.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/features/activity/ActivityPage.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/activity/DayChart.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/features/activity/FlowRow.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 4
+    },
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/activity/FlowSheet.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 4
+    },
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/auth/AuthGate.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 3
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/automations/AutomationSheet.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 11
+    },
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/features/automations/AutomationsPage.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 8
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/automations/RunHistory.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 6
+    },
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/backlog/BacklogPage.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 4
+    },
+    "no-restricted-syntax": {
+      "count": 6
+    }
+  },
+  "src/features/backlog/BacklogSheet.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 17
+    },
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/backlog/BoardCards.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/features/backlog/CardSheet.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/backlog/ProofBlock.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/features/backlog/SessionNow.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/features/chat/ChatHub.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/chat/Composer.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/chat/ConversationList.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/chat/MessageBlock.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 12
+    },
+    "no-restricted-syntax": {
+      "count": 6
+    }
+  },
+  "src/features/chat/MessageList.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/chat/StreamingIndicator.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/features/chat/ToolCallCard.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 6
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/claude-usage/ClaudeUsagePage.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/claude-usage/ModelSpend.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/claude-usage/Overview.tsx": {
+    "no-restricted-syntax": {
+      "count": 7
+    }
+  },
+  "src/features/claude-usage/SourceTab.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/claude-usage/Tables.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/claude-usage/Timeline.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/display/parts.tsx": {
+    "no-restricted-syntax": {
+      "count": 16
+    }
+  },
+  "src/features/finance/FinancePage.tsx": {
+    "no-restricted-syntax": {
+      "count": 18
+    }
+  },
+  "src/features/gateway/GatewayPage.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 15
+    },
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/home/AgentSteps.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/home/AskField.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/home/CardActions.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/home/Done.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/home/Group.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/home/HomePage.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/home/HomeSide.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/features/home/Ready.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/home/SessionHealth.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/homelab/DependenciesView.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 4
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/homelab/HomelabPage.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 8
+    },
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/homelab/MapPanel.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 3
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/homelab/ServiceSheet.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 10
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/homelab/StorageCard.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 6
+    }
+  },
+  "src/features/homelab/format.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 5
+    }
+  },
+  "src/features/jobs/JobSheet.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 15
+    },
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/jobs/JobStartForm.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 5
+    },
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/jobs/JobsPanel.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 6
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/jobs/Timeline.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/features/journal/JournalPage.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 20
+    },
+    "no-restricted-syntax": {
+      "count": 14
+    }
+  },
+  "src/features/kb/AddContent.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 6
+    },
+    "no-restricted-syntax": {
+      "count": 6
+    }
+  },
+  "src/features/kb/KnowledgePage.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 6
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/kb/MemorySection.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 10
+    },
+    "no-restricted-syntax": {
+      "count": 5
+    }
+  },
+  "src/features/kb/SearchPanel.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 5
+    },
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/kb/SourceSheet.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 5
+    }
+  },
+  "src/features/notes/CaptureBox.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/notes/NoteCard.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/notes/NoteSheet.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 7
+    }
+  },
+  "src/features/notes/NotesPage.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 3
+    }
+  },
+  "src/features/notes/NotesSearch.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 2
+    },
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/plans/CompareView.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/plans/DispatchCards.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/plans/DispatchLive.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/plans/DispatchRuns.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/features/plans/PlanView.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/features/plans/RunsPage.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 2
+    }
+  },
+  "src/features/profiles/McpGrants.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/profiles/McpServerForm.tsx": {
+    "no-restricted-syntax": {
+      "count": 11
+    }
+  },
+  "src/features/profiles/McpServerView.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/profiles/ProfileForm.tsx": {
+    "no-restricted-syntax": {
+      "count": 12
+    }
+  },
+  "src/features/profiles/ProfileView.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/features/projects/NewProjectForm.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/projects/ProjectEditor.tsx": {
+    "no-restricted-syntax": {
+      "count": 10
+    }
+  },
+  "src/features/projects/ProjectsPage.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/settings/SettingsPage.tsx": {
+    "no-restricted-syntax": {
+      "count": 8
+    }
+  },
+  "src/widgets/ConfirmCard.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/widgets/ProjectWidget.tsx": {
+    "no-restricted-syntax": {
+      "count": 6
+    }
+  },
+  "src/widgets/ProjectsWidget.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/widgets/card/marks.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  }
+}

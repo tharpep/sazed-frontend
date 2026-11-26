@@ -294,7 +294,6 @@ true satisfies Same<z.infer<typeof pullRequestView>, PullRequestView>;
 
 export interface WidgetDef {
   // Erased here because the catalog is heterogeneous; widget() has already checked the pair.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: React.ComponentType<any>;
   props: z.ZodType;
   ownership: "locked" | "ambient" | "agent" | "system";
