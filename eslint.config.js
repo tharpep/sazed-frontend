@@ -43,6 +43,10 @@ export default defineConfig([
               message: "Off the type scale. Use text-caption, text-meta, text-body, text-title or text-heading.",
             },
             {
+              pattern: `${VARIANTS}text-\\[[0-9.]+(px|rem|em)\\]${MODIFIER}`,
+              message: "Off the type scale. Use text-caption, text-meta, text-body, text-title or text-heading.",
+            },
+            {
               pattern: `${VARIANTS}bg-muted${MODIFIER}`,
               message: "Here `muted` is a text colour. Use bg-raised.",
             },
