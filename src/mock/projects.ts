@@ -82,6 +82,8 @@ function card(spec: CardSpec, repo: string, workstream: string): ProjectCard {
     plan_id: null,
     plan_section: null,
     plan_version: null,
+    plan_approval: next === "Ready to start" ? { at: ago(20), by: "pryce", plan: null, version: null, section: null, changed_since: false } : null,
+    started: null,
   };
 }
 
@@ -178,7 +180,7 @@ const FIXTURES: Project[] = [
       ["Check service", "done", "Runs the repo's CI locally before a PR.", [["Check runner", "done", "", 36], ["Result schema", "done", "", 37]]],
       ["Bake-offs", "done", "Compare models on the same task.", [["Bake-off runner", "done", "", 39], ["Scoring", "done"], ["Promote winner", "done"], ["Report page", "done"]]],
       ["Learning v1", "done", "Write results back as learnings.", [["Learning store", "done", "", 41], ["Guard queue", "done"]]],
-      ["Router + thread map", "next", "Pick who handles each event.", [["Spike: who may originate work", "next", "Read the webhook sources and list them"], ["Allowed-originator rule in /events", "next", "Reject events from unknown sources"], ["Thread map", "next", "Map events to open threads"]]],
+      ["Router + thread map", "next", "Pick who handles each event.", [["Spike: who may originate work", "next", "Ready to start"], ["Allowed-originator rule in /events", "next", "Plan to approve"], ["Thread map", "next", "Plan to approve"]]],
       ["Advisor + watchdog", "blocked", "A second opinion and a stuck-job alarm.", [["Advisor call", "inbox"], ["Watchdog timer", "inbox"]], ["Router + thread map"]],
       ["Views", "planned", "Console and Kelsier views of threads.", [["Thread list view", "inbox"]]],
     ]

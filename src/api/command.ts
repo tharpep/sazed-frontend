@@ -1,3 +1,5 @@
+import * as z from "zod";
+
 import { apiFetch } from "./client";
 import type { PrSnapshot, ProjectCard } from "./projects";
 import { mockingSessions, readSessionFields, type Session, type SessionHealth } from "./sessions";
@@ -51,6 +53,9 @@ export interface CommandSummary {
   // Both absent from a Sazed before slice 3 (sazed#212).
   sessions?: Session[];
   session_health?: SessionHealth;
+  // Both absent from a Sazed before slice 4 (migration 041).
+  plans_to_approve?: ProjectCard[];
+  ready_to_start?: number;
 }
 
 // The card views below take stage and kind as plain strings and every PR detail as optional, so a
@@ -102,9 +107,23 @@ export interface PullRequestView extends Pick<ProjectCard, "id" | "title" | "nex
   open_url?: string | null;
 }
 
+// Each card needs only what a Waiting row reads to render; the rest passes through.
+const planCard = z.looseObject({ id: z.string(), title: z.string(), next: z.string(), updated_at: z.string() });
+
+/** The slice 4 keys, read so that an older Sazed, or a malformed value, leaves both absent and one
+ * malformed card drops alone. */
+export const planFields = z.object({
+  plans_to_approve: z
+    .array(z.unknown())
+    .transform((cards) => cards.flatMap((c) => (planCard.safeParse(c).success ? [c as ProjectCard] : [])))
+    .optional()
+    .catch(undefined),
+  ready_to_start: z.number().int().nonnegative().optional().catch(undefined),
+});
+
 export async function getCommand(): Promise<CommandSummary> {
   const raw = (await apiFetch("/board/command")) as CommandSummary;
-  const command = { ...raw, ...readSessionFields(raw) };
+  const command = { ...raw, ...readSessionFields(raw), ...planFields.parse(raw) };
   if (import.meta.env.DEV && mockingSessions()) return { ...command, ...(await import("@/mock/sessions")).mockSessionFields() };
   return command;
 }

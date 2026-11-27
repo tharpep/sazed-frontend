@@ -37,7 +37,20 @@ export interface Session {
   card: { id: string; title: string; stage: string; next: string } | null;
   project: { slug: string; title: string } | null;
   pr: unknown;
+  /** "orchestrator" or null; absent from a Sazed before slice 4. */
+  role?: string | null;
 }
+
+const CLAUDE_CODE = "https://claude.ai/code";
+
+/** Where "Talk to orchestrator" and "Open in Claude" go. Check A0 has not shown that a hook's
+ * session id is the id in `claude.ai/code/<id>`, so every session opens the session list; once it
+ * does, return `${CLAUDE_CODE}/${session.session_id}`. */
+export function claudeLink(_session: Pick<Session, "session_id">): string {
+  return CLAUDE_CODE;
+}
+
+export const isOrchestrator = (session: Pick<Session, "role"> | null | undefined): boolean => session?.role === "orchestrator";
 
 export interface SessionStep {
   /** Unix seconds from the hook; display times use `at`. */
@@ -125,6 +138,7 @@ export function readSession(raw: unknown): Session | null {
     status: str(s.status) ?? "",
     doing: str(s.doing),
     doing_source: str(s.doing_source),
+    role: str(s.role) ?? undefined,
     question:
       question && typeof question === "object"
         ? { text: str(question.text) ?? "", agent_id: str(question.agent_id), asked_at: str(question.asked_at) ?? s.last_heard_at }

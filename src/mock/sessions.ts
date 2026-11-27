@@ -1,3 +1,4 @@
+import type { ProjectCard } from "@/api/projects";
 import type { Session, SessionAgent, SessionDetail, SessionHealth, SessionStep } from "@/api/sessions";
 
 // Fixtures in the slice 3 contract's shape, served in dev when localStorage "sazed-mock-sessions"
@@ -43,6 +44,7 @@ function card(id: string, title: string) {
 export function mockSessions(): Session[] {
   return [
     session(RUNNING, {
+      role: "orchestrator",
       branch: "feature/registry",
       doing: "Task 4 of 6: worker side of the registry",
       doing_source: "task",
@@ -97,8 +99,56 @@ export function mockSessions(): Session[] {
   ];
 }
 
-export function mockSessionFields(): { sessions: Session[]; session_health: SessionHealth } {
+function planCard(n: number, title: string, section: string): ProjectCard {
   return {
+    id: `item:5c2f0000-0000-4000-8000-00000000000${n}`,
+    kind: "item",
+    source: "backlog",
+    title,
+    stage: "next",
+    next: "Plan to approve",
+    updated_at: iso(n * 3600),
+    done_at: null,
+    session_link: null,
+    pr: null,
+    repo: "sazed-worker",
+    item_type: "planned",
+    effort: null,
+    impact: null,
+    rank: n,
+    workstream_id: "agent-stack-ws6",
+    actions: [],
+    job_id: null,
+    job_status: null,
+    ci_state: null,
+    fix_count: null,
+    pr_number: null,
+    pr_url: null,
+    pr_draft: null,
+    plan_id: "plan-p17",
+    plan_section: section,
+    plan_version: 11,
+    plan_approval: null,
+    started: null,
+  };
+}
+
+/** Slice 4's keys on the command: four plans to approve, so Waiting shows three and "1 more". */
+export function mockPlanFields(): { plans_to_approve: ProjectCard[]; ready_to_start: number } {
+  return {
+    plans_to_approve: [
+      planCard(1, "Dispatch launches agents through the worker's adapter contract", "seam-2"),
+      planCard(2, "Stuck detection fires on a dispatch task", "seam-3"),
+      planCard(3, "A dispatch run shows its profile and adapter", "seam-3"),
+      planCard(4, "Jobs and dispatch share one run-state word list", "seam-4"),
+    ],
+    ready_to_start: 2,
+  };
+}
+
+export function mockSessionFields(): { sessions: Session[]; session_health: SessionHealth } & ReturnType<typeof mockPlanFields> {
+  return {
+    ...mockPlanFields(),
     sessions: mockSessions(),
     session_health: {
       silent_after_s: 900,

@@ -176,6 +176,23 @@ const projectCard = z.object({
   plan_id: z.string().nullable(),
   plan_section: z.string().nullable(),
   plan_version: z.number().nullable(),
+  plan_approval: z
+    .object({
+      at: z.string(),
+      by: z.string().describe("pryce or agent:<name>"),
+      plan: z.string().nullable(),
+      version: z.number().nullable(),
+      section: z.string().nullable(),
+      changed_since: z.boolean(),
+    })
+    .nullable()
+    .optional()
+    .describe("Who approved the card's plan; absent from payloads before slice 4"),
+  started: z
+    .object({ at: z.string(), by: z.string().describe("pryce or agent:<name>") })
+    .nullable()
+    .optional()
+    .describe("Who started the card; absent from payloads before slice 4"),
 });
 
 const workstream = z.object({
