@@ -18,8 +18,7 @@ export function becauseText(reason: string | null): string {
 }
 
 export function isFresh(note: Pick<Note, "time">, now: Date): boolean {
-  const age = now.getTime() - new Date(note.time).getTime();
-  return age >= 0 && age < DAY_MS;
+  return now.getTime() - new Date(note.time).getTime() < DAY_MS;
 }
 
 export function filedText(

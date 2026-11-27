@@ -67,8 +67,9 @@ describe("isFresh", () => {
     expect(isFresh(at(48 * HOUR), NOW)).toBe(false);
   });
 
-  it("is false for a time after now", () => {
-    expect(isFresh(at(-HOUR), NOW)).toBe(false);
+  it("is true for a time after now, so a device clock behind the server still shows a new note's filed line", () => {
+    expect(isFresh(at(-30 * 1000), NOW)).toBe(true);
+    expect(isFresh(at(-HOUR), NOW)).toBe(true);
   });
 });
 
