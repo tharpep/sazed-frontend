@@ -43,7 +43,7 @@ interface Props {
 }
 
 const field =
-  "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus-visible:border-primary";
+  "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-body text-ink outline-none placeholder:text-muted focus-visible:border-primary";
 
 const FOOTER_BUTTON = "h-11 min-w-24 flex-1 px-4 sm:h-8 sm:flex-none";
 const BODY_BUTTON = "h-11 px-3 sm:h-7 sm:px-2.5";
@@ -112,6 +112,12 @@ export function BacklogSheet({
     setError(refused);
     setBusy(false);
     setPending(null);
+  }
+
+  // The form starts fresh: a refusal from a plan write says nothing about the worker job.
+  function openJobForm() {
+    setError(null);
+    setApproving(true);
   }
 
   const isOpen = item !== null && isOpenStatus(item.status);
@@ -198,7 +204,7 @@ export function BacklogSheet({
             : isOpen
               ? [
                   footerButton("Dismiss", () => act(() => updateBacklogItem(item.id, { status: "dismissed" }))),
-                  footerButton("Approve", () => setApproving(true), { primary: true }),
+                  footerButton("Approve", openJobForm, { primary: true }),
                 ]
               : item.status === "approved"
                 ? [footerButton("Mark done", () => act(() => updateBacklogItem(item.id, { status: "done" })))]
@@ -208,7 +214,7 @@ export function BacklogSheet({
   const footer = footerButtons.length > 0 && (
     <>
       {error && (
-        <p role="alert" className="basis-full text-sm [overflow-wrap:anywhere] text-destructive">
+        <p role="alert" className="basis-full text-body [overflow-wrap:anywhere] text-destructive">
           {error}
         </p>
       )}
@@ -247,7 +253,7 @@ export function BacklogSheet({
       onClose={onClose}
       footer={footer || undefined}
     >
-      {!item && loading && <p className="text-sm text-muted">Loading the card…</p>}
+      {!item && loading && <p className="text-body text-muted">Loading the card…</p>}
       {item && (
         <>
           {step && card && (
@@ -255,20 +261,20 @@ export function BacklogSheet({
               <PlanStrip step={step} card={card} />
               {cardPlan?.text && (
                 <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-medium text-ink">The plan</h3>
-                  <div className="prose-journal line-clamp-[12] text-sm">
+                  <h3 className="text-body font-medium text-ink">The plan</h3>
+                  <div className="prose-journal line-clamp-[12] text-body">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{cardPlan.text}</ReactMarkdown>
                   </div>
                 </div>
               )}
-              {asking && isOpen && <p className="text-xs text-muted">Approving says the design is right. It does not start anything.</p>}
+              {asking && isOpen && <p className="text-caption text-muted">Approving says the design is right. It does not start anything.</p>}
               {step === "started" && card.next === PLAN_NEXT.started && (
-                <p className="text-xs text-muted">Waiting for an orchestrator to pick it up from the board.</p>
+                <p className="text-caption text-muted">Waiting for an orchestrator to pick it up from the board.</p>
               )}
               {isOpen && !approving && (
                 <div className="flex flex-wrap items-center gap-2">
                   {jobPath && (
-                    <Button size="sm" variant="outline" className={BODY_BUTTON} disabled={busy} onClick={() => setApproving(true)}>
+                    <Button size="sm" variant="outline" className={BODY_BUTTON} disabled={busy} onClick={openJobForm}>
                       or run it as one worker job
                     </Button>
                   )}
@@ -298,12 +304,12 @@ export function BacklogSheet({
             </section>
           )}
 
-          {error && !footer && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && !footer && <p role="alert" className="text-body text-destructive">{error}</p>}
 
           {item.session_label && (
             // Inline text with a no-break space before each dot, so a wrapped line ends on the
             // separator and never starts with one.
-            <p className="text-xs [overflow-wrap:anywhere] text-muted">
+            <p className="text-caption [overflow-wrap:anywhere] text-muted">
               <span>Session {sessionLabel(item.session_label)}</span>
               {item.session_branch && (
                 <>
@@ -336,25 +342,25 @@ export function BacklogSheet({
           )}
 
           {item.summary && (
-            <section aria-label="What it is" className="prose-journal text-sm">
+            <section aria-label="What it is" className="prose-journal text-body">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.summary}</ReactMarkdown>
             </section>
           )}
           {item.why && (
             <section aria-label="Why" className="flex flex-col gap-1">
-              <h3 className="text-sm font-medium text-ink">Why</h3>
-              <div className="prose-journal text-sm">
+              <h3 className="text-body font-medium text-ink">Why</h3>
+              <div className="prose-journal text-body">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.why}</ReactMarkdown>
               </div>
             </section>
           )}
-          {item.repos.length > 0 && <p className="text-xs text-muted">Repos: {item.repos.join(", ")}</p>}
+          {item.repos.length > 0 && <p className="text-caption text-muted">Repos: {item.repos.join(", ")}</p>}
           {item.sources.length > 0 && (
             <section aria-label="Sources" className="flex flex-col gap-1">
-              <h3 className="text-sm font-medium text-ink">Sources</h3>
+              <h3 className="text-body font-medium text-ink">Sources</h3>
               <ul className="flex flex-col gap-1">
                 {item.sources.map((url) => (
-                  <li key={url} className="min-w-0 truncate text-xs">
+                  <li key={url} className="min-w-0 truncate text-caption">
                     <a href={url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
                       {url.replace(/^https?:\/\/(www\.)?/, "")}
                     </a>
@@ -363,7 +369,7 @@ export function BacklogSheet({
               </ul>
             </section>
           )}
-          {item.note && <p className="text-sm text-muted">Your note: {item.note}</p>}
+          {item.note && <p className="text-body text-muted">Your note: {item.note}</p>}
 
           {item.job_id && (
             <div className="flex flex-wrap items-center gap-2">
@@ -372,7 +378,7 @@ export function BacklogSheet({
                   href={item.job_meta.pr_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm text-primary hover:bg-surface sm:min-h-8"
+                  className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-body text-primary hover:bg-surface sm:min-h-8"
                 >
                   Open PR #{item.job_meta.pr_number} on GitHub
                 </a>
@@ -380,13 +386,13 @@ export function BacklogSheet({
               <Button size="sm" variant="outline" className={BODY_BUTTON} onClick={() => onOpenJob(item.job_id!)}>
                 Open the job
               </Button>
-              {work && !item.job_meta?.pr_url && <span className="text-xs text-muted">{work}</span>}
+              {work && !item.job_meta?.pr_url && <span className="text-caption text-muted">{work}</span>}
             </div>
           )}
 
           {isOpen && approving && (
             <section aria-label="Approve" className="flex flex-col gap-2 rounded-lg border border-border p-3">
-              <label className="flex flex-col gap-1 text-sm text-ink">
+              <label className="flex flex-col gap-1 text-body text-ink">
                 Repo for the PR
                 <input
                   value={repo}
@@ -401,7 +407,7 @@ export function BacklogSheet({
                   ))}
                 </datalist>
               </label>
-              <label className="flex flex-col gap-1 text-sm text-ink">
+              <label className="flex flex-col gap-1 text-body text-ink">
                 Note for Claude Code (optional)
                 <textarea
                   value={note}
@@ -411,7 +417,7 @@ export function BacklogSheet({
                   className={cn(field, "resize-y")}
                 />
               </label>
-              <p className="text-xs text-muted">
+              <p className="text-caption text-muted">
                 Claude Code starts now on a copy of the repo; the bot opens a PR you review and merge.
               </p>
             </section>
@@ -419,7 +425,7 @@ export function BacklogSheet({
 
           {isOpen && !approving && (
             <section aria-label="Priority" className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2">
-              <span className="mr-auto text-sm text-ink">
+              <span className="mr-auto text-body text-ink">
                 {item.rank != null ? (
                   <>
                     Priority <span className="font-medium">#{item.rank}</span>
@@ -458,7 +464,7 @@ export function BacklogSheet({
           )}
 
           {item.status === "dismissed" && (
-            <p className="text-xs text-muted">Kept on record so the scout won't suggest it again.</p>
+            <p className="text-caption text-muted">Kept on record so the scout won't suggest it again.</p>
           )}
         </>
       )}

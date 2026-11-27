@@ -110,7 +110,7 @@ const toBoard = () => goTo({ hub: "work", view: "board" });
 /** The Ready to start line, or null when no card is ready. */
 export function readyText(count: number | undefined): string | null {
   if (!count) return null;
-  return `Ready to start: ${count} ${count === 1 ? "card" : "cards"} with approved plans.`;
+  return count === 1 ? "Ready to start: 1 card with an approved plan." : `Ready to start: ${count} cards with approved plans.`;
 }
 
 interface Props {

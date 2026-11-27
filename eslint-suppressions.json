@@ -219,9 +219,6 @@
     }
   },
   "src/features/backlog/BacklogSheet.tsx": {
-    "better-tailwindcss/no-restricted-classes": {
-      "count": 17
-    },
     "no-restricted-syntax": {
       "count": 2
     }

@@ -184,7 +184,7 @@ describe("Ready to start line", () => {
   it("hides at 0 and when absent, and counts otherwise", () => {
     expect(readyText(0)).toBeNull();
     expect(readyText(undefined)).toBeNull();
-    expect(readyText(1)).toBe("Ready to start: 1 card with approved plans.");
+    expect(readyText(1)).toBe("Ready to start: 1 card with an approved plan.");
     expect(readyText(5)).toBe("Ready to start: 5 cards with approved plans.");
   });
 });
