@@ -22,7 +22,7 @@ import { SUB_CHOICES, useNavStore, useSub, type SubValue } from "@/store/navStor
 import { BacklogSheet } from "./BacklogSheet";
 import { CardRow, CardTile, type CardView } from "./BoardCards";
 import { TYPE_LABEL, ageLabel, isOpenStatus } from "./format";
-import { NEXT_LIMIT, STAGES, backlogId, groupByStage, olderDone, openingStage, shownNext, type StageInfo } from "./stages";
+import { NEXT_LIMIT, STAGES, backlogId, groupByStage, olderDone, openingStage, rowStartsJob, shownNext, type StageInfo } from "./stages";
 
 const REFRESH_MS = 15_000;
 const OPEN_REFRESH_MS = 60_000;
@@ -236,7 +236,7 @@ export function BacklogPage() {
     const id = backlogId(card);
     const item = id ? openById.get(id) : undefined;
     const dismissible = item !== undefined && isOpenStatus(item.status);
-    const approvable = dismissible && item.repos.length === 1 && (card.stage === "inbox" || card.stage === "next");
+    const approvable = dismissible && rowStartsJob(card, item);
     const type = card.item_type ? TYPE_LABEL[card.item_type as BacklogType] ?? card.item_type : null;
     return {
       key: card.id,
@@ -468,6 +468,7 @@ export function BacklogPage() {
           close();
           setJobId(id);
         }}
+        onCardChanged={() => reload()}
       />
       <JobSheet jobId={jobId} onClose={() => setJobId(null)} onChanged={reload} onOpenJob={setJobId} />
     </Page>

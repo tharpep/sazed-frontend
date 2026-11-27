@@ -7,13 +7,11 @@ import { DetailPanel } from "@/components/shell/DetailPanel";
 import { cn } from "@/lib/utils";
 import {
   approveBacklogItem,
-  approvePlan,
   moveBacklogItem,
-  startCard,
+  planWrite,
   updateBacklogItem,
-  withdrawStep,
   type BacklogItem,
-  type PlanStateResult,
+  type PlanAction,
 } from "@/api/backlog";
 import { errorText } from "@/api/homelab";
 import type { ProjectCard } from "@/api/projects";
@@ -38,8 +36,8 @@ interface Props {
   onClose: () => void;
   onChanged: (item: BacklogItem) => void;
   onOpenJob: (id: string) => void;
-  /** A plan-state route answered with the card as it stands now. */
-  onCardChanged?: (card: ProjectCard) => void;
+  /** A plan-state route answered, or a refusal reloaded the card: the page reloads its cards. */
+  onCardChanged: (card: ProjectCard) => void;
   /** The card's live session when it says it is an orchestrator. */
   orchestrator?: Pick<Session, "session_id"> | null;
 }
@@ -52,7 +50,7 @@ const BODY_BUTTON = "h-11 px-3 sm:h-7 sm:px-2.5";
 
 export function BacklogSheet({
   item,
-  card,
+  card: cardProp,
   liveSessionId = null,
   loading = false,
   rankedCount,
@@ -95,18 +93,25 @@ export function BacklogSheet({
     }
   }
 
-  async function actCard(fn: () => Promise<PlanStateResult>) {
+  // The card a plan-state route answered with, shown until the page's own copy is replaced.
+  const [answered, setAnswered] = useState<ProjectCard | null>(null);
+  useEffect(() => setAnswered(null), [cardProp]);
+  const card = answered && item && answered.id === `item:${item.id}` ? answered : cardProp;
+  const [pending, setPending] = useState<PlanAction | null>(null);
+
+  async function actCard(action: PlanAction) {
     const id = item?.id;
+    if (!id) return;
     setBusy(true);
+    setPending(action);
     setError(null);
-    try {
-      const result = await fn();
-      if (result.card) onCardChanged?.(result.card);
-    } catch (err) {
-      if (shownId.current === id) setError(errorText(err));
-    } finally {
-      if (shownId.current === id) setBusy(false);
-    }
+    const { card: next, error: refused } = await planWrite(action, id);
+    if (next) onCardChanged(next);
+    if (shownId.current !== id) return;
+    if (next) setAnswered(next);
+    setError(refused);
+    setBusy(false);
+    setPending(null);
   }
 
   const isOpen = item !== null && isOpenStatus(item.status);
@@ -182,12 +187,12 @@ export function BacklogSheet({
       : isOpen && asking
         ? [
             ...(cardPlan ? [footerButton("Open plan section", () => openPlanSection(cardPlan.slug, card?.plan_section ?? null))] : []),
-            footerButton(busy ? "Approving…" : step === "stale" ? "Approve plan again" : "Approve plan", () => actCard(() => approvePlan(item.id)), {
+            footerButton(pending === "approve" ? "Approving…" : step === "stale" ? "Approve plan again" : "Approve plan", () => actCard("approve"), {
               primary: true,
             }),
           ]
         : isOpen && step === "ready"
-          ? [footerButton(busy ? "Starting…" : "Start", () => actCard(() => startCard(item.id)), { primary: true })]
+          ? [footerButton(pending === "start" ? "Starting…" : "Start", () => actCard("start"), { primary: true })]
           : isOpen && step === "started"
             ? []
             : isOpen
@@ -199,8 +204,14 @@ export function BacklogSheet({
                 ? [footerButton("Mark done", () => act(() => updateBacklogItem(item.id, { status: "done" })))]
                 : [footerButton("Restore", () => act(() => updateBacklogItem(item.id, { status: "new" })))];
   const footerButtons = talk && !approving ? [...baseButtons, talk] : baseButtons;
+  // A write's error sits in the footer, beside the button that sent it, so a phone shows it in view.
   const footer = footerButtons.length > 0 && (
     <>
+      {error && (
+        <p role="alert" className="basis-full text-sm [overflow-wrap:anywhere] text-destructive">
+          {error}
+        </p>
+      )}
       <span className="hidden flex-1 sm:block" />
       {footerButtons}
     </>
@@ -262,30 +273,32 @@ export function BacklogSheet({
                     </Button>
                   )}
                   {card.started && (
-                    <Button size="sm" variant="ghost" className={BODY_BUTTON} disabled={busy} onClick={() => actCard(() => withdrawStep(item.id, "start"))}>
+                    <Button size="sm" variant="ghost" className={BODY_BUTTON} disabled={busy} onClick={() => actCard("withdraw-start")}>
                       Withdraw start
                     </Button>
                   )}
                   {card.plan_approval && (
-                    <Button size="sm" variant="ghost" className={BODY_BUTTON} disabled={busy} onClick={() => actCard(() => withdrawStep(item.id, "approval"))}>
+                    <Button size="sm" variant="ghost" className={BODY_BUTTON} disabled={busy} onClick={() => actCard("withdraw-approval")}>
                       Withdraw approval
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className={cn(BODY_BUTTON, "ml-auto")}
-                    disabled={busy}
-                    onClick={() => act(() => updateBacklogItem(item.id, { status: "dismissed" }))}
-                  >
-                    Dismiss
-                  </Button>
+                  {step !== "started" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={cn(BODY_BUTTON, "ml-auto")}
+                      disabled={busy}
+                      onClick={() => act(() => updateBacklogItem(item.id, { status: "dismissed" }))}
+                    >
+                      Dismiss
+                    </Button>
+                  )}
                 </div>
               )}
             </section>
           )}
 
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && !footer && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
           {item.session_label && (
             // Inline text with a no-break space before each dot, so a wrapped line ends on the

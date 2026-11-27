@@ -21,7 +21,7 @@ import { AskField } from "./AskField";
 import { Done } from "./Done";
 import { LinkRows, ProjectsBox, ShippedBox, TodayBox, TodayLine } from "./HomeSide";
 import { askFromHome, goTo, openSystem } from "./homeNav";
-import { NeedsYou } from "./NeedsYou";
+import { NeedsYou, PLAN_ROWS } from "./NeedsYou";
 import { Ready } from "./Ready";
 import { Running } from "./Running";
 import { QuietLine, StaleBanner } from "./SessionHealth";
@@ -216,7 +216,10 @@ export function HomePage() {
   const runningCount = (working?.length ?? 0) + (sessions?.length ?? 0);
   // Only a Sazed that reports sessions can say nothing runs anywhere; an older one keeps today's groups.
   const plansWaiting = command?.plans_to_approve?.length ?? 0;
-  const quiet = !!command && !!health && needs!.length === 0 && plansWaiting === 0 && runningCount === 0;
+  const readyWaiting = command?.ready_to_start ?? 0;
+  const quiet = !!command && !!health && needs!.length === 0 && plansWaiting === 0 && readyWaiting === 0 && runningCount === 0;
+  // The same rule as the Needs you group: its cards, session questions and the plan rows it shows.
+  const needYou = (needs?.length ?? 0) + asked + Math.min(plansWaiting, PLAN_ROWS);
   // A session with a card opens the card, which holds its agents; one with none opens its own steps.
   const openSession = (s: Session) =>
     s.card ? openCardSheet({ id: s.card.id, kind: "item", job_id: null }) : setOpenAgent({ session: s.session_id, agent: null });
@@ -265,8 +268,8 @@ export function HomePage() {
         <p className="mt-0.5 mb-2 text-body text-muted">
           {command ? (
             <>
-              <b className={needs!.length + asked ? "font-medium text-warn" : "font-medium text-ink"}>
-                {needs!.length + asked} {needs!.length + asked === 1 ? "needs" : "need"} you
+              <b className={needYou ? "font-medium text-warn" : "font-medium text-ink"}>
+                {needYou} {needYou === 1 ? "needs" : "need"} you
               </b>
               {" · "}
               <b className="font-medium text-ink">{runningCount} running</b>

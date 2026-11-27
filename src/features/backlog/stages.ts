@@ -19,6 +19,14 @@ export const STAGES: readonly StageInfo[] = [
 
 export const NEXT_LIMIT = 10;
 
+/** Whether a board row offers its one-click Approve, which starts a worker job at once. A card from
+ * a Sazed with plan states never does: approving its plan starts nothing, so its row opens the
+ * sheet, where the worker job sits behind Start. */
+export function rowStartsJob(card: Pick<ProjectCard, "stage" | "plan_approval">, item: Pick<BacklogItem, "status" | "repos"> | undefined): boolean {
+  if (card.plan_approval !== undefined) return false;
+  return item !== undefined && (item.status === "new" || item.status === "shortlisted") && item.repos.length === 1 && (card.stage === "inbox" || card.stage === "next");
+}
+
 export type StageGroups = Record<CardStage, ProjectCard[]>;
 
 /** Cards under their stage, for the picked type; a job card has no type, so only All shows it. */

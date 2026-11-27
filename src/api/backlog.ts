@@ -1,4 +1,5 @@
-import { apiFetch } from "./client";
+import { ApiError, apiFetch } from "./client";
+import { errorText } from "./homelab";
 import type { JobStatus } from "./jobs";
 import type { ProjectCard } from "./projects";
 
@@ -106,6 +107,26 @@ export const withdrawStep = (id: string, step: "start" | "approval") => planStat
 /** One card from the board, by its bare item id. */
 export async function getItemCard(id: string): Promise<ProjectCard> {
   return apiFetch(`/board/${encodeURIComponent(`item:${id}`)}`) as Promise<ProjectCard>;
+}
+
+export type PlanAction = "approve" | "start" | "withdraw-start" | "withdraw-approval";
+
+const PLAN_WRITES: Record<PlanAction, (id: string) => Promise<PlanStateResult>> = {
+  approve: approvePlan,
+  start: startCard,
+  "withdraw-start": (id) => withdrawStep(id, "start"),
+  "withdraw-approval": (id) => withdrawStep(id, "approval"),
+};
+
+/** One plan-state button's write: the card it answered with, or the refusal's reason. A 409 means
+ * the caller's picture is out of date, so the card is fetched again to show the truth. */
+export async function planWrite(action: PlanAction, id: string): Promise<{ card: ProjectCard | null; error: string | null }> {
+  try {
+    return { card: (await PLAN_WRITES[action](id)).card, error: null };
+  } catch (err) {
+    const fresh = err instanceof ApiError && err.status === 409 ? await getItemCard(id).catch(() => null) : null;
+    return { card: fresh, error: errorText(err) };
+  }
 }
 
 /** Set an open item's priority: 1 = top (others shift down), null takes it off the list. */

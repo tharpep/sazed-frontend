@@ -86,32 +86,31 @@ function PlanRow({ card, onChanged }: { card: ProjectCard; onChanged: () => void
   );
 }
 
-/** "Approve the plan" rows, at most PLAN_ROWS, then "N more" and the Ready to start line. */
-function PlanRows({ plans, readyToStart, onChanged }: { plans: ProjectCard[]; readyToStart?: number; onChanged: () => void }) {
-  const toBoard = () => goTo({ hub: "work", view: "board" });
+/** "Approve the plan" rows, at most PLAN_ROWS, then a link to the rest. */
+function PlanRows({ plans, onChanged }: { plans: ProjectCard[]; onChanged: () => void }) {
   const more = plans.length - PLAN_ROWS;
   return (
     <>
       {plans.slice(0, PLAN_ROWS).map((card) => (
         <PlanRow key={card.id} card={card} onChanged={onChanged} />
       ))}
-      {(more > 0 || readyToStart !== undefined) && (
-        <li className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2 pl-[34px] pr-1 text-meta text-muted sm:pr-3 sm:pl-[44px]">
-          {readyToStart !== undefined && (
-            <span className="inline-flex items-center gap-3">
-              Ready to start: {readyToStart} {readyToStart === 1 ? "card" : "cards"} with approved plans.
-              {readyToStart > 0 && <MoreLink onClick={toBoard}>Show</MoreLink>}
-            </span>
-          )}
-          {more > 0 && (
-            <MoreLink onClick={toBoard} className="ml-auto">
-              {more} more {more === 1 ? "plan" : "plans"} to approve
-            </MoreLink>
-          )}
+      {more > 0 && (
+        <li className="flex justify-end py-2 pr-1 text-meta sm:pr-3">
+          <MoreLink onClick={toBoard}>
+            {more} more {more === 1 ? "plan" : "plans"} to approve
+          </MoreLink>
         </li>
       )}
     </>
   );
+}
+
+const toBoard = () => goTo({ hub: "work", view: "board" });
+
+/** The Ready to start line, or null when no card is ready. */
+export function readyText(count: number | undefined): string | null {
+  if (!count) return null;
+  return `Ready to start: ${count} ${count === 1 ? "card" : "cards"} with approved plans.`;
 }
 
 interface Props {
@@ -127,117 +126,126 @@ interface Props {
 
 export function NeedsYou({ cards, onOpenJob, onChanged, onRuns = 0, plans = [], readyToStart }: Props) {
   const planRows = Math.min(plans.length, PLAN_ROWS);
+  const ready = readyText(readyToStart);
   return (
-    <Group
-      name="Needs you"
-      count={cards ? cards.length + onRuns + planRows : null}
-      empty="Nothing is waiting on you."
-      extra={
-        onRuns > 0 && (
-          <span className="text-meta font-normal text-muted">
-            {onRuns} {onRuns === 1 ? "sits on its run" : "sit on their runs"} below
-          </span>
-        )
-      }
-    >
-      <ul className="divide-y divide-line">
-        {orderMergeCalls(cards ?? []).map((card) => {
-          const asking = card.job_status === "needs_input";
-          const plan = dispatchPlan(card);
-          const bad = failed(card);
-          const kind = mergeKind(card);
-          const merge = kind ? card.pr! : null;
-          const open = card.job_id
-            ? () => onOpenJob(card.job_id!)
-            : plan
-              ? () => openDispatch(plan)
-              : merge
-                ? () => openCardSheet(card)
-                : null;
-          const old = merge ? oldSnapshotText(merge) : "";
-          const body = card.question ?? (merge ? mergeCallLine(merge) : card.next);
-          return (
-            <li
-              key={card.id}
-              onClick={open ?? undefined}
-              className={cn(
-                "grid grid-cols-[22px_minmax(0,1fr)] gap-x-2.5 px-1 pt-2.5 pb-3 sm:rounded-lg sm:px-3",
-                open && "cursor-pointer sm:hover:bg-surface"
-              )}
-            >
-              <span aria-hidden="true" className={cn("text-center font-mono text-[15px] leading-5", bad ? "text-err" : "text-warn")}>
-                {bad ? "!" : "✻"}
-              </span>
-              <div className="min-w-0">
-                <div className="text-body font-medium [overflow-wrap:anywhere] text-ink">{card.title}</div>
-                <div className="text-caption text-muted">
-                  {[card.repo, plan && `plan ${plan}`].filter(Boolean).map((part) => `${part} · `).join("")}
-                  {card.pr_url && !merge && (
-                    <>
+    <div className="min-w-0">
+      <Group
+        name="Needs you"
+        count={cards ? cards.length + onRuns + planRows : null}
+        empty="Nothing is waiting on you."
+        extra={
+          onRuns > 0 && (
+            <span className="text-meta font-normal text-muted">
+              {onRuns} {onRuns === 1 ? "sits on its run" : "sit on their runs"} below
+            </span>
+          )
+        }
+      >
+        <ul className="divide-y divide-line">
+          {orderMergeCalls(cards ?? []).map((card) => {
+            const asking = card.job_status === "needs_input";
+            const plan = dispatchPlan(card);
+            const bad = failed(card);
+            const kind = mergeKind(card);
+            const merge = kind ? card.pr! : null;
+            const open = card.job_id
+              ? () => onOpenJob(card.job_id!)
+              : plan
+                ? () => openDispatch(plan)
+                : merge
+                  ? () => openCardSheet(card)
+                  : null;
+            const old = merge ? oldSnapshotText(merge) : "";
+            const body = card.question ?? (merge ? mergeCallLine(merge) : card.next);
+            return (
+              <li
+                key={card.id}
+                onClick={open ?? undefined}
+                className={cn(
+                  "grid grid-cols-[22px_minmax(0,1fr)] gap-x-2.5 px-1 pt-2.5 pb-3 sm:rounded-lg sm:px-3",
+                  open && "cursor-pointer sm:hover:bg-surface"
+                )}
+              >
+                <span aria-hidden="true" className={cn("text-center font-mono text-[15px] leading-5", bad ? "text-err" : "text-warn")}>
+                  {bad ? "!" : "✻"}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-body font-medium [overflow-wrap:anywhere] text-ink">{card.title}</div>
+                  <div className="text-caption text-muted">
+                    {[card.repo, plan && `plan ${plan}`].filter(Boolean).map((part) => `${part} · `).join("")}
+                    {card.pr_url && !merge && (
+                      <>
+                        <a
+                          href={card.pr_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-primary hover:underline"
+                        >
+                          PR #{card.pr_number}
+                        </a>
+                        {" · "}
+                      </>
+                    )}
+                    {ago(card.updated_at)}
+                    {old && <span className="text-warn"> · snapshot {old}</span>}
+                  </div>
+                  {merge && kind && (
+                    <p className="mt-1.5 text-meta font-medium text-ink">
+                      {MERGE_LABEL[kind]}
+                      <span className="font-normal text-muted"> · {prName(merge)}</span>
+                    </p>
+                  )}
+                  {body && <p className={cn("text-meta [overflow-wrap:anywhere] text-ink-2", merge ? "mt-0.5" : "mt-1.5")}>{body}</p>}
+                  <div className="mt-2.5 flex flex-wrap items-start justify-end gap-2">
+                    {open && !asking && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className={TOUCH_BUTTON}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          open();
+                        }}
+                      >
+                        {card.job_id ? (bad ? "Log" : "Details") : plan ? "Open plan" : "Details"}
+                      </Button>
+                    )}
+                    {/* Merging stays on GitHub: the console only points there. */}
+                    {merge && (
                       <a
-                        href={card.pr_url}
+                        href={merge.url}
                         target="_blank"
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-primary hover:underline"
+                        className={cn(buttonVariants({ variant: "outline", size: "sm", className: TOUCH_BUTTON }))}
                       >
-                        PR #{card.pr_number}
+                        Open PR
                       </a>
-                      {" · "}
-                    </>
-                  )}
-                  {ago(card.updated_at)}
-                  {old && <span className="text-warn"> · snapshot {old}</span>}
+                    )}
+                    <CardActions
+                      key={asking ? "ask" : "act"}
+                      cardId={card.id}
+                      actions={card.actions}
+                      onDone={onChanged}
+                      openText={asking ? "answer" : null}
+                      touch
+                      className={asking ? "min-w-0 flex-1" : undefined}
+                    />
+                  </div>
                 </div>
-                {merge && kind && (
-                  <p className="mt-1.5 text-meta font-medium text-ink">
-                    {MERGE_LABEL[kind]}
-                    <span className="font-normal text-muted"> · {prName(merge)}</span>
-                  </p>
-                )}
-                {body && <p className={cn("text-meta [overflow-wrap:anywhere] text-ink-2", merge ? "mt-0.5" : "mt-1.5")}>{body}</p>}
-                <div className="mt-2.5 flex flex-wrap items-start justify-end gap-2">
-                  {open && !asking && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className={TOUCH_BUTTON}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        open();
-                      }}
-                    >
-                      {card.job_id ? (bad ? "Log" : "Details") : plan ? "Open plan" : "Details"}
-                    </Button>
-                  )}
-                  {/* Merging stays on GitHub: the console only points there. */}
-                  {merge && (
-                    <a
-                      href={merge.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className={cn(buttonVariants({ variant: "outline", size: "sm", className: TOUCH_BUTTON }))}
-                    >
-                      Open PR
-                    </a>
-                  )}
-                  <CardActions
-                    key={asking ? "ask" : "act"}
-                    cardId={card.id}
-                    actions={card.actions}
-                    onDone={onChanged}
-                    openText={asking ? "answer" : null}
-                    touch
-                    className={asking ? "min-w-0 flex-1" : undefined}
-                  />
-                </div>
-              </div>
-            </li>
-          );
-        })}
-        {cards && <PlanRows plans={plans} readyToStart={readyToStart} onChanged={onChanged} />}
-      </ul>
-    </Group>
+              </li>
+            );
+          })}
+          {cards && <PlanRows plans={plans} onChanged={onChanged} />}
+        </ul>
+      </Group>
+      {ready && (
+        <p className="flex flex-wrap items-center gap-x-3 px-1 py-1.5 text-meta text-muted sm:px-3">
+          {ready}
+          <MoreLink onClick={toBoard}>Show</MoreLink>
+        </p>
+      )}
+    </div>
   );
 }
