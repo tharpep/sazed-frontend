@@ -67,11 +67,16 @@ export function runRows(task: DispatchTask): DispatchRow[] {
   return task.rows.slice(cleaned + 1);
 }
 
+/** A run row's word: its phase, except a reaped task, whose phase stays failed, reads timed out. */
+export function rowState<P extends string>(row: { state: string; phase: P }): P | "timed_out" {
+  return row.state === "timed_out" ? "timed_out" : row.phase;
+}
+
 // A reaped task's phase stays failed and a task cleaned mid-run leaves no current rows, so
 // those two read from Sazed's run state.
 export function stateOf(task: DispatchTask): TaskState {
   const latest = last(runRows(task));
-  if (latest) return latest.state === "timed_out" ? "timed_out" : latest.phase;
+  if (latest) return rowState(latest);
   return last(task.rows)?.state === "cancelled" ? "cancelled" : "next";
 }
 

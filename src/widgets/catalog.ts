@@ -10,11 +10,13 @@ import type {
   WeatherData,
 } from "../api/display";
 import type { CardPr, NeedsYouItem, NeedsYouView, PullRequestView } from "../api/command";
+import type { DispatchCardTask, DispatchRunView } from "../api/dispatch";
 import type { Project } from "../api/projects";
 import { CalendarWidget } from "./CalendarWidget";
 import { ClockWidget } from "./ClockWidget";
 import { ConfirmCard } from "./ConfirmCard";
 import { ContainerWidget } from "./ContainerWidget";
+import { DispatchRunWidget } from "./DispatchRunWidget";
 import { EmailBadge } from "./EmailBadge";
 import { FinanceWidget } from "./FinanceWidget";
 import { GitHubWidget, type GitHubIssue } from "./GitHubWidget";
@@ -271,10 +273,44 @@ const needsYouItem = z.object({
 const needsYouView = z.object({
   needs: z.array(needsYouItem).describe("Needs-me cards and dispatch questions, trimmed to what the card draws"),
   needs_total: z.number().nullish().describe("How many needs there are when the list was cut"),
+  question_total: z.number().nullish().describe("Questions among all needs, listed or not"),
+  merge_total: z.number().nullish().describe("PRs ready to merge among all needs, listed or not"),
+  merge_reviewed: z.number().nullish().describe("Of merge_total, how many carry a review verdict"),
   working: z.array(z.object({ kind: z.string().describe("job or dispatch"), title: z.string(), elapsed_s: z.number() })),
+  working_total: z.number().nullish().describe("How many rows are running when the list was cut"),
   done: z.object({ succeeded: z.number(), failed: z.number(), window_hours: z.number().nullish() }),
   session_count: z.number().nullish().describe("Live Claude Code sessions"),
   open_url: z.string().nullish().describe("Console Home, https, in a ?page= or ?open= shape"),
+});
+
+const dispatchCardTask = z.object({
+  id: z.string(),
+  goal: z.string().describe("Its first sentence, at most 120 characters"),
+  depends_on: z.array(z.string()),
+  latest: z
+    .object({
+      state: z.string().describe("Sazed's run state: running, needs_input, succeeded, failed ..."),
+      phase: z.string().describe("dispatch's word: running, waiting, done, landed, failed ..."),
+      line: z.string(),
+      received_at: z.string().nullish(),
+    })
+    .nullish()
+    .describe("The current run's newest row; null before the task starts or after it was cleaned"),
+  question: z.string().nullish().describe("What an asking task wants to know"),
+  step: z.string().nullish().describe("The last tool step, at most 160 characters"),
+  tools: z.number().nullish(),
+  elapsed_s: z.number().nullish().describe("How long the current run has been going"),
+});
+
+const dispatchRunView = z.object({
+  plan: z.string(),
+  repo: z.string(),
+  tasks_total: z.number(),
+  updated_at: z.string().nullish(),
+  now: z.string().nullish().describe("Server time, for last heard"),
+  last_heard_at: z.string().nullish().describe("The newest received_at across the plan's rows and steps"),
+  tasks: z.array(dispatchCardTask),
+  open_url: z.string().nullish().describe("The plan in the console, https, as ?open=dispatch:<plan>"),
 });
 
 const prSnapshot = projectCard.shape.pr.unwrap().unwrap();
@@ -307,6 +343,8 @@ true satisfies Same<z.infer<typeof project>, Project>;
 true satisfies Same<z.infer<typeof needsYouItem>, NeedsYouItem>;
 true satisfies Same<z.infer<typeof needsYouView>, NeedsYouView>;
 true satisfies Same<z.infer<typeof cardPr>, CardPr>;
+true satisfies Same<z.infer<typeof dispatchCardTask>, DispatchCardTask>;
+true satisfies Same<z.infer<typeof dispatchRunView>, DispatchRunView>;
 true satisfies Same<z.infer<typeof pullRequestView>, PullRequestView>;
 
 export interface WidgetDef {
@@ -533,6 +571,14 @@ export const WIDGET_CATALOG = {
     describe: (p) => (p.pr ? `PR ${p.pr.repo}#${p.pr.number}: ${p.pr.state}` : `Card ${p.title}: no PR`),
     ownership: "agent",
     description: "One board card's pull request: the merge verdict, its checks, size and review; the card itself when it has no PR.",
+    live: false,
+  }),
+  DispatchRunWidget: widget({
+    component: DispatchRunWidget,
+    props: dispatchRunView,
+    describe: (p) => `Dispatch ${p.plan}: ${p.tasks.filter((t) => t.latest?.phase === "landed").length} of ${p.tasks_total} landed`,
+    ownership: "agent",
+    description: "One dispatch run: how many tasks landed, one square per task, the asking task's question, working tasks with their last step.",
     live: false,
   }),
 } satisfies Record<string, WidgetDef>;
