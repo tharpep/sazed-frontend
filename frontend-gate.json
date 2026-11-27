@@ -1,0 +1,30 @@
+{
+  "rawElements": {
+    "exempt": ["src/components/ui/**", "src/components/system/**"],
+    "use": {
+      "button": "Button from @/components/ui/button",
+      "input": "Input from @/components/ui/input (Checkbox or Switch for a toggle)",
+      "select": "Select from @/components/ui/select",
+      "textarea": "Textarea from @/components/ui/textarea",
+      "table": "Table from @/components/ui/table"
+    }
+  },
+  "classes": [
+    {
+      "pattern": "^([a-zA-Z0-9:/_\\[\\]&>.=-]*:)?!?text-(xs|sm|base|lg|xl|[2-9]xl)(\\/[^\\s!]+)?!?$",
+      "message": "Off the type scale. Use text-caption, text-meta, text-body, text-title or text-heading."
+    },
+    {
+      "pattern": "^([a-zA-Z0-9:/_\\[\\]&>.=-]*:)?!?text-\\[[0-9.]+(px|rem|em)\\](\\/[^\\s!]+)?!?$",
+      "message": "Off the type scale. Use text-caption, text-meta, text-body, text-title or text-heading."
+    },
+    {
+      "pattern": "^([a-zA-Z0-9:/_\\[\\]&>.=-]*:)?!?bg-muted(\\/[^\\s!]+)?!?$",
+      "message": "Here `muted` is a text colour. Use bg-raised."
+    },
+    {
+      "pattern": "^([a-zA-Z0-9:/_\\[\\]&>.=-]*:)?!?bg-accent(\\/[^\\s!]+)?!?$",
+      "message": "Here `accent` is the warn colour. Use bg-raised."
+    }
+  ]
+}
