@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { planWrite } from "@/api/backlog";
 import { planFields } from "@/api/command";
 import type { ProjectCard } from "@/api/projects";
 import { claudeLink, readSessionFields } from "@/api/sessions";
@@ -7,7 +8,10 @@ import { mockProject } from "@/mock/projects";
 import { getWidget } from "@/widgets/catalog";
 import { actorWord, PLAN_NEXT, planStep } from "@/widgets/projectWork";
 
+import { readyText } from "@/features/home/NeedsYou";
+
 import { stripCells } from "./PlanStrip";
+import { rowStartsJob } from "./stages";
 
 const project = mockProject("agent-stack")!;
 const anyCard = project.workstreams.flatMap((w) => w.cards ?? [])[0];
@@ -67,26 +71,22 @@ describe("plan strip", () => {
 describe("old shapes under the new schemas", () => {
   const schema = getWidget("ProjectWidget")!.props;
 
-  it("parse a project whose cards predate plan_approval and started", () => {
-    const older = {
-      ...project,
-      workstreams: project.workstreams.map((w) => ({
-        ...w,
-        cards: w.cards?.map(({ plan_approval: _a, started: _s, ...c }) => c),
-      })),
-    };
-    expect(schema.safeParse(older).success).toBe(true);
+  const withCards = (map: (c: ProjectCard) => object) => ({
+    ...project,
+    workstreams: project.workstreams.map((w) => ({ ...w, cards: w.cards?.map(map) })),
+  });
+  const firstCard = (parsed: unknown) => (parsed as typeof project).workstreams.find((w) => w.cards?.length)!.cards![0];
+
+  it("parse a project whose cards predate plan_approval and started, and refuse a malformed one", () => {
+    expect(schema.safeParse(withCards(({ plan_approval: _a, started: _s, ...c }) => c)).success).toBe(true);
+    expect(schema.safeParse(withCards((c) => ({ ...c, plan_approval: { at: "x", by: 5 } }))).success).toBe(false);
+    expect(schema.safeParse(withCards((c) => ({ ...c, started: { by: "pryce" } }))).success).toBe(false);
   });
 
-  it("parse a project whose cards carry both", () => {
-    const newer = {
-      ...project,
-      workstreams: project.workstreams.map((w) => ({
-        ...w,
-        cards: w.cards?.map((c) => ({ ...c, plan_approval: approval({ by: "agent:orch" }), started })),
-      })),
-    };
-    expect(schema.safeParse(newer).success).toBe(true);
+  it("parse a project whose cards carry both, and keep them", () => {
+    const parsed = schema.parse(withCards((c) => ({ ...c, plan_approval: approval({ by: "agent:orch" }), started })));
+    expect(firstCard(parsed).plan_approval).toEqual(approval({ by: "agent:orch" }));
+    expect(firstCard(parsed).started).toEqual(started);
   });
 
   it("read an old command as having neither plan key", () => {
@@ -111,5 +111,80 @@ describe("old shapes under the new schemas", () => {
 describe("link out", () => {
   it("opens the Claude Code session list until check A0 picks the per-session URL", () => {
     expect(claudeLink({ session_id: "7c0e5a7e" })).toBe("https://claude.ai/code");
+  });
+});
+
+describe("plan-state writes", () => {
+  const path = (url: string) => decodeURIComponent(new URL(url, "http://sazed.test").pathname);
+  const sent: { url: string; method: string; body: unknown }[] = [];
+  let answer: (url: string) => Response;
+
+  beforeEach(() => {
+    sent.length = 0;
+    vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
+      sent.push({ url, method: init?.method ?? "GET", body: init?.body ? JSON.parse(String(init.body)) : null });
+      return answer(url);
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+
+  it.each([
+    ["approve", "/backlog/abc/approve-plan", { by: "pryce" }],
+    ["start", "/backlog/abc/start", { by: "pryce" }],
+    ["withdraw-start", "/backlog/abc/withdraw", { by: "pryce", step: "start" }],
+    ["withdraw-approval", "/backlog/abc/withdraw", { by: "pryce", step: "approval" }],
+  ] as const)("%s posts to its route as the owner", async (action, route, body) => {
+    answer = () => ok({ changed: true, card: card({}) });
+    const result = await planWrite(action, "abc");
+    expect(sent).toHaveLength(1);
+    expect(sent[0].method).toBe("POST");
+    expect(path(sent[0].url)).toBe(route);
+    expect(sent[0].body).toEqual(body);
+    expect(result.error).toBeNull();
+    expect(result.card?.id).toBe("item:x");
+  });
+
+  it("a 409 shows its reason and reloads the card", async () => {
+    const reason = "the card's plan or section changed since approval; approve it again";
+    const fresh = card({ next: PLAN_NEXT.stale, plan_approval: approval({ changed_since: true }) });
+    answer = (url) =>
+      url.endsWith("/start") ? new Response(JSON.stringify({ detail: reason }), { status: 409 }) : ok(fresh);
+    const result = await planWrite("start", "abc");
+    expect(result.error).toBe(reason);
+    expect(sent.map((r) => `${r.method} ${path(r.url)}`)).toEqual(["POST /backlog/abc/start", "GET /board/item:abc"]);
+    expect(result.card && planStep(result.card)).toBe("stale");
+  });
+
+  it("another refusal shows its reason without a reload", async () => {
+    answer = () => new Response(JSON.stringify({ detail: "only pryce can withdraw an approval or a start" }), { status: 403 });
+    const result = await planWrite("withdraw-start", "abc");
+    expect(result).toEqual({ card: null, error: "only pryce can withdraw an approval or a start" });
+    expect(sent).toHaveLength(1);
+  });
+});
+
+describe("board rows", () => {
+  const open = { status: "shortlisted" as const, repos: ["tharpep/sazed"] };
+
+  it("never offer the one-click job start on a card with plan states", () => {
+    expect(rowStartsJob(card({}), open)).toBe(false);
+    expect(rowStartsJob(card({ next: PLAN_NEXT.ready, plan_approval: approval() }), open)).toBe(false);
+  });
+
+  it("keep it for a card from a Sazed before slice 4", () => {
+    const { plan_approval: _a, started: _s, ...old } = card({});
+    expect(rowStartsJob(old, open)).toBe(true);
+    expect(rowStartsJob(old, { ...open, repos: [] })).toBe(false);
+  });
+});
+
+describe("Ready to start line", () => {
+  it("hides at 0 and when absent, and counts otherwise", () => {
+    expect(readyText(0)).toBeNull();
+    expect(readyText(undefined)).toBeNull();
+    expect(readyText(1)).toBe("Ready to start: 1 card with approved plans.");
+    expect(readyText(5)).toBe("Ready to start: 5 cards with approved plans.");
   });
 });
