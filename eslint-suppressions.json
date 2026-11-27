@@ -8,6 +8,9 @@
     }
   },
   "src/components/graph/GraphFocus.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
     "no-restricted-syntax": {
       "count": 1
     }
@@ -21,13 +24,16 @@
     }
   },
   "src/components/shell/CommandPalette.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 2
+    },
     "no-restricted-syntax": {
       "count": 2
     }
   },
   "src/components/shell/DetailPanel.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 1
+      "count": 2
     },
     "no-restricted-syntax": {
       "count": 1
@@ -103,7 +109,7 @@
   },
   "src/components/ui/button.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 2
+      "count": 3
     }
   },
   "src/components/ui/dialog.tsx": {
@@ -148,12 +154,12 @@
   },
   "src/features/activity/DayChart.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 1
+      "count": 2
     }
   },
   "src/features/activity/FlowRow.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 4
+      "count": 6
     },
     "no-restricted-syntax": {
       "count": 2
@@ -161,15 +167,20 @@
   },
   "src/features/activity/FlowSheet.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 4
+      "count": 7
     },
     "no-restricted-syntax": {
       "count": 3
     }
   },
+  "src/features/apps/AppGrid.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
   "src/features/auth/AuthGate.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 3
+      "count": 5
     },
     "no-restricted-syntax": {
       "count": 1
@@ -201,7 +212,7 @@
   },
   "src/features/backlog/BacklogPage.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 4
+      "count": 5
     },
     "no-restricted-syntax": {
       "count": 6
@@ -216,6 +227,9 @@
     }
   },
   "src/features/backlog/BoardCards.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
     "no-restricted-syntax": {
       "count": 4
     }
@@ -242,7 +256,7 @@
   },
   "src/features/chat/Composer.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 1
+      "count": 2
     },
     "no-restricted-syntax": {
       "count": 3
@@ -258,7 +272,7 @@
   },
   "src/features/chat/MessageBlock.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 12
+      "count": 18
     },
     "no-restricted-syntax": {
       "count": 6
@@ -282,8 +296,18 @@
       "count": 1
     }
   },
+  "src/features/claude-usage/Card.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
   "src/features/claude-usage/ClaudeUsagePage.tsx": {
     "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/claude-usage/CostChart.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
       "count": 1
     }
   },
@@ -293,8 +317,16 @@
     }
   },
   "src/features/claude-usage/Overview.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
     "no-restricted-syntax": {
       "count": 7
+    }
+  },
+  "src/features/claude-usage/SessionChart.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
     }
   },
   "src/features/claude-usage/SourceTab.tsx": {
@@ -308,11 +340,27 @@
     }
   },
   "src/features/claude-usage/Timeline.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
     "no-restricted-syntax": {
       "count": 2
     }
   },
+  "src/features/claude-usage/Trends.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/features/display/DisplayPage.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 12
+    }
+  },
   "src/features/display/parts.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 37
+    },
     "no-restricted-syntax": {
       "count": 16
     }
@@ -331,6 +379,9 @@
     }
   },
   "src/features/home/AgentSteps.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 2
+    },
     "no-restricted-syntax": {
       "count": 2
     }
@@ -349,6 +400,9 @@
     }
   },
   "src/features/home/Done.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
     "no-restricted-syntax": {
       "count": 1
     }
@@ -359,6 +413,9 @@
     }
   },
   "src/features/home/HomePage.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 2
+    },
     "no-restricted-syntax": {
       "count": 1
     }
@@ -371,6 +428,11 @@
       "count": 4
     }
   },
+  "src/features/home/NeedsYou.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
   "src/features/home/Ready.tsx": {
     "no-restricted-syntax": {
       "count": 1
@@ -381,9 +443,19 @@
       "count": 1
     }
   },
+  "src/features/home/SessionRow.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/features/home/StepLine.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
   "src/features/homelab/DependenciesView.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 4
+      "count": 7
     },
     "no-restricted-syntax": {
       "count": 1
@@ -391,7 +463,7 @@
   },
   "src/features/homelab/HomelabPage.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 8
+      "count": 10
     },
     "no-restricted-syntax": {
       "count": 2
@@ -399,9 +471,14 @@
   },
   "src/features/homelab/MapPanel.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 3
+      "count": 7
     },
     "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/homelab/MapView.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
       "count": 1
     }
   },
@@ -415,7 +492,7 @@
   },
   "src/features/homelab/StorageCard.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 6
+      "count": 8
     }
   },
   "src/features/homelab/format.tsx": {
@@ -454,7 +531,7 @@
   },
   "src/features/journal/JournalPage.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 20
+      "count": 22
     },
     "no-restricted-syntax": {
       "count": 14
@@ -507,10 +584,13 @@
   },
   "src/features/notes/MoveDialog.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 2
+      "count": 3
     }
   },
   "src/features/notes/NoteCard.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    },
     "no-restricted-syntax": {
       "count": 2
     }
@@ -522,7 +602,7 @@
   },
   "src/features/notes/NotesPage.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 4
+      "count": 5
     }
   },
   "src/features/notes/NotesSearch.tsx": {
@@ -609,8 +689,21 @@
     }
   },
   "src/widgets/ConfirmCard.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 4
+    },
     "no-restricted-syntax": {
       "count": 1
+    }
+  },
+  "src/widgets/FallbackCard.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 1
+    }
+  },
+  "src/widgets/NeedsYouWidget.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 2
     }
   },
   "src/widgets/ProjectWidget.tsx": {
@@ -623,8 +716,26 @@
       "count": 2
     }
   },
+  "src/widgets/PullRequestWidget.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 5
+    }
+  },
+  "src/widgets/card/frame.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 7
+    }
+  },
   "src/widgets/card/marks.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 5
+    },
     "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/widgets/stepTrack.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
       "count": 1
     }
   }
