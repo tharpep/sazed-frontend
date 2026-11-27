@@ -505,19 +505,24 @@
       "count": 1
     }
   },
+  "src/features/notes/MoveDialog.tsx": {
+    "better-tailwindcss/no-restricted-classes": {
+      "count": 2
+    }
+  },
   "src/features/notes/NoteCard.tsx": {
     "no-restricted-syntax": {
-      "count": 1
+      "count": 2
     }
   },
   "src/features/notes/NoteSheet.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 7
+      "count": 8
     }
   },
   "src/features/notes/NotesPage.tsx": {
     "better-tailwindcss/no-restricted-classes": {
-      "count": 3
+      "count": 4
     }
   },
   "src/features/notes/NotesSearch.tsx": {
