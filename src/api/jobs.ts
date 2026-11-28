@@ -17,7 +17,7 @@ export type JobStatus =
 /** Every run row's state, jobs and dispatch tasks alike (migration 017); only dispatch skips. */
 export type RunState = JobStatus | "skipped";
 
-export type JobKind = "research" | "second_opinion" | "code_task";
+export type JobKind = "research" | "second_opinion" | "code_task" | "dispatch";
 
 export interface JobSummary {
   id: string;
@@ -66,6 +66,8 @@ export interface JobDetail extends Omit<JobSummary, "result_preview"> {
     ci_fix_job?: string;
     lint_found?: number;
     question?: string;
+    cost_usd?: number;
+    tasks?: Record<string, string>;
   };
   events?: JobEvent[];
   /** When the worker last reported in for this job; only GET /jobs/{id} returns it. */

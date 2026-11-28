@@ -464,7 +464,7 @@ function WaitingList({ jobs, onOpen }: { jobs: JobSummary[] | null; onOpen: (id:
             time={day === "Today" ? shortClock(j.created_at) : day}
             leading={<Icon className="text-warn" aria-hidden="true" />}
             title={j.title}
-            description={`${STATUS_LABEL[j.status]} · ${KIND_LABEL[j.kind]}`}
+            description={`${STATUS_LABEL[j.status]} · ${KIND_LABEL[j.kind] ?? j.kind}`}
             meta={<span className="md:hidden">{when}</span>}
           />
         );

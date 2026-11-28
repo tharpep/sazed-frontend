@@ -5,6 +5,7 @@ export const KIND_LABEL: Record<JobKind, string> = {
   research: "Research",
   second_opinion: "Second opinion",
   code_task: "Code task",
+  dispatch: "Dispatch plan",
 };
 
 /** Run-state words for job and dispatch screens alike. */

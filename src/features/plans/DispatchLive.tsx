@@ -18,7 +18,7 @@ const POLL_MS = 3000;
 function usePlan(plan: string) {
   const [data, setData] = useState<DispatchPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const settled = data ? isSettled(data.tasks) : false;
+  const settled = data ? isSettled(data.tasks) && (!data.job_id || !!data.pr_url) : false;
 
   useEffect(() => {
     setData(null);
@@ -55,6 +55,10 @@ function ColumnHead({ label, count }: { label: string; count?: number }) {
 
 function openProject(slug: string) {
   useNavStore.getState().openItem({ kind: "project", id: slug });
+}
+
+function openJob(id: string) {
+  useNavStore.getState().openItem({ kind: "job", id });
 }
 
 const Empty = ({ children }: { children: string }) => <p className="text-caption text-muted">{children}</p>;
@@ -131,6 +135,19 @@ export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBac
               {data.repo} · onto <span className="font-mono">integ/{data.plan}</span>
             </span>
             <span className="font-mono">{data.host}</span>
+            {data.pr_url && (
+              <a href={data.pr_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                Draft PR{data.pr_number != null && ` #${data.pr_number}`}
+              </a>
+            )}
+            {data.job_id && (
+              <span>
+                Job{" "}
+                <button type="button" onClick={() => openJob(data.job_id!)} className="font-mono text-primary hover:underline">
+                  {data.job_id.slice(0, 8)}
+                </button>
+              </span>
+            )}
             {data.project && (
               <span>
                 Project{" "}
@@ -182,7 +199,7 @@ export function DispatchLive({ plan, onBack, onOpenPlan }: { plan: string; onBac
                       <TaskCard key={t.id} task={t} byId={byId} selected={t.id === selected?.id} fresh={fresh.has(t.id)} onSelect={select} />
                     ))}
                     <SystemBox node="integ" title={`integ/${data.plan}`} mono>
-                      {`${landed.length} landed. ${allLanded ? "Draft PR opens on export." : "Draft PR when all land."}`}
+                      {`${landed.length} landed. ${data.pr_url ? "Draft PR open." : allLanded ? "Draft PR opens on export." : "Draft PR when all land."}`}
                     </SystemBox>
                   </div>
                 </div>
