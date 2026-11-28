@@ -2452,6 +2452,27 @@
           "null"
         ]
       },
+      "question_total": {
+        "description": "Questions among all needs, listed or not",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "merge_total": {
+        "description": "PRs ready to merge among all needs, listed or not",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "merge_reviewed": {
+        "description": "Of merge_total, how many carry a review verdict",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
       "working": {
         "type": "array",
         "items": {
@@ -2474,6 +2495,13 @@
             "elapsed_s"
           ]
         }
+      },
+      "working_total": {
+        "description": "How many rows are running when the list was cut",
+        "type": [
+          "number",
+          "null"
+        ]
       },
       "done": {
         "type": "object",
@@ -2703,6 +2731,142 @@
       "job_id",
       "job_status",
       "stage"
+    ]
+  },
+  "DispatchRunWidget": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "plan": {
+        "type": "string"
+      },
+      "repo": {
+        "type": "string"
+      },
+      "tasks_total": {
+        "type": "number"
+      },
+      "updated_at": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "now": {
+        "description": "Server time, for last heard",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "last_heard_at": {
+        "description": "The newest received_at across the plan's rows and steps",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "tasks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "goal": {
+              "type": "string",
+              "description": "Its first sentence, at most 120 characters"
+            },
+            "depends_on": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "latest": {
+              "description": "The current run's newest row; null before the task starts or after it was cleaned",
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "description": "Sazed's run state: running, needs_input, succeeded, failed ..."
+                    },
+                    "phase": {
+                      "type": "string",
+                      "description": "dispatch's word: running, waiting, done, landed, failed ..."
+                    },
+                    "line": {
+                      "type": "string"
+                    },
+                    "received_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "phase",
+                    "line"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "question": {
+              "description": "What an asking task wants to know",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "step": {
+              "description": "The last tool step, at most 160 characters",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "tools": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "elapsed_s": {
+              "description": "How long the current run has been going",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "goal",
+            "depends_on"
+          ]
+        }
+      },
+      "open_url": {
+        "description": "The plan in the console, https, as ?open=dispatch:<plan>",
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "plan",
+      "repo",
+      "tasks_total",
+      "tasks"
     ]
   }
 }

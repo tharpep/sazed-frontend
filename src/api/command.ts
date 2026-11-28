@@ -84,7 +84,11 @@ export interface NeedsYouItem extends Pick<NeedsCard, "id" | "title" | "repo" | 
 export interface NeedsYouView {
   needs: NeedsYouItem[];
   needs_total?: number | null;
+  question_total?: number | null;
+  merge_total?: number | null;
+  merge_reviewed?: number | null;
   working: { kind: string; title: string; elapsed_s: number }[];
+  working_total?: number | null;
   done: { succeeded: number; failed: number; window_hours?: number | null };
   session_count?: number | null;
   open_url?: string | null;

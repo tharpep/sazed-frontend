@@ -69,6 +69,27 @@ export interface DispatchPlan extends DispatchPlanSummary {
   tasks: DispatchTask[];
 }
 
+// The dispatch_status card's view of a plan. State and phase are plain strings, so a new word from
+// dispatch draws as text instead of failing the card; the raw plan detail fits the same shape.
+
+/** One task as the card carries it: latest is the current run's newest row, null before it starts. */
+export interface DispatchCardTask extends Pick<DispatchTask, "id" | "goal" | "depends_on"> {
+  latest?: { state: string; phase: string; line: string; received_at?: string | null } | null;
+  question?: string | null;
+  step?: string | null;
+  tools?: number | null;
+  elapsed_s?: number | null;
+}
+
+/** The dispatch_status tool's trimmed plan: what the Dispatch run card draws. */
+export interface DispatchRunView extends Pick<DispatchPlanSummary, "plan" | "repo" | "tasks_total"> {
+  updated_at?: string | null;
+  now?: string | null;
+  last_heard_at?: string | null;
+  tasks: DispatchCardTask[];
+  open_url?: string | null;
+}
+
 export function listDispatchPlans(): Promise<DispatchPlanSummary[]> {
   return apiFetch("/dispatch/plans") as Promise<DispatchPlanSummary[]>;
 }

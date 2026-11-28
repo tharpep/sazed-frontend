@@ -54,21 +54,37 @@ export function needsParts(needs: readonly NeedsYouItem[]) {
   return { questions, merges, others };
 }
 
+type Parts = ReturnType<typeof needsParts>;
+type Totals = Pick<NeedsYouView, "needs_total" | "question_total" | "merge_total" | "merge_reviewed">;
+
+/** The headline counts: the gateway's totals when it sends them, else the listed rows. */
+export function needsCounts(parts: Parts, totals: Totals) {
+  const questions = totals.question_total ?? parts.questions.length;
+  const merges = totals.merge_total ?? parts.merges.length;
+  const reviewed = totals.merge_reviewed ?? parts.merges.filter((n) => mergeKind(candidate(n)) === "reviewed").length;
+  const counted = totals.question_total != null && totals.merge_total != null && totals.needs_total != null;
+  const others = counted ? Math.max(0, totals.needs_total! - questions - merges) : parts.others.length;
+  return { questions, merges, reviewed, others };
+}
+
 /** "1 question, 14 PRs ready to merge, 2 other items". */
-export function needsAnswer(parts: ReturnType<typeof needsParts>): string {
+export function needsAnswer(parts: Parts, totals: Totals = {}): string {
+  const n = needsCounts(parts, totals);
   return [
-    parts.questions.length && plural(parts.questions.length, "question", "questions"),
-    parts.merges.length && `${plural(parts.merges.length, "PR", "PRs")} ready to merge`,
-    parts.others.length && plural(parts.others.length, "other item", "other items"),
+    n.questions && plural(n.questions, "question", "questions"),
+    n.merges && `${plural(n.merges, "PR", "PRs")} ready to merge`,
+    n.others && plural(n.others, "other item", "other items"),
   ]
     .filter(Boolean)
     .join(", ");
 }
 
 /** What is waiting on Pryce: the first question in full, merge calls with checks and size, what is running. */
-export function NeedsYouWidget({ needs, needs_total, working, done, session_count, open_url }: NeedsYouView) {
+export function NeedsYouWidget(view: NeedsYouView) {
+  const { needs, needs_total, working, working_total, done, session_count, open_url } = view;
   const total = Math.max(needs_total ?? 0, needs.length);
   const parts = needsParts(needs);
+  const counts = needsCounts(parts, view);
   const [question, ...laterQuestions] = parts.questions;
   // While a long question is clamped it takes most of the height budget, so the lists shorten to
   // keep the collapsed card under the host's cap; expanding restores them.
@@ -77,16 +93,17 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
   const rest = [...laterQuestions, ...parts.others];
   const shown = rest.slice(0, clamped ? 0 : parts.merges.length ? 1 : OTHER_ROWS);
   const hidden = rest.length - shown.length;
-  const reviewed = parts.merges.filter((n) => mergeKind(candidate(n)) === "reviewed").length;
-  const unsent = total - needs.length;
-  const running = working.length + (session_count ?? 0);
+  const reviewed = counts.reviewed;
+  const moreMerges = counts.merges - Math.min(mergeRows, parts.merges.length);
+  const unsent = total - needs.length - (counts.merges - parts.merges.length);
+  const running = Math.max(working_total ?? 0, working.length) + (session_count ?? 0);
   const foldRunning = clamped && running > 0 && parts.merges.length > 0;
   const doneLine = `${done.succeeded} done${done.failed ? `, ${done.failed} failed` : ""} in ${done.window_hours ?? 24}h`;
 
   return (
     <CardFrame>
       <CardHeader right={total ? <Num>{total}</Num> : undefined}>Needs you</CardHeader>
-      {total ? <CardAnswer>{needsAnswer(parts) || plural(total, "item", "items")}</CardAnswer> : <CardAnswer tail={doneLine}>Nothing needs you</CardAnswer>}
+      {total ? <CardAnswer>{needsAnswer(parts, view) || plural(total, "item", "items")}</CardAnswer> : <CardAnswer tail={doneLine}>Nothing needs you</CardAnswer>}
 
       {question && (
         <Callout
@@ -120,8 +137,8 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
           ))}
           <MoreLine>
             {[
-              parts.merges.length > mergeRows && `+${parts.merges.length - mergeRows} more`,
-              `${reviewed} reviewed, ${parts.merges.length - reviewed} no review`,
+              moreMerges > 0 && `+${moreMerges} more`,
+              `${reviewed} reviewed, ${counts.merges - reviewed} no review`,
               clamped && hidden > 0 && `${hidden} more waiting`,
               unsent > 0 && `${unsent} not listed`,
               foldRunning && `${running} running`,
@@ -131,7 +148,7 @@ export function NeedsYouWidget({ needs, needs_total, working, done, session_coun
           </MoreLine>
         </>
       )}
-      {unsent > 0 && !parts.merges.length && <MoreLine>+{unsent} more not listed</MoreLine>}
+      {total > needs.length && !parts.merges.length && <MoreLine>+{total - needs.length} more not listed</MoreLine>}
 
       {running > 0 && !foldRunning && (
         <div className="mt-1 truncate border-t border-card-line pt-1.5 text-[12px] text-card-ink-3">

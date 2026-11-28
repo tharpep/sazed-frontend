@@ -15,6 +15,7 @@ export const CARD_WIDGETS = [
   "ProjectWidget",
   "NeedsYouWidget",
   "PullRequestWidget",
+  "DispatchRunWidget",
 ] as const;
 
 /** Each card's props as JSON Schema: the bridge api-gateway's contract test validates tool output against. */

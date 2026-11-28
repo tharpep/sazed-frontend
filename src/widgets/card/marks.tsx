@@ -48,6 +48,37 @@ export function Square({ tone, title }: { tone: Tone; title: string }) {
   return <span role="img" title={title} aria-label={title} className={cn("inline-block size-3.5 flex-none rounded-[3px]", TONE_FILL[tone])} />;
 }
 
+export type StepMark = "done" | "landing" | "flight" | "asking" | "blocked" | "planned" | "other";
+
+const STEP_MARK_CLASS: Record<StepMark, string> = {
+  done: "border border-transparent bg-card-ok-tint text-card-ok-on-tint",
+  landing: "border-[1.5px] border-dashed border-card-ok-fill text-card-ok",
+  flight: "border-[1.5px] border-card-info-fill text-card-info",
+  asking: "border-[1.5px] border-card-warn-fill bg-card-warn-tint text-card-warn-on-tint",
+  blocked:
+    "border border-transparent bg-[repeating-linear-gradient(135deg,var(--color-card-err-tint)_0_4px,transparent_4px_8px)] text-card-err",
+  planned: "border border-card-line text-card-ink-3",
+  other: "border border-card-line-2 text-card-ink-2",
+};
+
+/** A 26px numbered square for one step, or 14px and unnumbered when small; shape carries the state as well as colour. */
+export function StepSquare({ mark, label, title, small = false }: { mark: StepMark; label: string; title: string; small?: boolean }) {
+  return (
+    <span
+      role="img"
+      title={title}
+      aria-label={title}
+      className={cn(
+        "inline-grid flex-none place-items-center font-mono text-caption tabular-nums",
+        small ? "size-3.5 rounded-[3px]" : "size-[26px] rounded-md",
+        STEP_MARK_CLASS[mark]
+      )}
+    >
+      {small ? null : label}
+    </span>
+  );
+}
+
 /** A row of squares that wraps. */
 export function Squares({ children }: { children: ReactNode }) {
   return <span className="flex flex-wrap gap-[3px]">{children}</span>;

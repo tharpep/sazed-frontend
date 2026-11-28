@@ -84,7 +84,7 @@ export function CardFixture({ children }: { children: ReactNode }) {
   const w = Number(search.get("w"));
   const t = search.get("theme");
   const themes: Theme[] = t === "dark" || t === "light" ? [t] : ["dark", "light"];
-  const widths = WIDTHS.includes(w) ? [w] : WIDTHS;
+  const widths = w >= 280 && w <= 760 ? [w] : WIDTHS;
   return (
     <div className="flex flex-wrap items-start gap-4 p-4">
       {themes.flatMap((theme) =>
