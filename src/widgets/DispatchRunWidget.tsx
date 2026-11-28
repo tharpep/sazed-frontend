@@ -6,6 +6,10 @@ import { consoleLink } from "./card/links";
 import { CardActions, Callout, Dot, StepSquare, type StepMark } from "./card/marks";
 
 const ROWS = 3;
+// Past this many tasks the squares shrink and the rows cut to two, so a big plan stays under the
+// host's height cap.
+const BIG_PLAN = 24;
+const BIG_PLAN_ROWS = 2;
 
 type Group = "landed" | "landing" | "working" | "asking" | "failed" | "next" | "other";
 
@@ -48,8 +52,6 @@ export function age(seconds: number): string {
   return `${Math.floor(s / 86_400)}d`;
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
 function lastHeard(view: DispatchRunView): number | null {
   const heard = view.last_heard_at
     ? Date.parse(view.last_heard_at)
@@ -91,6 +93,14 @@ export function DispatchRunWidget(view: DispatchRunView) {
   const count = (g: Group) => tasks.filter((t) => groups.get(t.id) === g).length;
   const asking = tasks.filter((t) => groups.get(t.id) === "asking");
   const rows = tasks.filter((t) => ["working", "failed"].includes(groups.get(t.id)!));
+  const big = tasks.length > BIG_PLAN;
+  const rowCap = big ? BIG_PLAN_ROWS : ROWS;
+  const more = [
+    asking.length > 1 && `${asking.length - 1} more asking`,
+    rows.length > rowCap && `${rows.length - rowCap} more working or failed`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const heard = lastHeard(view);
   const unsent = Math.max(0, tasks_total - tasks.length);
   const next = nextLine(tasks, groups);
@@ -127,7 +137,7 @@ export function DispatchRunWidget(view: DispatchRunView) {
       {tasks.length > 0 && (
         <div className="mb-2 flex flex-wrap items-center gap-1">
           {tasks.map((t, i) => (
-            <StepSquare key={t.id} mark={MARK[groups.get(t.id)!]} label={squareLabel(t.id, i)} title={`${t.id}: ${t.goal} (${t.latest ? rowState(t.latest).replace(/_/g, " ") : "not started"})`} />
+            <StepSquare key={t.id} small={big} mark={MARK[groups.get(t.id)!]} label={squareLabel(t.id, i)} title={`${t.id}: ${t.goal} (${t.latest ? rowState(t.latest).replace(/_/g, " ") : "not started"})`} />
           ))}
           {unsent > 0 && <span className="text-caption text-card-ink-3">+{unsent} more</span>}
           <span className="ml-1.5 min-w-0 truncate text-caption text-card-ink-3">{plan}</span>
@@ -139,16 +149,15 @@ export function DispatchRunWidget(view: DispatchRunView) {
           {asking[0].id} asks: {asking[0].question || asking[0].latest?.line || "it is waiting on you"}
         </Callout>
       )}
-      {asking.length > 1 && <MoreLine>+{plural(asking.length - 1, "more task asking", "more tasks asking")}</MoreLine>}
 
       {rows.length > 0 && (
         <div>
-          {rows.slice(0, ROWS).map((t) => (
+          {rows.slice(0, rowCap).map((t) => (
             <TaskRow key={t.id} task={t} group={groups.get(t.id)!} />
           ))}
         </div>
       )}
-      {rows.length > ROWS && <MoreLine>+{rows.length - ROWS} more working or failed</MoreLine>}
+      {more && <MoreLine>+{more}</MoreLine>}
       {next && <MoreLine>{next}</MoreLine>}
 
       <CardActions links={open_url ? [consoleLink("Open in console", open_url)] : []} />

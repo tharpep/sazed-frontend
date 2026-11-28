@@ -61,16 +61,20 @@ const STEP_MARK_CLASS: Record<StepMark, string> = {
   other: "border border-card-line-2 text-card-ink-2",
 };
 
-/** A 26px numbered square for one step; shape carries the state as well as colour. */
-export function StepSquare({ mark, label, title }: { mark: StepMark; label: string; title: string }) {
+/** A 26px numbered square for one step, or 14px and unnumbered when small; shape carries the state as well as colour. */
+export function StepSquare({ mark, label, title, small = false }: { mark: StepMark; label: string; title: string; small?: boolean }) {
   return (
     <span
       role="img"
       title={title}
       aria-label={title}
-      className={cn("inline-grid size-[26px] flex-none place-items-center rounded-md font-mono text-caption tabular-nums", STEP_MARK_CLASS[mark])}
+      className={cn(
+        "inline-grid flex-none place-items-center font-mono text-caption tabular-nums",
+        small ? "size-3.5 rounded-[3px]" : "size-[26px] rounded-md",
+        STEP_MARK_CLASS[mark]
+      )}
     >
-      {label}
+      {small ? null : label}
     </span>
   );
 }
