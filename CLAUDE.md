@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm tauri dev` — Tauri desktop window (requires Rust toolchain)
 - `pnpm build` — TypeScript check + Vite build, then `vite.cards.config.ts` builds `dist/cards/widget.html`
 - `pnpm tauri build` — Full desktop build after `pnpm build`
-- `pnpm lint` — the frontend gate (`eslint.config.js`), run in CI. It fails on a new raw `<button>`, `<input>`, `<select>`, `<textarea>` or `<table>` outside `components/ui` and `components/system`, on a font size off the type scale, and on `bg-muted` or `bg-accent`. Violations that predate the gate are counted per file in `eslint-suppressions.json`, so a file may not add one.
+- `pnpm lint` — the frontend gate, run in CI. Its banned elements and classes live in `frontend-gate.json`; `eslint.config.js` reads them, and so does the `frontend-gate` edit hook in Claude Code, so change a rule there only. It fails on a new raw `<button>`, `<input>`, `<select>`, `<textarea>` or `<table>` outside `components/ui` and `components/system`, on a font size off the type scale, and on `bg-muted` or `bg-accent`. Violations that predate the gate are counted per file in `eslint-suppressions.json`, so a file may not add one.
 - `pnpm lint:prune` — run after fixing old violations. It lowers the counts in `eslint-suppressions.json`; `pnpm lint` fails until it has run. Never raise a count by hand or with `--suppress-all`. The file is keyed by path, so when a file moves, move its entry with it.
 
 ## Architecture

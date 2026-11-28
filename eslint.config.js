@@ -4,16 +4,7 @@ import { MatcherType, SelectorKind } from "eslint-plugin-better-tailwindcss/type
 import { defineConfig, globalIgnores } from "eslint/config";
 import { parser } from "typescript-eslint";
 
-const VARIANTS = "^([a-zA-Z0-9:/_\\[\\]&>.=-]*:)?!?";
-const MODIFIER = "(\\/[^\\s!]+)?!?$";
-
-const RAW_CONTROLS = {
-  button: "Button from @/components/ui/button",
-  input: "Input from @/components/ui/input (Checkbox or Switch for a toggle)",
-  select: "Select from @/components/ui/select",
-  textarea: "Textarea from @/components/ui/textarea",
-  table: "Table from @/components/ui/table",
-};
+import gate from "./frontend-gate.json" with { type: "json" };
 
 const CLASS_CONSTANTS = {
   kind: SelectorKind.Variable,
@@ -34,38 +25,16 @@ export default defineConfig([
       },
     },
     rules: {
-      "better-tailwindcss/no-restricted-classes": [
-        "error",
-        {
-          restrict: [
-            {
-              pattern: `${VARIANTS}text-(xs|sm|base|lg|xl|[2-9]xl)${MODIFIER}`,
-              message: "Off the type scale. Use text-caption, text-meta, text-body, text-title or text-heading.",
-            },
-            {
-              pattern: `${VARIANTS}text-\\[[0-9.]+(px|rem|em)\\]${MODIFIER}`,
-              message: "Off the type scale. Use text-caption, text-meta, text-body, text-title or text-heading.",
-            },
-            {
-              pattern: `${VARIANTS}bg-muted${MODIFIER}`,
-              message: "Here `muted` is a text colour. Use bg-raised.",
-            },
-            {
-              pattern: `${VARIANTS}bg-accent${MODIFIER}`,
-              message: "Here `accent` is the warn colour. Use bg-raised.",
-            },
-          ],
-        },
-      ],
+      "better-tailwindcss/no-restricted-classes": ["error", { restrict: gate.classes }],
     },
   },
   {
     files: ["src/**/*.tsx"],
-    ignores: ["src/components/ui/**", "src/components/system/**"],
+    ignores: gate.rawElements.exempt,
     rules: {
       "no-restricted-syntax": [
         "error",
-        ...Object.entries(RAW_CONTROLS).flatMap(([element, use]) => [
+        ...Object.entries(gate.rawElements.use).flatMap(([element, use]) => [
           {
             selector: `JSXOpeningElement[name.name='${element}']`,
             message: `Raw <${element}>. Use ${use}.`,
